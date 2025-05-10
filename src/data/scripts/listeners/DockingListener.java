@@ -3,6 +3,7 @@ package data.scripts.listeners;
 import com.fs.starfarer.api.Global;
 
 import com.fs.starfarer.api.campaign.*;
+import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.characters.*;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.combat.EngagementResultAPI;
@@ -16,14 +17,22 @@ public class DockingListener implements CampaignEventListener {
         return Global.getSector().getMemoryWithoutUpdate().getBoolean("$playerDocked");
     }
 
+    public static MarketAPI getPlayerCurrentMarket() {
+        return (MarketAPI) Global.getSector().getMemoryWithoutUpdate().get("$playerCurrentMarket");
+    }
+
     @Override
     public void reportPlayerOpenedMarket(MarketAPI market) {
-        Global.getSector().getMemoryWithoutUpdate().set("$playerDocked", true);
+        MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
+        mem.set("$playerDocked", true);
+        mem.set("$playerCurrentMarket", market);
     }
 
     @Override
     public void reportPlayerClosedMarket(MarketAPI market) {
-        Global.getSector().getMemoryWithoutUpdate().unset("$playerDocked");
+        MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
+        mem.unset("$playerDocked");
+        mem.unset("$playerCurrentMarket");
     }
 
     public void reportBattleFinished(CampaignFleetAPI primaryWinner, BattleAPI battle) {}

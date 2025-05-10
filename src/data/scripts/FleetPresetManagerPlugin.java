@@ -8,19 +8,24 @@ import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.campaign.CampaignEventListener;
 
 import data.scripts.util.PresetUtils;
+import data.scripts.util.UtilReflection;
 import data.scripts.FleetPresetManagerCoreScript;
 import data.scripts.listeners.DockingListener;
 import data.scripts.listeners.OfficerDismissalTracker;
 
 import java.util.*;
+
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Paths;
+
 import org.apache.log4j.Logger;
 
 public class FleetPresetManagerPlugin extends BaseModPlugin {
     private static final Logger logger = Logger.getLogger(FleetPresetManagerPlugin.class);
     private static final String MEMORY_KEY = PresetUtils.MEMORY_KEY;
+
+    //
 
     private static final String[] reflectionWhitelist = new String[] {
             "data.scripts.FleetPresetManagerCoreScript",
@@ -49,7 +54,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         ClassLoader cl = new ReflectionEnabledClassLoader(url, getClass().getClassLoader());
         try {
             Global.getSector().getPersistentData().put(MEMORY_KEY, new HashMap<String, PresetUtils.FleetPreset>());
-            Global.getSector().addTransientScript((EveryFrameScript) PresetUtils.instantiateClassNoParams(cl.loadClass("data.scripts.FleetPresetManagerCoreScript")));
+            Global.getSector().addTransientScript((EveryFrameScript) UtilReflection.instantiateClassNoParams(cl.loadClass("data.scripts.FleetPresetManagerCoreScript")));
 
             Global.getSector().addTransientScript(new OfficerDismissalTracker());
             Global.getSector().addListener(new DockingListener());
@@ -59,6 +64,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         }
     }
 
+    // credit for this goes to the author of the code in the officer extension mod
     public static class ReflectionEnabledClassLoader extends URLClassLoader {
 
         public ReflectionEnabledClassLoader(URL url, ClassLoader parent) {

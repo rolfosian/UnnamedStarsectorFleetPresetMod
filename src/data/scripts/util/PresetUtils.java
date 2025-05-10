@@ -39,12 +39,16 @@ public class PresetUtils {
         public Map<String, List<List<Object>>> officersMap = new HashMap<>();
     }
 
+    public static Map<String, FleetPreset> getFleetPresets() {
+        return (Map<String, FleetPreset>) Global.getSector().getPersistentData().get(MEMORY_KEY);
+    }
+
     @SuppressWarnings("unchecked")
     public static void saveFleetPreset(String name) {
         CampaignFleetAPI fleet = Global.getSector().getPlayerFleet();
         FleetPreset preset = new FleetPreset();
     
-        for (FleetMemberAPI member : fleet.getFleetData().getMembersListCopy()) {
+        for (FleetMemberAPI member : fleet.getFleetData().getMembersInPriorityOrder()) {
             String hullId = member.getHullId();
             ShipVariantAPI variant = member.getVariant();
             PersonAPI captain = member.getCaptain();
@@ -102,7 +106,10 @@ public class PresetUtils {
         
         SubmarketAPI storage = playerFleet.getCommander().getMarket().getSubmarket("storage");
 
-        for (FleetMemberAPI member : playerFleet.getFleetData().getMembersListCopy()) {
+        for (FleetMemberAPI member : playerFleet.getFleetData().getMembersInPriorityOrder()) {
+            if (member.getCaptain() != null) {
+                member.setCaptain(null);
+            }
             storage.getCargo().getMothballedShips().addFleetMember(member);
         }
         playerFleet.getFleetData().clear();
@@ -116,7 +123,7 @@ public class PresetUtils {
                 
                 // Check if the ship is in storage
                 boolean found = false;
-                for (FleetMemberAPI storedMember : storage.getCargo().getMothballedShips().getMembersListCopy()) {
+                for (FleetMemberAPI storedMember : storage.getCargo().getMothballedShips().getMembersInPriorityOrder()) {
                     if (storedMember.getHullId().equals(hullId) && storedMember.getVariant().equals(variant)) {
                         // Transfer from storage to fleet
                         storage.getCargo().getMothballedShips().removeFleetMember(storedMember);
@@ -196,18 +203,6 @@ public class PresetUtils {
                 }
                 doneHullIds.add(hullId);
             }
-        }
-    }
-    
-    public static <T> T instantiateClassNoParams(Class<T> cls) throws NoSuchMethodException, IllegalAccessException {
-        MethodHandles.Lookup lookup = MethodHandles.lookup();
-        MethodHandle mh = lookup.findConstructor(cls, MethodType.methodType(void.class));
-        try {
-            //noinspection unchecked
-            return (T) mh.invoke();
-        }
-        catch (Throwable e) {
-            throw new RuntimeException(e);
         }
     }
 }

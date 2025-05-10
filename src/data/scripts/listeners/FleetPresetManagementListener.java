@@ -12,6 +12,8 @@ import com.fs.starfarer.api.campaign.SectorEntityToken;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 
+import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
+
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.ui.Alignment;
@@ -23,12 +25,15 @@ import com.fs.starfarer.api.ui.Alignment;
 import com.fs.starfarer.api.ui.CutStyle;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
+import com.fs.starfarer.api.input.InputEventType;
 
 import com.fs.starfarer.api.util.Misc;
 
 // import data.scripts.listeners.SaveFleetPreset;
 import data.scripts.listeners.DialogDismissedListener;
 import data.scripts.listeners.DummyDialogListener;
+import data.scripts.ui.UIComponent;
+import data.scripts.ui.UIPanel;
 import data.scripts.listeners.DockingListener;
 
 import data.scripts.util.RandomStringList;
@@ -63,17 +68,27 @@ public class FleetPresetManagementListener extends ActionListener {
 
     private TextFieldAPI saveNameField;
     private String selectedPresetName;
+    private List<ButtonAPI> theButtons;
+
+    private final HashMap<String, String> buttonToolTipParas = new HashMap<>();
 
     public FleetPresetManagementListener() {
         super();
+        buttonToolTipParas.put("saveDialogButton", "Save current fleet as preset.");
+        buttonToolTipParas.put("loadButton", "Stores entire fleet in storage and then loads the selected preset.");
     }
 
     @Override
     public void trigger(Object... args) {
 
-        ButtonPlugin buttonPlugin = new ButtonPlugin();
+        List<String> buttonIds = new ArrayList<>();
+        buttonIds.add("saveDialogButton");
+        buttonIds.add("loadButton");
+        ButtonPlugin buttonPlugin = new ButtonPlugin(buttonIds);
+        
         CustomPanelAPI customPanel = Global.getSettings().createCustom(PANEL_WIDTH, PANEL_HEIGHT, buttonPlugin);
         TooltipMakerAPI tooltipMaker = customPanel.createUIElement(PANEL_WIDTH, PANEL_HEIGHT, true);
+        buttonPlugin.init(customPanel, tooltipMaker);
 
         DialogDismissedListener dummyListener = new DummyDialogListener();
         UtilReflection.ConfirmDialogData data = UtilReflection.showConfirmationDialog(
@@ -92,7 +107,7 @@ public class FleetPresetManagementListener extends ActionListener {
         ButtonAPI cancelButton = data.cancelButton.getInstance();
         PositionAPI cancelButtonPosition = cancelButton.getPosition();
 
-        List<ButtonAPI> theButtons = addTheButtons(tooltipMaker, confirmButtonPosition, cancelButtonPosition);
+        theButtons = addTheButtons(tooltipMaker, confirmButtonPosition, cancelButtonPosition);
 
         data.panel.removeComponent(confirmButton);
         data.panel.removeComponent(cancelButton);
@@ -111,6 +126,10 @@ public class FleetPresetManagementListener extends ActionListener {
 
         ButtonAPI loadPresetButton = tooltipMaker.addButton("Load selected", "loadButton", c1, c2,
         Alignment.BR, CutStyle.BL_TR, confirmPosition.getWidth(), cancelPosition.getHeight(), 5f);
+
+        if (!DockingListener.isPlayerDocked() || DockingListener.getPlayerCurrentMarket().getSubmarket(Submarkets.SUBMARKET_STORAGE) == null ) {
+            loadPresetButton.setEnabled(false);
+        }
 
         buttons.add(saveDialogButton);
         buttons.add(loadPresetButton);
@@ -134,6 +153,7 @@ public class FleetPresetManagementListener extends ActionListener {
             saveListener);
 
         subData.panel.addComponent(textFieldPanel).inTL(0f, 0f);
+        saveNameField.showCursor();
 
         return subData;
     }
@@ -173,14 +193,63 @@ public class FleetPresetManagementListener extends ActionListener {
         }
     }
 
-    private class ButtonPlugin implements CustomUIPanelPlugin {    
-        CustomPanelAPI panel;
-    
-    
-        public void init(CustomPanelAPI panel) {
-            this.panel = panel;
+    private class ButtonPlugin implements CustomUIPanelPlugin {
+        CustomPanelAPI masterPanel;
+        TooltipMakerAPI masterTooltip;
+
+        HashMap<String, CustomPanelAPI> tooltipMap;
+        List<String> buttonIds;
+
+        boolean isTooltip;
+        String currentTooltipId;
+
+        public ButtonPlugin(List<String> buttonIds) {
+            this.tooltipMap = new HashMap<>();
+            this.isTooltip = false;
+            this.buttonIds = buttonIds;
+
+            for (String buttonId : buttonIds) {
+                CustomPanelAPI tooltipPanel = Global.getSettings().createCustom(250f, 60f, null);
+                TooltipMakerAPI tooltip = tooltipPanel.createUIElement(250f, 60f, false);
+                tooltip.addPara(buttonToolTipParas.get(buttonId), 0f);
+                tooltipPanel.wrapTooltipWithBox(tooltip, Misc.getBasePlayerColor());
+            
+                tooltipPanel.addUIElement(tooltip).inTL(0f, 0f);
+                tooltipMap.put(buttonId, tooltipPanel);
+            }
+
+
         }
-    
+        
+        public void init(CustomPanelAPI panel, TooltipMakerAPI tooltip) {
+            this.masterPanel = panel;
+            this.masterTooltip = tooltip;
+        }
+
+        private void showButtonToolTipAtLocation(String buttonId) {
+            CustomPanelAPI toolTipPanel = tooltipMap.get(buttonId);
+            toolTipPanel.setOpacity(100f);
+            float width = 0f;
+            float height = 0f;
+
+            for (ButtonAPI button : theButtons) {
+                if (button.getCustomData().equals(buttonId)) {
+                    PositionAPI pos = button.getPosition();
+                    width = pos.getWidth();
+                    height = pos.getHeight();
+                    break;
+                }
+            }
+
+            this.masterTooltip.addComponent(toolTipPanel).inTL(width + 5f, height - 10f);
+        }
+
+        private void destroyButtonToolTip(String buttonId) {
+            CustomPanelAPI toolTipPanel = tooltipMap.get(buttonId);
+            toolTipPanel.setOpacity(0f);
+            this.masterTooltip.removeComponent(toolTipPanel);
+        }
+
         @Override
         public void advance(float amount) {
     
@@ -188,27 +257,65 @@ public class FleetPresetManagementListener extends ActionListener {
     
         @Override
         public void buttonPressed(Object arg0) {
-            if (arg0 == "saveDialogButton") {
+            if (arg0.equals("saveDialogButton")) {
                 openSaveDialog();
                 return;
-            } else if (arg0 == "loadButton") {
-                if (DockingListener.isPlayerDocked()) {
-                    PresetUtils.restoreFleetFromPreset(selectedPresetName);
-                    return;
+            } else if (arg0.equals("loadButton")) {
+                PresetUtils.restoreFleetFromPreset(selectedPresetName);
                 }
-
-            }
         }
     
         @Override
         public void positionChanged(PositionAPI arg0) {
     
         }
-    
+
+        //this is so dirty i dont like it
         @Override
         public void processInput(List<InputEventAPI> arg0) {
-    
+            for (InputEventAPI event : arg0) {
+                if (event.isMouseMoveEvent()) {
+                    int mouseX = event.getX();
+                    int mouseY = event.getY();
+
+                    ButtonAPI button = getButton(theButtons, mouseX, mouseY);
+                    if (button != null) {
+                        String buttonId = (String) button.getCustomData();
+                        this.isTooltip = true;
+                        this.currentTooltipId = new String(buttonId);
+                        showButtonToolTipAtLocation(buttonId);
+                        return;
+                    }
+                    if (this.isTooltip && this.currentTooltipId != null) {
+                        destroyButtonToolTip(this.currentTooltipId);
+                        this.isTooltip = false;
+                        this.currentTooltipId = null;
+                        return;
+                        // i dont know why we have to do this, probably because concurrency ticks take too long
+                    } else {
+                        for (String buttonId : this.buttonIds) {
+                            tooltipMap.get(buttonId).setOpacity(0f);
+                        }
+                    }
+                }
+            }
         }
+
+        private ButtonAPI getButton (List<ButtonAPI> buttons, int mouseX, int mouseY) {
+            for (ButtonAPI button : theButtons) {
+                PositionAPI pos = button.getPosition();
+                float x = pos.getX();
+                float y = pos.getY();
+                float width = pos.getWidth();
+                float height = pos.getHeight();
+
+                if (mouseX >= x && mouseX <= x + width - 5f &&
+                mouseY >= y && mouseY <= y + height - 5f) {
+                return button;
+                }
+            }
+            return null;
+        }   
     
         @Override
         public void render(float arg0) {

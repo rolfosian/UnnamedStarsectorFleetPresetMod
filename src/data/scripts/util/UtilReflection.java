@@ -173,4 +173,16 @@ public class UtilReflection {
             this.dialog = dialog;
         }
     }
+
+    public static <T> T instantiateClassNoParams(Class<T> cls) throws NoSuchMethodException, IllegalAccessException {
+        MethodHandles.Lookup lookup = MethodHandles.lookup();
+        MethodHandle mh = lookup.findConstructor(cls, MethodType.methodType(void.class));
+        try {
+            //noinspection unchecked
+            return (T) mh.invoke();
+        }
+        catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

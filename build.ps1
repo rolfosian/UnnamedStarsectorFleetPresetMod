@@ -1,7 +1,9 @@
 # Set Java Home to your specific JDK 17 installation
 $env:JAVA_HOME = "$env:USERPROFILE\Downloads\jdk-17.0.12_windows-x64_bin\jdk-17.0.12"
 echo "Killing Starsector"
-Get-Process java -ErrorAction SilentlyContinue | Stop-Process -Force;
+Get-Process java -ErrorAction SilentlyContinue | Where-Object {
+    ($_ | Get-Process).Path -like 'C:\Starsector\jre\bin\java.exe'
+} | Stop-Process -Force
 
 # Verify Java Home is set correctly
 if (-not (Test-Path "$env:JAVA_HOME\bin\java.exe")) {
