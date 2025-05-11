@@ -22,7 +22,7 @@ import java.nio.file.Paths;
 import org.apache.log4j.Logger;
 
 public class FleetPresetManagerPlugin extends BaseModPlugin {
-    private static final Logger logger = Logger.getLogger(FleetPresetManagerPlugin.class);
+    public static final Logger logger = Logger.getLogger(FleetPresetManagerPlugin.class);
     private static final String MEMORY_KEY = PresetUtils.MEMORY_KEY;
 
     //
@@ -53,7 +53,6 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         @SuppressWarnings("resource")
         ClassLoader cl = new ReflectionEnabledClassLoader(url, getClass().getClassLoader());
         try {
-            Global.getSector().getPersistentData().put(MEMORY_KEY, new HashMap<String, PresetUtils.FleetPreset>());
             Global.getSector().addTransientScript((EveryFrameScript) UtilReflection.instantiateClassNoParams(cl.loadClass("data.scripts.FleetPresetManagerCoreScript")));
 
             Global.getSector().addTransientScript(new OfficerDismissalTracker());
@@ -62,6 +61,11 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
             logger.error("Failure to load core script class; exiting", e);
             return;
         }
+    }
+
+    @Override
+    public void onNewGame() {
+        Global.getSector().getPersistentData().put(MEMORY_KEY, new HashMap<String, PresetUtils.FleetPreset>());
     }
 
     // credit for this goes to the author of the code in the officer extension mod

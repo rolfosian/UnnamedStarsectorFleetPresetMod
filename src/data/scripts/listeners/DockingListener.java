@@ -11,7 +11,7 @@ import com.fs.starfarer.api.combat.EngagementResultAPI;
 import org.apache.log4j.Logger;
 
 public class DockingListener implements CampaignEventListener {
-    private static final Logger logger = Logger.getLogger(DockingListener.class);
+    public static final Logger logger = Logger.getLogger(DockingListener.class);
 
     public static boolean isPlayerDocked() {
         return Global.getSector().getMemoryWithoutUpdate().getBoolean("$playerDocked");

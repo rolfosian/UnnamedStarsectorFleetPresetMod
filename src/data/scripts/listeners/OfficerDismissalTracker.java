@@ -13,7 +13,7 @@ import java.util.*;
 import org.apache.log4j.Logger;
 
 public class OfficerDismissalTracker implements EveryFrameScript {
-    private static final Logger logger = Logger.getLogger(FleetPresetManagementListener.class);
+    public static final Logger logger = Logger.getLogger(FleetPresetManagementListener.class);
 
     private final Set<String> knownOfficers = new HashSet<>();
 
@@ -45,8 +45,6 @@ public class OfficerDismissalTracker implements EveryFrameScript {
 
     private void onOfficerDismissed(String officerId) {
         PresetUtils.removeOfficerFromPresets(officerId);
-
-        logger.info("Officer dismissed: " + officerId);
     }
 
     @Override

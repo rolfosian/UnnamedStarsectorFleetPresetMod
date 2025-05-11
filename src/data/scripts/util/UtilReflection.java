@@ -24,7 +24,7 @@ import java.lang.invoke.MethodHandle;
 import org.apache.log4j.Logger;
 
 public class UtilReflection {
-    private static final Logger logger = Logger.getLogger(UtilReflection.class);
+    public static final Logger logger = Logger.getLogger(UtilReflection.class);
 
     public static Button makeButton(String text, ActionListener handler, Color base, Color bg, float width, float height, Object shortcutKey) {
         return makeButton(text, handler, base, bg, Alignment.MID, CutStyle.ALL, width, height, shortcutKey);

@@ -1,10 +1,9 @@
 package data.scripts.listeners;
 
-import data.scripts.listeners.DialogDismissedListener;
 import org.apache.log4j.Logger;
 
 public class DummyDialogListener extends DialogDismissedListener {
-    private static final Logger logger = Logger.getLogger(DummyDialogListener.class);
+    public static final Logger logger = Logger.getLogger(DummyDialogListener.class);
     
         @Override
         public void trigger(Object... args) {
