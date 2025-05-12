@@ -8,31 +8,33 @@ import com.fs.starfarer.api.characters.*;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.combat.EngagementResultAPI;
 
+import data.scripts.util.PresetUtils;
+
 import org.apache.log4j.Logger;
 
 public class DockingListener implements CampaignEventListener {
     public static final Logger logger = Logger.getLogger(DockingListener.class);
 
     public static boolean isPlayerDocked() {
-        return Global.getSector().getMemoryWithoutUpdate().getBoolean("$playerDocked");
+        return Global.getSector().getMemoryWithoutUpdate().getBoolean(PresetUtils.PLAYERDOCKED_KEY);
     }
 
     public static MarketAPI getPlayerCurrentMarket() {
-        return (MarketAPI) Global.getSector().getMemoryWithoutUpdate().get("$playerCurrentMarket");
+        return (MarketAPI) Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY);
     }
 
     @Override
     public void reportPlayerOpenedMarket(MarketAPI market) {
         MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
-        mem.set("$playerDocked", true);
-        mem.set("$playerCurrentMarket", market);
+        mem.set(PresetUtils.PLAYERDOCKED_KEY, true);
+        mem.set(PresetUtils.PLAYERCURRENTMARKET_KEY, market);
     }
 
     @Override
     public void reportPlayerClosedMarket(MarketAPI market) {
         MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
-        mem.unset("$playerDocked");
-        mem.unset("$playerCurrentMarket");
+        mem.unset(PresetUtils.PLAYERDOCKED_KEY);
+        mem.unset(PresetUtils.PLAYERCURRENTMARKET_KEY);
     }
 
     public void reportBattleFinished(CampaignFleetAPI primaryWinner, BattleAPI battle) {}

@@ -8,12 +8,13 @@ import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.util.Misc;
 
+import data.scripts.listeners.FleetPresetManagementListener;
 import data.scripts.ui.Button;
 import data.scripts.ui.Position;
 import data.scripts.ui.Label;
 import data.scripts.ui.UIPanel;
+import data.scripts.util.PresetUtils;
 import data.scripts.util.UtilReflection;
-import data.scripts.listeners.FleetPresetManagementListener;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -44,6 +45,7 @@ public class FleetPanelInjector {
 
         if (!injected) {
             injected = true;
+            Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.FLEETINFOPANEL_KEY, fleetInfoPanel);
 
             Button officerAutoAssignButton = new Button(getAutoAssignButton(fleetInfoPanel));
             PositionAPI officerAutoAssignButtonPosition = officerAutoAssignButton.getPosition();

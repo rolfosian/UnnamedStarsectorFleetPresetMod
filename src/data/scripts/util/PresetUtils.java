@@ -3,9 +3,9 @@ package data.scripts.util;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
+// import java.lang.invoke.MethodHandle;
+// import java.lang.invoke.MethodHandles;
+// import java.lang.invoke.MethodType;
 
 import com.fs.starfarer.api.Global;
 
@@ -19,7 +19,7 @@ import com.fs.starfarer.api.campaign.econ.SubmarketAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 
 import com.fs.starfarer.api.combat.ShipVariantAPI;
-import com.fs.starfarer.api.combat.CombatEngineAPI;
+// import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 import com.fs.starfarer.api.characters.PersonAPI;
 
@@ -34,13 +34,26 @@ import com.fs.starfarer.api.util.Misc;
 
 // import org.lazywizard.lazylib.JSONUtils;
 
-// import org.apache.log4j.Logger;
+import org.apache.log4j.Logger;
 
 public class PresetUtils {
-    // public static final Logger logger = Global.getlogger();
+    public static final Logger logger = Logger.getLogger(PresetUtils.class);
 
-    public static final String MEMORY_KEY = "$player_fleet_presets";
+    public static final String PRESETS_MEMORY_KEY = "$player_fleet_presets";
+    public static final String FLEETINFOPANEL_KEY = "$fleetInfoPanel";
+    public static final String PLAYERDOCKED_KEY = "$playerDocked";
+    public static final String PLAYERCURRENTMARKET_KEY = "$playerCurrentMarket";
+
+    public static class OfficerVariantPair {
+        public final PersonAPI officer;
+        public final ShipVariantAPI variant;
     
+        public OfficerVariantPair(PersonAPI officer, ShipVariantAPI variant) {
+            this.officer = officer;
+            this.variant = variant;
+        }
+    }
+
     public static final List<HullSize> SIZE_ORDER = Arrays.asList(HullSize.CAPITAL_SHIP, HullSize.CRUISER, HullSize.DEFAULT, HullSize.DESTROYER, HullSize.FIGHTER, HullSize.FRIGATE);
     // TODO SORT FUNCTION FOR LARGEST TO SMALLEST WHILE SHUNTING CIVILIAN HULLS TO THE BOTTOM
     // - will use ShipVariantAPI.getHullSize()
@@ -61,16 +74,16 @@ public class PresetUtils {
             return new FleetPreset();
         }
 
-        public static void exportPresetasJSON() {
-            // TODO implement this and corresponding import function
+        // public void exportPresetasJSON() {
+        //     // TODO implement this and corresponding import function
 
-            // PROBLEM: How to handle officers
-        }
+        //     // PROBLEM: How to handle officers
+        // }
 
-        public static String deserializePreset() {
-            // TODO implement this for use in export function
-            return "";
-        }
+        // public String deserializePreset() {
+        //     // TODO implement this for use in export function
+        //     return "";
+        // }
 
         // public Map<String, List<ShipVariantAPI>> getVariantsMapString(String name) {
         //     return this.variantsMap.get(name);
@@ -83,13 +96,11 @@ public class PresetUtils {
         // }
     }
 
-    public static class OfficerVariantPair {
-        public final PersonAPI officer;
-        public final ShipVariantAPI variant;
-    
-        public OfficerVariantPair(PersonAPI officer, ShipVariantAPI variant) {
-            this.officer = officer;
-            this.variant = variant;
+    public static void initMothballedShips(CargoAPI storageCargo) {
+        List<FactionAPI> factions = Global.getSector().getAllFactions();
+        for (FactionAPI faction : factions) {
+            // i dont know what this does but the javadocs say to do it before calling getmothballedships
+            storageCargo.initMothballedShips(faction.getId());
         }
     }
 
@@ -104,7 +115,14 @@ public class PresetUtils {
         return false;
     }
 
+    public static boolean isPresetAvailableAtCurrentMarket(MarketAPI market, String presetName) {
+        FleetPreset preset = getFleetPresets().get(presetName);
+        return false;
+    }
+
+
     // should only be called if preset has no officers
+    // needs testing
     public static void assignofficersToPreset(FleetPreset preset, List<FleetMemberAPI> playerFleetMembers) {
         for (String hullId: preset.shipIds) {
             for (FleetMemberAPI fleetMember : playerFleetMembers) {
@@ -126,16 +144,19 @@ public class PresetUtils {
 
     public static void stripofficersFromPlayerFleet(List<FleetMemberAPI> fleetMembers) {
         for (FleetMemberAPI fleetMember : fleetMembers) {
-            if (!fleetMember.getCaptain().isPlayer()) fleetMember.setCaptain(null);
+            PersonAPI captain = fleetMember.getCaptain();
+            if (captain != null && !captain.isPlayer()) fleetMember.setCaptain(null);
         }
     }
 
     public static boolean isOfficerInFleet(String officerId, List<FleetMemberAPI> fleetMembers) {
         for (FleetMemberAPI fleetMember : fleetMembers) {
-            if (fleetMember.getCaptain() != null && fleetMember.getCaptain().getId() == officerId) return true;
+            PersonAPI captain = fleetMember.getCaptain();
+            if (captain != null && captain.getId() == officerId) return true;
         }
         return false;
     }
+
 
     public static boolean isOfficerInPreset(String officerId, FleetPreset preset) {
         for (String hullId : preset.shipIds) {
@@ -143,7 +164,7 @@ public class PresetUtils {
             if (pairs != null) {
                 for (OfficerVariantPair pair : pairs) {
                     PersonAPI officer = pair.officer;
-                    if (officer != null && officer.getId() == officerId) return true;
+                    if (officer.getId() == officerId) return true;
                 }
             }
         }
@@ -159,13 +180,15 @@ public class PresetUtils {
 
     // requires current fleet to be a preset and preset to be imported/saved
     // officers need to be assigned by player to fleet members before this function is called
+    // needs testing
     public static void applyOfficerChangesToPreset(String presetName, boolean isNewlyImportedPreset) {
         FleetPreset preset = (FleetPreset) getFleetPresets().get(presetName);
         List<FleetMemberAPI> playerFleetMembers = Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder();
 
         if (isNewlyImportedPreset) {
-            // fresh preset with no officers
+            // is a fresh preset with no officers
             assignofficersToPreset(preset, playerFleetMembers);
+
         } else {            
             for (FleetMemberAPI fleetMember : playerFleetMembers) {
                 for (Map.Entry<String, List<OfficerVariantPair>> entry : preset.officersMap.entrySet()) {
@@ -269,7 +292,7 @@ public class PresetUtils {
 
     @SuppressWarnings("unchecked")
     public static Map<String, FleetPreset> getFleetPresets() {
-        return (Map<String, FleetPreset>) Global.getSector().getPersistentData().get(MEMORY_KEY);
+        return (Map<String, FleetPreset>) Global.getSector().getPersistentData().get(PRESETS_MEMORY_KEY);
     }
 
     public static void storeFleetInStorage(String name) {
@@ -280,7 +303,6 @@ public class PresetUtils {
         SubmarketAPI storage = market.getSubmarket("storage");
         // ReflectionUtilis.logMethods(storage);
         CargoAPI storageCargo = storage.getCargo();
-        List<FactionAPI> factions = Global.getSector().getAllFactions();
         
         FleetDataAPI playerFleetData = playerFleet.getFleetData();
 
@@ -292,11 +314,10 @@ public class PresetUtils {
             playerFleetData.removeFleetMember(member);
 
             // i dont know what this does but according to the javadocs you need to call it before calling GetMothballedShips
-            for (FactionAPI faction : factions) {
-                storageCargo.initMothballedShips(faction.getId());
-            }
+            initMothballedShips(storageCargo);
             storage.getCargo().getMothballedShips().addFleetMember(member);
         }
+        refreshFleetUI();
     }
 
     public static boolean isMemberInFleet(FleetDataAPI fleetData, FleetMemberAPI memberToCheck) {
@@ -408,9 +429,7 @@ public class PresetUtils {
             playerFleetData.removeFleetMember(member);
 
             // i dont know what this does but according to the javadocs you need to call it before calling GetMothballedShips
-            for (FactionAPI faction : factions) {
-                storageCargo.initMothballedShips(faction.getId());
-            }
+            initMothballedShips(storageCargo);
             storage.getCargo().getMothballedShips().addFleetMember(member);
         }
 
@@ -428,35 +447,35 @@ public class PresetUtils {
                 boolean found = false;
 
                 // i dont know what this does but according to the javadocs you need to call it before calling GetMothballedShips
-                for (FactionAPI faction : factions) {
-                    storageCargo.initMothballedShips(faction.getId());
-                }
+                initMothballedShips(storageCargo);
                 int count = 0;
                 for (FleetMemberAPI storedMember : storage.getCargo().getMothballedShips().getMembersInPriorityOrder()) {
                     if (count == variantsToGet) {
                         found = true;
                         break;
                     }
-
+                    if (storedMember.getHullId().equals(hullId)) {
                         if (preset.officersMap.containsKey(hullId)) {
                             List<OfficerVariantPair> pairs = preset.officersMap.get(hullId);
 
                             for (OfficerVariantPair pair : pairs) {
                                 if (areSameVariant(pair.variant, storedMember.getVariant())) {
                                     storedMember.setCaptain(pair.officer);
-                                    break;
+
+                                    initMothballedShips(storageCargo);
+                                    storageCargo.getMothballedShips().removeFleetMember(storedMember);
+                                    playerFleet.getFleetData().addFleetMember(storedMember);
+                                    found = true;
+                                    count ++;
+                                    continue;
                                 }
                             }
 
-                        if (storedMember.getHullId().equals(hullId)) {
-                            for (FactionAPI faction : factions) {
-                                storageCargo.initMothballedShips(faction.getId());
-                            }
-                        storageCargo.getMothballedShips().removeFleetMember(storedMember);
-                        playerFleet.getFleetData().addFleetMember(storedMember);
-                        found = true;
-                        count ++;
-
+                            initMothballedShips(storageCargo);
+                            storageCargo.getMothballedShips().removeFleetMember(storedMember);
+                            playerFleet.getFleetData().addFleetMember(storedMember);
+                            found = true;
+                            count ++;
                         }
                     }
                 }
@@ -471,15 +490,8 @@ public class PresetUtils {
                 }
             }
         }
-        // WE HAVE NOTHING TO AUTOMATICALLY UPDATE THE FLEET PANEL MEMBER SPRITES FOR THE NEW FLEET HULLS AAAAAAAAAAAAAAAAAAA
-        // TODO:
-        // HOW DO YOU ADVANCE THE FLEET PANEL UI CHILDREN????
-        // SWITCHING TABS MANUALLY WILL UPDATE IT FOR US - FIND MECHANISM OF ACTION??????
-        // playerFleetData.syncIfNeeded(); - DOES NOTHING
-        // UIPanelAPI fleetInfoPanel = (UIPanelAPI) Global.getSector().getMemoryWithoutUpdate().get("$fleetInfoPanel");
-        // fleetInfoPanel.advance(0.0166667f); - DOES NOTHING
 
-        // ReflectionUtilis.logMethods(fleetInfoPanel);  // - GET CHILDREN????
+        refreshFleetUI();
 
         if (allFound) {
             Global.getSector().getCampaignUI().addMessage(
@@ -487,6 +499,14 @@ public class PresetUtils {
                 Misc.getPositiveHighlightColor()
             );
         }
+    }
+
+    // this is kinda jank but it works well enough for now
+    // need a more seamless solution at some point
+    public static void refreshFleetUI() {
+        Object fleetInfoPanel = Global.getSector().getMemoryWithoutUpdate().get(FLEETINFOPANEL_KEY);
+        Object infoPanelParent = ReflectionUtilis.invokeMethod("getParent", fleetInfoPanel);
+        ReflectionUtilis.invokeMethod("recreateUI", infoPanelParent);
     }
 
     public static void deleteFleetPreset(String name) {
@@ -557,7 +577,7 @@ public class PresetUtils {
                 .map(e -> e.getValue() > 1 ? e.getKey() + " x" + e.getValue() : e.getKey())
                 .collect(Collectors.joining(", "));
     
-            map.put(capitalizeFirstLetter(fleetPresetName), ships);
+            map.put(fleetPresetName, ships);
         }
         return sortByKeyAlphanumerically(map);
     }

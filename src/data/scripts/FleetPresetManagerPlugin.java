@@ -23,9 +23,6 @@ import org.apache.log4j.Logger;
 
 public class FleetPresetManagerPlugin extends BaseModPlugin {
     public static final Logger logger = Logger.getLogger(FleetPresetManagerPlugin.class);
-    private static final String MEMORY_KEY = PresetUtils.MEMORY_KEY;
-
-    //
 
     private static final String[] reflectionWhitelist = new String[] {
             "data.scripts.FleetPresetManagerCoreScript",
@@ -65,7 +62,12 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
 
     @Override
     public void onNewGame() {
-        Global.getSector().getPersistentData().put(MEMORY_KEY, new HashMap<String, PresetUtils.FleetPreset>());
+        Global.getSector().getPersistentData().put(PresetUtils.PRESETS_MEMORY_KEY, new HashMap<String, PresetUtils.FleetPreset>());
+    }
+
+    @Override
+    public void beforeGameSave() {
+        Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.FLEETINFOPANEL_KEY);
     }
 
     // credit for this goes to the author of the code in the officer extension mod

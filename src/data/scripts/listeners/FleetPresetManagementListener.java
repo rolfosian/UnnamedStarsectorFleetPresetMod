@@ -55,7 +55,6 @@ import org.lwjgl.opengl.GL11;
 
 public class FleetPresetManagementListener extends ActionListener {
     public static final Logger logger = Logger.getLogger(FleetPresetManagementListener.class);
-    private static final String MEMORY_KEY = PresetUtils.MEMORY_KEY;
 
     private static final float DISPLAY_WIDTH = (float)Global.getSettings().getScreenWidth();
     private static final float DISPLAY_HEIGHT = (float)Global.getSettings().getScreenHeight();
@@ -110,9 +109,10 @@ public class FleetPresetManagementListener extends ActionListener {
         PositionAPI confirmButtonPosition = confirmButton.getPosition();
         ButtonAPI cancelButton = data.cancelButton.getInstance();
         PositionAPI cancelButtonPosition = cancelButton.getPosition();
+        float cancelButtonWidth = cancelButtonPosition.getWidth();
 
-        CustomPanelAPI customPanel = Global.getSettings().createCustom(cancelButtonPosition.getWidth(), PANEL_HEIGHT, buttonPlugin);
-        TooltipMakerAPI tooltipMaker = customPanel.createUIElement(cancelButtonPosition.getWidth(), PANEL_HEIGHT, true);
+        CustomPanelAPI customPanel = Global.getSettings().createCustom(cancelButtonWidth, PANEL_HEIGHT, buttonPlugin);
+        TooltipMakerAPI tooltipMaker = customPanel.createUIElement(cancelButtonWidth, PANEL_HEIGHT, true);
         buttonPlugin.init(customPanel, tooltipMaker);
 
         theButtons = addTheButtons(tooltipMaker, confirmButtonPosition, cancelButtonPosition);
@@ -121,8 +121,8 @@ public class FleetPresetManagementListener extends ActionListener {
         data.panel.removeComponent(cancelButton);
         this.cancelButton = cancelButton;
 
-        CustomPanelAPI tablePanel = Global.getSettings().createCustom(PANEL_WIDTH, PANEL_HEIGHT, null);
-        TooltipMakerAPI tableTipMaker = tablePanel.createUIElement(PANEL_WIDTH, PANEL_HEIGHT, true);
+        CustomPanelAPI tablePanel = Global.getSettings().createCustom(PANEL_WIDTH - cancelButtonWidth, PANEL_HEIGHT, null);
+        TooltipMakerAPI tableTipMaker = tablePanel.createUIElement(PANEL_WIDTH - cancelButtonWidth, PANEL_HEIGHT, true);
 
         UIPanelAPI table = tableTipMaker.beginTable(c1, c2,
         Misc.getHighlightedOptionColor(), 30f, true, true, 
@@ -351,6 +351,7 @@ public class FleetPresetManagementListener extends ActionListener {
                         openSaveDialog();
                         return;
                     case "restoreButton":
+                        logger.info(selectedPresetName);
                         PresetUtils.restoreFleetFromPreset(selectedPresetName);
                         return;
                     case "storeButton":
