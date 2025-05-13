@@ -7,16 +7,26 @@ import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.characters.*;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.combat.EngagementResultAPI;
+import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 
 import data.scripts.util.PresetUtils;
+
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
 public class DockingListener implements CampaignEventListener {
     public static final Logger logger = Logger.getLogger(DockingListener.class);
 
-    public static boolean isPlayerDocked() {
-        return Global.getSector().getMemoryWithoutUpdate().getBoolean(PresetUtils.PLAYERDOCKED_KEY);
+    public static boolean canPlayerAccessStorage() {
+        MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
+        return (mem.get(PresetUtils.PLAYERCURRENTMARKET_KEY) != null
+                && mem.getBoolean(PresetUtils.ISPLAYERPAIDFORSTORAGE_KEY)) ;
+    }
+    
+    public static boolean isPlayerPaidForStorage(SubmarketPlugin storagePlugin, MemoryAPI mem) {
+        CoreUIAPI coreUI = (CoreUIAPI) mem.get(PresetUtils.COREUI_KEY);
+        return storagePlugin.getOnClickAction(coreUI).equals(SubmarketPlugin.OnClickAction.OPEN_SUBMARKET);
     }
 
     public static MarketAPI getPlayerCurrentMarket() {
@@ -26,15 +36,19 @@ public class DockingListener implements CampaignEventListener {
     @Override
     public void reportPlayerOpenedMarket(MarketAPI market) {
         MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
-        mem.set(PresetUtils.PLAYERDOCKED_KEY, true);
-        mem.set(PresetUtils.PLAYERCURRENTMARKET_KEY, market);
+        boolean isPaidForStorage = isPlayerPaidForStorage(market.getSubmarket(Submarkets.SUBMARKET_STORAGE).getPlugin(), mem);
+        if (isPaidForStorage) {
+            mem.set(PresetUtils.PLAYERCURRENTMARKET_KEY, market);
+            mem.set(PresetUtils.ISPLAYERPAIDFORSTORAGE_KEY, isPaidForStorage);
+        }
     }
 
     @Override
     public void reportPlayerClosedMarket(MarketAPI market) {
         MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
-        mem.unset(PresetUtils.PLAYERDOCKED_KEY);
         mem.unset(PresetUtils.PLAYERCURRENTMARKET_KEY);
+        mem.unset(PresetUtils.ISPLAYERPAIDFORSTORAGE_KEY);
+        PresetUtils.addMessagesToCampaignUI();
     }
 
     public void reportBattleFinished(CampaignFleetAPI primaryWinner, BattleAPI battle) {}

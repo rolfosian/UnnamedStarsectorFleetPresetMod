@@ -75,6 +75,8 @@ public class FleetPanelInjector {
         if (core == null) {
             return null;
         }
+        Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.COREUI_KEY, core);
+
         UIPanelAPI currentTab = (UIPanelAPI) UtilReflection.invokeGetter(core, "getCurrentTab");
         // Since the current tab ID is fleet, this *should* give us the fleet tab.
         // We need to find the field corresponding to the info panel. There's no good way to do this,

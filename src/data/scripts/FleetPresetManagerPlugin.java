@@ -6,6 +6,7 @@ import com.fs.starfarer.api.BaseModPlugin;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.campaign.CampaignEventListener;
+import com.fs.starfarer.api.fleet.FleetMemberAPI;
 
 import data.scripts.util.PresetUtils;
 import data.scripts.util.UtilReflection;
@@ -45,7 +46,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
             throw new RuntimeException("Failed to get URL of this class", e);
         }
 
-        Global.getSector().getMemoryWithoutUpdate().set("$playerDocked", false);
+        Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.MESSAGEQUEUE_KEY, new ArrayList<>());
 
         @SuppressWarnings("resource")
         ClassLoader cl = new ReflectionEnabledClassLoader(url, getClass().getClassLoader());
@@ -68,6 +69,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
     @Override
     public void beforeGameSave() {
         Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.FLEETINFOPANEL_KEY);
+        Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.COREUI_KEY);
     }
 
     // credit for this goes to the author of the code in the officer extension mod

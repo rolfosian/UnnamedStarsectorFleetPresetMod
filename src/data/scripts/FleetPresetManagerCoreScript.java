@@ -31,7 +31,6 @@ import org.apache.log4j.Logger;
 public class FleetPresetManagerCoreScript implements EveryFrameScript {
 
     private final Logger log = Logger.getLogger(this.getClass());
-    private static String PRESETS_MEMORY_KEY = PresetUtils.PRESETS_MEMORY_KEY;
 
     private static PresetUtils.FleetPreset currentFleetPreset;
 
