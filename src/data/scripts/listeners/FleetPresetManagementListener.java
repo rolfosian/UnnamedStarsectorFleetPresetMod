@@ -351,21 +351,15 @@ public class FleetPresetManagementListener extends ActionListener {
         }
     }
 
-    public class DeleteListener extends DialogDismissedListener {
+   public class DeleteListener extends DialogDismissedListener {
         @Override
         public void trigger(Object... args) {
             int option = (int) args[1];
     
             if (option == 0) {
                 // confirm
-                print("DELETING");
-                print("-------------------");
-                
                 PresetUtils.deleteFleetPreset(selectedPresetName);
-                // currentPresetsNum--;
-            
                 
-            
                 if (currentPresetsNum == 1) {
                     disableButtonsRequiringSelection();
                     selectedRowIndex = -1;
@@ -377,32 +371,28 @@ public class FleetPresetManagementListener extends ActionListener {
                 if (tableUp) {
                     tableRowListeners.remove(selectedRowIndex);
                     selectedRowIndex--;
-                    selectedPresetName = tableRowListeners.get(selectedRowIndex).rowName;
+                    if (selectedRowIndex >= 0) {
+                        selectedPresetName = tableRowListeners.get(selectedRowIndex).rowName;
+                    } else if (!tableRowListeners.isEmpty()) {
+                        selectedRowIndex = 0;
+                        selectedPresetName = tableRowListeners.get(0).rowName;
+                    }
+                    rebuild = true; 
+                    return;
+                } else {
+                    int actualIndex = tableRowListeners.size() - selectedRowIndex - 1;
+                    tableRowListeners.remove(actualIndex);
+                    
+                    if (tableRowListeners.isEmpty()) {
+                        selectedRowIndex = -1;
+                        selectedPresetName = EMPTY_STRING;
+                    } else {
+                        selectedRowIndex = Math.min(selectedRowIndex, tableRowListeners.size() - 1);
+                        selectedPresetName = tableRowListeners.get(tableRowListeners.size() - selectedRowIndex - 1).rowName;
+                        enableButtonsRequiringSelection();
+                    }
                     rebuild = true;
                     return;
-
-                } else { // indexing is reversed
-                    // selectedRowIndex--;
-                    if (currentPresetsNum == 2) {
-                        tableRowListeners.remove(1);
-                        selectedRowIndex = 0;
-                        selectedPresetName = tableRowListeners.get(selectedRowIndex).rowName;
-                        rebuild = true;
-                        return;
-                    }
-                    
-                    try {
-                        int deletedIndex = getTableMapIndex(selectedPresetName);
-                        tableRowListeners.remove(tableRowListeners.size() - deletedIndex - 1);
-                        selectedPresetName = tableRowListeners.get(tableRowListeners.size() - deletedIndex - 1 ).rowName;
-                        rebuild = true; 
-                    } catch (Exception e) {
-                        tableRowListeners.remove(tableRowListeners.size() - selectedRowIndex);
-                        selectedPresetName = tableRowListeners.get(tableRowListeners.size() - selectedRowIndex).rowName;
-                        selectedRowIndex--;
-                        rebuild = true;
-                    }
-
                 }
             } else if (option == 1) {
                 // cancel
