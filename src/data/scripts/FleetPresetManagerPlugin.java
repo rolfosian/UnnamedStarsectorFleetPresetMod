@@ -6,6 +6,7 @@ import com.fs.starfarer.api.BaseModPlugin;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.campaign.CampaignEventListener;
+import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 
 import data.scripts.util.PresetUtils;
@@ -68,8 +69,11 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
 
     @Override
     public void beforeGameSave() {
-        Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.FLEETINFOPANEL_KEY);
-        Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.COREUI_KEY);
+        MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
+        // required or else game catches exception about reflection during load and kicks this stuff from the save
+        // its just smoother this way (its not actually a big deal i just dont like the look of the double loading info) 
+        mem.unset(PresetUtils.FLEETINFOPANEL_KEY);
+        mem.unset(PresetUtils.COREUI_KEY);
     }
 
     // credit for this goes to the author of the code in the officer extension mod

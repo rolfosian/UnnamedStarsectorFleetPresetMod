@@ -18,16 +18,10 @@ import org.apache.log4j.Logger;
 public class DockingListener implements CampaignEventListener {
     public static final Logger logger = Logger.getLogger(DockingListener.class);
 
-    public static boolean canPlayerAccessStorage() {
-        MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
-        return (mem.get(PresetUtils.PLAYERCURRENTMARKET_KEY) != null
-                && mem.getBoolean(PresetUtils.ISPLAYERPAIDFORSTORAGE_KEY)) ;
+    public static boolean canPlayerAccessStorage(MarketAPI market) {
+        return (market != null && PresetUtils.isPlayerPaidForStorage(market.getSubmarket(Submarkets.SUBMARKET_STORAGE).getPlugin()));
     }
-    
-    public static boolean isPlayerPaidForStorage(SubmarketPlugin storagePlugin, MemoryAPI mem) {
-        CoreUIAPI coreUI = (CoreUIAPI) mem.get(PresetUtils.COREUI_KEY);
-        return storagePlugin.getOnClickAction(coreUI).equals(SubmarketPlugin.OnClickAction.OPEN_SUBMARKET);
-    }
+
 
     public static MarketAPI getPlayerCurrentMarket() {
         return (MarketAPI) Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY);
@@ -36,11 +30,7 @@ public class DockingListener implements CampaignEventListener {
     @Override
     public void reportPlayerOpenedMarket(MarketAPI market) {
         MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
-        boolean isPaidForStorage = isPlayerPaidForStorage(market.getSubmarket(Submarkets.SUBMARKET_STORAGE).getPlugin(), mem);
-        if (isPaidForStorage) {
-            mem.set(PresetUtils.PLAYERCURRENTMARKET_KEY, market);
-            mem.set(PresetUtils.ISPLAYERPAIDFORSTORAGE_KEY, isPaidForStorage);
-        }
+        mem.set(PresetUtils.PLAYERCURRENTMARKET_KEY, market);
     }
 
     @Override
