@@ -63,14 +63,6 @@ import org.lwjgl.opengl.GL11;
 
 public class FleetPresetManagementListener extends ActionListener {
     public static final Logger logger = Logger.getLogger(FleetPresetManagementListener.class);
-    private void print(Object... args) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < args.length; i++) {
-            sb.append(args[i] instanceof String ? (String) args[i] : String.valueOf(args[i]));
-            if (i < args.length - 1) sb.append(' ');
-        }
-        logger.info(sb.toString());
-    }
 
     private static final int DISPLAY_WIDTH = (int)Global.getSettings().getScreenWidth();
     private static final int DISPLAY_HEIGHT = (int)Global.getSettings().getScreenHeight();
@@ -94,125 +86,133 @@ public class FleetPresetManagementListener extends ActionListener {
     // NAME_COLUMN_WIDTH_DIVISOR = 3.8f;
     // SHIP_COLUMN_WIDTH_DIVISOR = 1.8f;
 
+    // private static finalMap<Double, Runnable>
+
     static {
-        switch(DISPLAY_WIDTH) {
-            // most common 16:9 widths first
 
-            case 1920:
-                CONFIRM_DIALOG_WIDTH_DIVISOR = 3.3f;
-                CONFIRM_DIALOG_HEIGHT_DIVISOR = 2f;
-                PANEL_WIDTH_SUBTRACTOR = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
-                PANEL_HEIGHT_SUBTRACTOR = (DISPLAY_HEIGHT / 100 * 1.4f);
+        double ratio = (double)DISPLAY_HEIGHT / (double)DISPLAY_WIDTH;
+        double epsilon = 1e-6;
+        boolean is169 = Math.abs(ratio - 0.5625) < epsilon;
 
-                NAME_COLUMN_WIDTH_DIVISOR = 3.8f;
-                SHIP_COLUMN_WIDTH_DIVISOR = 1.8f;
-                // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
-                // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
+        // If 16:9
+        if (is169) {
+            switch(DISPLAY_WIDTH) {
+                case 1920:
+                    CONFIRM_DIALOG_WIDTH_DIVISOR = 3.3f;
+                    CONFIRM_DIALOG_HEIGHT_DIVISOR = 2f;
+                    PANEL_WIDTH_SUBTRACTOR = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
+                    PANEL_HEIGHT_SUBTRACTOR = (DISPLAY_HEIGHT / 100 * 1.3f);
 
-                SHIPLIST_Y_OFFSET_MULTIPLIER = 0.25f;
-                SHIPLIST_SCALE = 0.9f;
-                break;
+                    NAME_COLUMN_WIDTH_DIVISOR = 3.8f;
+                    SHIP_COLUMN_WIDTH_DIVISOR = 1.8f;
+                    // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+                    // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
 
-            case 2560:
-                CONFIRM_DIALOG_WIDTH_DIVISOR = 3.8f;
-                CONFIRM_DIALOG_HEIGHT_DIVISOR = 2.9f;
-                PANEL_WIDTH_SUBTRACTOR = (DISPLAY_WIDTH / 100 * 0.62f) - 5f;
-                PANEL_HEIGHT_SUBTRACTOR = (DISPLAY_HEIGHT / 100 * 1.4f);
+                    SHIPLIST_Y_OFFSET_MULTIPLIER = 0.42f;
+                    SHIPLIST_SCALE = 0.9f;
+                    break;
+                    
+                case 2560:
+                    CONFIRM_DIALOG_WIDTH_DIVISOR = 3.8f;
+                    CONFIRM_DIALOG_HEIGHT_DIVISOR = 2.9f;
+                    PANEL_WIDTH_SUBTRACTOR = (DISPLAY_WIDTH / 100 * 0.62f) - 5f;
+                    PANEL_HEIGHT_SUBTRACTOR = (DISPLAY_HEIGHT / 100 * 1.4f);
 
-                NAME_COLUMN_WIDTH_DIVISOR = 3.8f;
-                SHIP_COLUMN_WIDTH_DIVISOR = 1.8f;
-                // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
-                // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
+                    NAME_COLUMN_WIDTH_DIVISOR = 3.8f;
+                    SHIP_COLUMN_WIDTH_DIVISOR = 1.8f;
+                    // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+                    // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
 
-                SHIPLIST_Y_OFFSET_MULTIPLIER = 0.25f;
-                SHIPLIST_SCALE = 0.9f;
-                break;
+                    SHIPLIST_Y_OFFSET_MULTIPLIER = 0.25f;
+                    SHIPLIST_SCALE = 0.9f;
+                    break;
 
-            // TODO
-            case 3840:
-                CONFIRM_DIALOG_WIDTH_DIVISOR = 3.3f;
-                CONFIRM_DIALOG_HEIGHT_DIVISOR = 2f;
-                PANEL_WIDTH_SUBTRACTOR = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
-                PANEL_HEIGHT_SUBTRACTOR = (DISPLAY_HEIGHT / 100 * 1.4f);
-
-                NAME_COLUMN_WIDTH_DIVISOR = 3.8f;
-                SHIP_COLUMN_WIDTH_DIVISOR = 1.8f;
-                // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
-                // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
-
-                SHIPLIST_Y_OFFSET_MULTIPLIER = 0.25f;
-                SHIPLIST_SCALE = 1.2f;
-                break;
-            
-            // outlier widths
-            default:
                 // TODO
-                // 1366x768 1360x768 ITS 6 PIXELS SURELY THEY DONT NEED SEPARATE CONDITIONS
-                // if (DISPLAY_WIDTH == 1366 || DISPLAY_WIDTH == 1360) {
-                //     break;
-                // }
+                case 3840:
+                    CONFIRM_DIALOG_WIDTH_DIVISOR = 3.3f;
+                    CONFIRM_DIALOG_HEIGHT_DIVISOR = 2f;
+                    PANEL_WIDTH_SUBTRACTOR = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
+                    PANEL_HEIGHT_SUBTRACTOR = (DISPLAY_HEIGHT / 100 * 1.4f);
 
-                // double ratio = (double)DISPLAY_HEIGHT / (double)DISPLAY_WIDTH;
-                // double epsilon = 1e-6;
+                    NAME_COLUMN_WIDTH_DIVISOR = 3.8f;
+                    SHIP_COLUMN_WIDTH_DIVISOR = 1.8f;
+                    // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+                    // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
 
-                // // 1600x900
-                // if (Math.abs(ratio - 0.5625) < epsilon && DISPLAY_WIDTH == 1600) {
+                    SHIPLIST_Y_OFFSET_MULTIPLIER = 0.25f;
+                    SHIPLIST_SCALE = 1.2f;
+                    break;
 
-                //     break;
+                // TODO 1600x900
+                default:
+                    CONFIRM_DIALOG_WIDTH_DIVISOR = 3.3f;
+                    CONFIRM_DIALOG_HEIGHT_DIVISOR = 2f;
+                    PANEL_WIDTH_SUBTRACTOR = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
+                    PANEL_HEIGHT_SUBTRACTOR = (DISPLAY_HEIGHT / 100 * 1.4f);
 
-                // // 1280x800 1440x900 1680x1050  2560x1600
-                // } else if (Math.abs(ratio - 0.625) < epsilon) {
-                //     switch(DISPLAY_WIDTH) {
-                //         case 1280:
-                //             break;
+                    NAME_COLUMN_WIDTH_DIVISOR = 3.8f;
+                    SHIP_COLUMN_WIDTH_DIVISOR = 1.8f;
+                    // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+                    // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
+
+                    SHIPLIST_Y_OFFSET_MULTIPLIER = 0.25f;
+                    SHIPLIST_SCALE = 1.2f;
+                    break;
+            }
+        } else {            
+                //TODO outlier widths
+                //1366x768 1360x768 ITS 6 PIXELS SURELY THEY DONT NEED SEPARATE CONDITIONS
+                if (DISPLAY_WIDTH == 1366 || DISPLAY_WIDTH == 1360) {
+
+                // 1280x800 1440x900 1680x1050  2560x1600
+                } else if (Math.abs(ratio - 0.625) < epsilon) {
+                    switch(DISPLAY_WIDTH) {
+                        case 1280:
+                            break;
                             
-                //         case 1440:
-                //             break;
+                        case 1440:
+                            break;
                             
-                //         case 1680:
-                //             break;
+                        case 1680:
+                            break;
 
-                //         case 2560:
-                //             break;
-                //     }
-                //     break;
+                        case 2560:
+                            break;
+                    }
 
-                // // 1280x768
-                // } else if (Math.abs(ratio - 0.6) < epsilon) {
+                // 1280x768
+                } else if (Math.abs(ratio - 0.6) < epsilon) {
 
-                //     break;
                 
-                // // 1600x1024
-                // } else if (Math.abs(ratio - 0.64) < epsilon) {
+                // 1600x1024
+                } else if (Math.abs(ratio - 0.64) < epsilon) {
 
-                //     break;
 
-                // // 1280x960 2048x1536 1600x1200
-                // } else if (Math.abs(ratio - 0.75) < epsilon) {
-                //     break;
+                // 1280x960 2048x1536 1600x1200
+                } else if (Math.abs(ratio - 0.75) < epsilon) {
 
-                // // 1280x1024 
-                // } else if (Math.abs(ratio - 0.8) < epsilon) {
-                //     break;
 
-                // // 2048x1080
-                // } else if (Math.abs(ratio - 0.52734375) < epsilon) {
-                //     break;
-                // }
+                // 1280x1024 
+                } else if (Math.abs(ratio - 0.8) < epsilon) {
 
-                // fallback using 1080p values
+                // 2048x1080
+                } else if (Math.abs(ratio - 0.52734375) < epsilon) {
+
+                }
                 CONFIRM_DIALOG_WIDTH_DIVISOR = 2.8f;
                 CONFIRM_DIALOG_HEIGHT_DIVISOR = 2f;
+
                 PANEL_WIDTH_SUBTRACTOR = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
                 PANEL_HEIGHT_SUBTRACTOR = (DISPLAY_HEIGHT / 100 * 1.4f);
+
                 NAME_COLUMN_WIDTH_DIVISOR = 3.8f;
                 SHIP_COLUMN_WIDTH_DIVISOR = 1.8f;
 
                 SHIPLIST_Y_OFFSET_MULTIPLIER = 0.25f;
                 SHIPLIST_SCALE = 0.9f;
-
-                break;
             }
+            
+        
             
 
     
@@ -426,7 +426,7 @@ public class FleetPresetManagementListener extends ActionListener {
             @Override 
             public void processInput(List<InputEventAPI> events) {
                 for (InputEventAPI event : events) {
-                    if (event.isKeyDownEvent() && (Keyboard.isKeyDown(Keyboard.KEY_RETURN) || Keyboard.isKeyDown(Keyboard.KEY_NUMPADENTER)) && saveNameField.hasFocus()) {
+                    if (event.isKeyDownEvent() && (Keyboard.isKeyDown(Keyboard.KEY_RETURN) || Keyboard.isKeyDown(Keyboard.KEY_NUMPADENTER))) {
                         MiscUtils.pressKey(Keyboard.KEY_RETURN);
                     }
                 }
@@ -568,8 +568,6 @@ public class FleetPresetManagementListener extends ActionListener {
         @Override
         public void processInput(List<InputEventAPI> arg0) {
             for (InputEventAPI event : arg0) {
-            //     if (event.isMouseScrollEvent()) {
-            //     }
             //     if (event.isMouseMoveEvent()) {
             //         int mouseX = event.getX();
             //         int mouseY = event.getY();

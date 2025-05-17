@@ -36,6 +36,10 @@ import org.apache.log4j.Logger;
 public class PresetUtils {
     public static final Logger logger = Logger.getLogger(PresetUtils.class);
 
+    public static void print(Object... args) {
+        MiscUtils.print(args);
+    }
+
     public static final String PRESETS_MEMORY_KEY = "$player_fleet_presets";
     public static final String FLEETINFOPANEL_KEY = "$fleetInfoPanel";
     public static final String PLAYERCURRENTMARKET_KEY = "$playerCurrentMarket";
@@ -168,20 +172,123 @@ public class PresetUtils {
 
     public static void initMothballedShips(CargoAPI storageCargo) {
         for (FactionAPI faction : Global.getSector().getAllFactions()) {
-            // i dont know what this does but the javadocs say to do it before calling getmothballedships and i think it stopped some crashing
+            // i dont know what this does but the javadocs say to do it before calling getmothballedships and i think it stopped some crashing?
             storageCargo.initMothballedShips(faction.getId());
         }
     }
 
-    public static boolean isPlayerFleetAPreset() {
-        // TODO implement
+    // needs testing
+    public static boolean isPlayerFleetAPreset(List<FleetMemberAPI> playerFleetMembers) {
+        Map<String, FleetPreset> presets = getFleetPresets();
+        
+        for (FleetPreset preset : presets.values()) {
+            if (playerFleetMembers.size() != preset.shipIds.size()) {
+                continue;
+            }
+
+            Map<String, Integer> matchedShips = new HashMap<>();
+            boolean allShipsMatched = true;
+
+            for (FleetMemberAPI playerMember : playerFleetMembers) {
+                String hullId = playerMember.getHullId();
+                ShipVariantAPI variant = playerMember.getVariant();
+                PersonAPI captain = playerMember.getCaptain();
+
+                matchedShips.put(hullId, matchedShips.getOrDefault(hullId, 0) + 1);
+                int count = matchedShips.get(hullId);
+
+
+                List<ShipVariantAPI> presetVariants = preset.variantsMap.get(hullId);
+                if (presetVariants == null || count > presetVariants.size()) {
+                    allShipsMatched = false;
+                    break;
+                }
+
+                boolean variantMatched = false;
+                for (ShipVariantAPI presetVariant : presetVariants) {
+                    if (areSameVariant(presetVariant, variant)) {
+
+                        if (preset.officersMap.containsKey(hullId)) {
+                            List<OfficerVariantPair> pairs = preset.officersMap.get(hullId);
+                            boolean officerMatched = false;
+                            for (OfficerVariantPair pair : pairs) {
+                                if (areSameVariant(pair.variant, variant)) {
+                                    if (captain != null && pair.officer.getId().equals(captain.getId())) {
+                                        officerMatched = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!officerMatched) {
+                                allShipsMatched = false;
+                                break;
+                            }
+                        }
+                        variantMatched = true;
+                        break;
+                    }
+                }
+                if (!variantMatched) {
+                    allShipsMatched = false;
+                    break;
+                }
+            }
+
+            if (allShipsMatched) {
+                return true;
+            }
+        }
         return false;
     }
 
-    // public static boolean isPresetAvailableAtCurrentMarket(MarketAPI market, String presetName) {
-    //     FleetPreset preset = getFleetPresets().get(presetName);
-    //     return false;
-    // }
+    // needs testing
+    public static boolean isPresetAvailableAtCurrentMarket(MarketAPI market, String presetName) {
+        FleetPreset preset = getFleetPresets().get(presetName);
+        if (preset == null) return false;
+
+        SubmarketAPI storage = market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
+        if (storage == null) return false;
+
+        SubmarketPlugin storagePlugin = storage.getPlugin();
+        if (!isPlayerPaidForStorage(storagePlugin)) return false;
+
+        CargoAPI storageCargo = storage.getCargo();
+        initMothballedShips(storageCargo);
+        FleetDataAPI mothballedShipsFleetData = storageCargo.getMothballedShips();
+
+        Map<String, Integer> requiredShips = new HashMap<>();
+        for (String hullId : preset.shipIds) {
+            requiredShips.put(hullId, requiredShips.getOrDefault(hullId, 0) + 1);
+        }
+
+        Map<String, Integer> foundShips = new HashMap<>();
+
+        for (FleetMemberAPI storedMember : mothballedShipsFleetData.getMembersInPriorityOrder()) {
+            String hullId = storedMember.getHullId();
+            
+            if (!requiredShips.containsKey(hullId)) continue;
+
+            if (foundShips.getOrDefault(hullId, 0) >= requiredShips.get(hullId)) continue;
+
+            List<ShipVariantAPI> presetVariants = preset.variantsMap.get(hullId);
+            if (presetVariants == null) continue;
+
+            for (ShipVariantAPI presetVariant : presetVariants) {
+                if (areSameVariant(presetVariant, storedMember.getVariant())) {
+                    foundShips.put(hullId, foundShips.getOrDefault(hullId, 0) + 1);
+                    break;
+                }
+            }
+        }
+
+        for (Map.Entry<String, Integer> entry : requiredShips.entrySet()) {
+            if (foundShips.getOrDefault(entry.getKey(), 0) < entry.getValue()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     // should only be called if preset has no officers
     // needs testing
@@ -335,10 +442,12 @@ public class PresetUtils {
         if (market == null) return;
 
         SubmarketAPI storage = market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
+        CargoPresetUtils.CargoResourceRatios cargoRatios = CargoPresetUtils.getCargoResourceRatios(playerFleet.getFleetData().getMembersInPriorityOrder(), playerFleet.getCargo());
         SubmarketPlugin storagePlugin = storage.getPlugin();
         if (!isPlayerPaidForStorage(storagePlugin)) return;
         
         CargoAPI storageCargo = storage.getCargo();
+        CargoAPI playerCargo = playerFleet.getCargo();
         initMothballedShips(storageCargo);
         
         FleetDataAPI playerFleetData = playerFleet.getFleetData();
@@ -354,6 +463,7 @@ public class PresetUtils {
             mothballedShipsFleetData.addFleetMember(member);
         }
         refreshFleetUI();
+        CargoPresetUtils.equalizeCargo(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder(), storageCargo, playerCargo, cargoRatios);
     }
 
     public static boolean isMemberInFleet(FleetDataAPI fleetData, FleetMemberAPI memberToCheck) {
@@ -460,6 +570,7 @@ public class PresetUtils {
 
     // TODO make D/SMOD AGNOSTIC SETTINGS, FRESH HULLS? 
     // WHAT IF PLAYER ACTUALLY /WANTS/ VERY SPECIFIC DMOD/OFFICER VARIANTS?
+    @SuppressWarnings("unchecked")
     public static void restoreFleetFromPreset(String name) {
         CampaignFleetAPI playerFleet = Global.getSector().getPlayerFleet();
         MarketAPI market = getPlayerCurrentMarket();
@@ -474,9 +585,12 @@ public class PresetUtils {
         initMothballedShips(storageCargo);
         
         FleetDataAPI playerFleetData = playerFleet.getFleetData();
+        List<FleetMemberAPI> playerFleetMembers = playerFleet.getFleetData().getMembersInPriorityOrder();
+
+        CargoPresetUtils.CargoResourceRatios cargoRatios = CargoPresetUtils.getCargoResourceRatios(playerFleetMembers, playerCargo);
         FleetMemberAPI playerFleetMember = getPlayerFleetMemberCopy(playerFleetData);
 
-        for (FleetMemberAPI member : playerFleetData.getMembersInPriorityOrder()) {
+        for (FleetMemberAPI member : playerFleetMembers) {
             if (member.getCaptain() != null) {
                 member.setCaptain(null);
             }
@@ -511,7 +625,7 @@ public class PresetUtils {
 
                                     storageCargo.getMothballedShips().removeFleetMember(storedMember);
                                     membersDone.add(storedMember);
-                                    CargoPresetUtils.refit(storedMember, variant, playerCargo, storageCargo);
+                                    // CargoPresetUtils.refit(storedMember, variant, playerCargo, storageCargo);
 
                                     doneofficers.add(pair.officer.getId());
                                     officerVariantFound = true;
@@ -528,7 +642,7 @@ public class PresetUtils {
                         if (areSameVariant(variant, storedMember.getVariant())) {
                             storageCargo.getMothballedShips().removeFleetMember(storedMember);
                             membersDone.add(storedMember);
-                            CargoPresetUtils.refit(storedMember, variant, playerCargo, storageCargo);
+                            // CargoPresetUtils.refit(storedMember, variant, playerCargo, storageCargo);
                             found++;
 
                             membersDone.add(storedMember);
@@ -562,6 +676,7 @@ public class PresetUtils {
             }
         }
 
+        CargoPresetUtils.equalizeCargo(playerFleetData.getMembersInPriorityOrder(), playerCargo, storageCargo, cargoRatios);
         refreshFleetUI();
 
         if (allFound) {

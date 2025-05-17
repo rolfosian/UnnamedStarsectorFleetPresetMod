@@ -11,11 +11,16 @@ import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.loading.WeaponGroupSpec;
 import com.fs.starfarer.api.loading.WeaponSlotAPI;
 
+import java.lang.reflect.Method;
 import java.util.*;
 import org.apache.log4j.Logger;
 
 public class CargoPresetUtils {
     private static Logger logger = Logger.getLogger(CargoPresetUtils.class);
+
+    public static void print(Object... args) {
+        MiscUtils.print(args);
+    }
 
     public static boolean playerKnowsHullmod(String modId) {
         return Global.getSector().getCharacterData().knowsHullMod(modId);
@@ -42,6 +47,12 @@ public class CargoPresetUtils {
             storageCargo.addFighters(wing, 1);
         }
         variant.clear();
+    }
+
+    public static void stripAllToStorage(List<FleetMemberAPI> fleetMembers, CargoAPI storageCargo) {
+        for (FleetMemberAPI member : fleetMembers) {
+            stripToStorage(member.getVariant(), storageCargo);
+        }
     }
 
     // manual implementation for refit because FleetMemberAPI.setvariant materializes weapons and fighters out of thin air and simply overwrites and i couldnt find any other avenue, someone please let me know if there's a better way
@@ -122,5 +133,104 @@ public class CargoPresetUtils {
         }
         targetMember.setVariant(targetVariant, false, false);
     }
-    // TODO implementation to keep supply/fuel/crew ratio relative to fleet preset consumption
+
+    public static class CargoResourceRatios {
+        public float rawCrewRatio;
+        public float crewToMarinesRatio;
+        public float fuelRatio;
+        public float supplyRatio;
+        public float totalNeededCrewToMaxPersonnelRatio;
+
+        public CargoResourceRatios(float rawCrewRatio, float crewToMarinesRatio, float fuelRatio, float supplyRatio, float totalNeededCrewToMaxPersonnelRatio) {
+            this.rawCrewRatio = rawCrewRatio;
+            this.crewToMarinesRatio = crewToMarinesRatio;
+            this.fuelRatio = fuelRatio;
+            this.supplyRatio = supplyRatio;
+            this.totalNeededCrewToMaxPersonnelRatio = totalNeededCrewToMaxPersonnelRatio;
+        }
+    }
+
+    public static CargoResourceRatios getCargoResourceRatios(List<FleetMemberAPI> fleetMembers, CargoAPI playerCargo) {
+        float totalCrew = playerCargo.getCrew();
+        float totalMarines = playerCargo.getMarines();
+        float maxPersonnel = playerCargo.getMaxPersonnel();
+        float supplies = playerCargo.getSupplies();
+        float cargoCapacity = playerCargo.getMaxCapacity();
+        float fuel = playerCargo.getFuel();
+        float maxFuel = playerCargo.getMaxFuel();
+
+        float totalNeededCrew = 0f;
+
+        for (FleetMemberAPI member : fleetMembers) {
+            totalNeededCrew += member.getNeededCrew();
+        }
+
+        float totalNeededCrewToMaxPersonnelRatio = totalNeededCrew / maxPersonnel;
+
+        float crewToMarinesRatio = totalMarines / totalCrew;
+        float rawCrewRatio = totalCrew / maxPersonnel;
+        float fuelRatio = fuel / maxFuel;
+        float supplyRatio = supplies / cargoCapacity;
+
+        return new CargoResourceRatios(rawCrewRatio, crewToMarinesRatio, fuelRatio, supplyRatio, totalNeededCrewToMaxPersonnelRatio);
+    }
+
+    public static void equalizeCargo(List<FleetMemberAPI> fleetMembers, CargoAPI storageCargo, CargoAPI playerCargo, CargoResourceRatios previousCargoRatios) {
+        float maxPersonnel = playerCargo.getMaxPersonnel();
+        float playerCargoCapacity = playerCargo.getMaxCapacity();
+        float maxFuel = playerCargo.getMaxFuel();
+        
+        storageCargo.addAll(playerCargo);
+        playerCargo.clear();
+
+        float storageFuel = storageCargo.getFuel();
+        float storageSupplies = storageCargo.getSupplies();
+        float storageCrew = storageCargo.getCrew();
+
+        // minimum fuel is 20% of max fuel
+        float desiredFuel = Math.max(maxFuel * previousCargoRatios.fuelRatio, maxFuel * 0.2f);
+        float actualFuel = Math.min(desiredFuel, storageFuel);
+        Global.getSector().getPlayerFleet().getCargo().addFuel(actualFuel);
+        storageCargo.removeFuel(actualFuel);
+
+        // minimum supplies is 20% of cargo capacity
+        float desiredSupplies = Math.max(playerCargoCapacity * previousCargoRatios.supplyRatio, playerCargoCapacity * 0.2f);
+        float actualSupplies = Math.min(desiredSupplies, storageSupplies);
+        playerCargo.addSupplies(actualSupplies);
+        storageCargo.removeSupplies(actualSupplies);
+        
+        float newNeededCrew = 0f;
+        for (FleetMemberAPI member : fleetMembers) {
+            newNeededCrew += member.getNeededCrew();
+        }
+
+        float baseCrew = Math.max(maxPersonnel * previousCargoRatios.rawCrewRatio, newNeededCrew * 1.1f);
+        float totalCrew = Math.max(baseCrew, newNeededCrew);
+        float totalMarines = 0f;
+        
+        if (previousCargoRatios.crewToMarinesRatio > 0) {
+            totalMarines = totalCrew * previousCargoRatios.crewToMarinesRatio;
+            totalCrew -= totalMarines;
+        }
+
+        float actualCrew = Math.min(totalCrew, storageCrew);
+        playerCargo.addCrew((int)actualCrew);
+        storageCargo.removeCrew((int)actualCrew);
+        
+        if (totalMarines > 0) {
+            float storageMarines = storageCargo.getMarines();
+            float actualMarines = Math.min(totalMarines, storageMarines);
+
+            playerCargo.addMarines((int)actualMarines);
+            storageCargo.removeMarines((int)actualMarines);
+        }
+    }
+
+    public static void refitAllHullsOfIdInFleetWithVariant(String hullId, ShipVariantAPI variant, List<FleetMemberAPI> fleetMembers, CargoAPI playerCargo, CargoAPI storageCargo) {
+        for (FleetMemberAPI member : fleetMembers) {
+            if (member.getHullId().equals(hullId)) {
+                refit(member, variant, playerCargo, storageCargo);
+            }
+        }
+    }
 }

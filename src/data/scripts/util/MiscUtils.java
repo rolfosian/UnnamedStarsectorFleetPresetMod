@@ -4,8 +4,12 @@ import java.util.*;
 import java.awt.Robot;
 import java.awt.AWTException;
 import java.awt.event.InputEvent;
+import org.apache.log4j.Logger;
+import com.fs.starfarer.api.Global;
 
 public class MiscUtils {
+    private static final Logger logger = Global.getLogger(MiscUtils.class);
+    
     public static void clickAt(float x, float y) {
         try {
             Robot robot = new Robot();
@@ -74,4 +78,14 @@ public class MiscUtils {
     
         return sortedMap;
     }
+
+    public static void print(Object... args) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < args.length; i++) {
+            sb.append(args[i] instanceof String ? (String) args[i] : String.valueOf(args[i]));
+            if (i < args.length - 1) sb.append(' ');
+        }
+        logger.info(sb.toString());
+    }
+
 }
