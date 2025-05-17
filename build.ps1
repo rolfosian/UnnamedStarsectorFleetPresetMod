@@ -69,8 +69,8 @@ if ($LASTEXITCODE -eq 0) {
         $cwd = Get-Location; 
         if ($LASTEXITCODE -eq 0) {
             echo "Starting starsector.exe"
-             Set-Location C:\Starsector; .\starsector.exe; Set-Location $cwd; rm -r build
-             }
+            Set-Location C:\Starsector; .\starsector.exe; Set-Location $cwd; rm -r build
+        }
     } else {
         Write-Host "JAR creation failed!" -ForegroundColor Red; rm -r build
     }

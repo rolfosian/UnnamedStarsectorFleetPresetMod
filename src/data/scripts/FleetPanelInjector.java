@@ -49,9 +49,10 @@ public class FleetPanelInjector {
 
             Button officerAutoAssignButton = new Button(getAutoAssignButton(fleetInfoPanel));
             PositionAPI officerAutoAssignButtonPosition = officerAutoAssignButton.getPosition();
+            float officerAutoAssignButtonHeight = officerAutoAssignButtonPosition.getHeight();
 
             presetFleetsButton = UtilReflection.makeButton(
-                    "   Preset Fleets Management",
+                    "   Fleet Presets Management",
                     new FleetPresetManagementListener(),
                     Misc.getBasePlayerColor(),
                     Misc.getDarkPlayerColor(),
@@ -59,11 +60,12 @@ public class FleetPanelInjector {
                     CutStyle.BL_TR,
                     officerAutoAssignButtonPosition.getWidth(),
                     officerAutoAssignButtonPosition.getHeight(),
-                    Keyboard.KEY_P);
+                    Keyboard.KEY_A);
             UIPanel presetFleetsButtonPanel = new UIPanel(fleetInfoPanel);
-            new UIPanel(fleetInfoPanel).add(presetFleetsButton);
+            new UIPanel(fleetInfoPanel).add(presetFleetsButton).set(officerAutoAssignButtonPosition);
             PositionAPI presetFleetsButtonPosition = presetFleetsButton.getPosition();
-            presetFleetsButtonPosition.setXAlignOffset(-0.25f);
+            // presetFleetsButtonPosition.setXAlignOffset(-0.25f);
+            presetFleetsButtonPosition.setYAlignOffset(-officerAutoAssignButtonHeight * 1.55f);
         }
     }
 

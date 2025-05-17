@@ -13,6 +13,7 @@ import java.lang.invoke.MethodType;
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
+import java.lang.reflect.Field;
 
 import org.apache.log4j.Logger;
 
@@ -150,7 +151,14 @@ public class ReflectionUtilis {
         try {
             for (Object method : instance.getClass().getMethods()) {
                 logger.info("---------------------------------------------");
-                logger.info(getMethodNameHandle.invoke(method));
+                String methodName = (String) getMethodNameHandle.invoke(method);
+                Class<?>[] paramTypes = (Class<?>[]) getParameterTypesHandle.invoke(method);
+                StringBuilder paramString = new StringBuilder();
+                for (Class<?> paramType : paramTypes) {
+                    if (paramString.length() > 0) paramString.append(", ");
+                    paramString.append(paramType.getSimpleName());
+                }
+                logger.info(methodName + "(" + paramString.toString() + ")");
             }
         } catch (Throwable e) {
             logger.info("Error logging methods: ", e);
@@ -470,5 +478,18 @@ public class ReflectionUtilis {
 
     public static List<UIComponentAPI> getChildren(UIPanelAPI panelAPI) {
         return ReflectionUtilis.getChildrenCopy(panelAPI);
+    }
+
+    public static void logFields(Object instance) {
+        try {
+            for (Object field : instance.getClass().getFields()) {
+                logger.info("---------------------------------------------");
+                String fieldName = (String) getFieldNameHandle.invoke(field);
+                Class<?> fieldType = (Class<?>) getFieldTypeHandle.invoke(field);
+                logger.info(fieldType.getSimpleName() + " " + fieldName);
+            }
+        } catch (Throwable e) {
+            logger.info("Error logging fields: ", e);
+        }
     }
 }

@@ -115,10 +115,16 @@ public class PresetUtils {
 
     public static class FleetPreset {
         public List<String> shipIds = new ArrayList<>();
+
         public Map<String, List<ShipVariantAPI>> variantsMap = new HashMap<>();
 
-        // maps to list of officer and variant pairs, with index 0 being the officer
         public Map<String, List<OfficerVariantPair>> officersMap = new HashMap<>();
+
+        public List<FleetMemberAPI> fleetMembers;
+
+        public FleetPreset(List<FleetMemberAPI> fleetMembers) {
+            this.fleetMembers = fleetMembers;
+        }
 
 
         // JEEPERS FEATURE CREEPERS???
@@ -375,7 +381,8 @@ public class PresetUtils {
         List<FleetMemberAPI> fleetMembers = Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder();
 
         sortFleetMembers(fleetMembers, SIZE_ORDER_DESCENDING);
-        FleetPreset preset = new FleetPreset();
+        FleetPreset preset = new FleetPreset(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
+
     
         for (FleetMemberAPI member : fleetMembers) {
             String hullId = member.getHullId();
@@ -631,7 +638,38 @@ public class PresetUtils {
         }
     }
 
-    public static LinkedHashMap<String, String> getFleetPresetsMapForTable(boolean ascendingNames, boolean ascendingShips) {
+    public static String createShipCountString(Map<String, Integer> shipCountMap, Map<String, HullSize> shipHullSizes, Map<String, ShipHullSpecAPI> shipHullSpecs, HullSize[] shipOrder) {
+        return sortShipCountMap(shipCountMap, shipHullSizes, shipHullSpecs, shipOrder)
+            .stream()
+            .map(PresetUtils::formatShipCount)
+            .collect(Collectors.joining(", "));
+    }
+
+    private static String formatShipCount(Map.Entry<String, Integer> entry) {
+        return entry.getValue() > 1 ? entry.getKey() + " x" + entry.getValue() : entry.getKey();
+    }
+
+    public static List<Map.Entry<String, Integer>> sortShipCountMap(Map<String, Integer> shipCountMap, Map<String, HullSize> shipHullSizes, Map<String, ShipHullSpecAPI> shipHullSpecs, HullSize[] shipOrder) {
+        return shipCountMap.entrySet()
+            .stream()
+            .sorted((e1, e2) -> {
+                HullSize size1 = shipHullSizes.get(e1.getKey());
+                HullSize size2 = shipHullSizes.get(e2.getKey());
+                
+                boolean aIsCivilian = shipHullSpecs.get(e1.getKey()).isCivilianNonCarrier();
+                boolean bIsCivilian = shipHullSpecs.get(e2.getKey()).isCivilianNonCarrier();
+        
+                if (aIsCivilian && !bIsCivilian) return 1;
+                if (!aIsCivilian && bIsCivilian) return -1;
+        
+                int index1 = Arrays.asList(shipOrder).indexOf(size1);
+                int index2 = Arrays.asList(shipOrder).indexOf(size2);
+                return Integer.compare(index1, index2);
+            })
+            .collect(Collectors.toList());
+    }
+
+    public static LinkedHashMap<String, String> getFleetPresetsMapForTable_STRINGSONLY(boolean ascendingNames, boolean ascendingShips) {
         HashMap<String, String> map = new HashMap<>();
         HullSize[] shipOrder;
         if (ascendingShips) {
@@ -646,6 +684,8 @@ public class PresetUtils {
             FleetPreset fleetPreset = entry.getValue();
         
             Map<String, Integer> shipCountMap = new LinkedHashMap<>();
+            Map<String, HullSize> shipHullSizes = new HashMap<>();
+            Map<String, ShipHullSpecAPI> shipHullSpecs = new HashMap<>();
 
             for (Map.Entry<String, List<ShipVariantAPI>> variantsEntry : fleetPreset.variantsMap.entrySet()) {
                 List<ShipVariantAPI> variantList = variantsEntry.getValue();
@@ -653,29 +693,36 @@ public class PresetUtils {
                 for (ShipVariantAPI variant : variantList) {
                     String name = variant.getHullSpec().getHullName();
                     shipCountMap.put(name, shipCountMap.getOrDefault(name, 0) + 1);
+                    shipHullSizes.put(name, variant.getHullSize());
+                    shipHullSpecs.put(name, variant.getHullSpec());
                 }
-                sortShips(variantList, shipOrder);
             }
 
-            String ships = shipCountMap.entrySet()
-                .stream()
-                .map(e -> e.getValue() > 1 ? e.getKey() + " x" + e.getValue() : e.getKey())
-                .collect(Collectors.joining(", "));
-    
+            String ships = createShipCountString(shipCountMap, shipHullSizes, shipHullSpecs, shipOrder);
             map.put(fleetPresetName, ships);
         }
-        return sortByKeyAlphanumerically(map, ascendingNames);
+        return MiscUtils.sortByKeyAlphanumerically(map, ascendingNames);
     }
 
-    public static LinkedHashMap<String, String> sortByKeyAlphanumerically(HashMap<String, String> input, boolean ascending) {
-        List<String> keys = new ArrayList<>(input.keySet());
-    
+    public static LinkedHashMap<String, FleetPreset> getFleetPresetsMapForTable(boolean ascendingNames, boolean ascendingShips) {
+        Map<String, FleetPreset> presets = getFleetPresets();
+        LinkedHashMap<String, FleetPreset> sortedMap = new LinkedHashMap<>();
+        
+        HullSize[] shipOrder = ascendingShips ? SIZE_ORDER_ASCENDING : SIZE_ORDER_DESCENDING;
+        for (FleetPreset preset : presets.values()) {
+            if (preset.fleetMembers != null) {
+                sortFleetMembers(preset.fleetMembers, shipOrder);
+            }
+        }
+        
+        // alphanumeric sorting by key
+        List<String> keys = new ArrayList<>(presets.keySet());
         keys.sort((s1, s2) -> {
             int i = 0, j = 0;
             while (i < s1.length() && j < s2.length()) {
                 char c1 = s1.charAt(i);
                 char c2 = s2.charAt(j);
-    
+
                 if (Character.isDigit(c1) && Character.isDigit(c2)) {
                     int start1 = i, start2 = j;
                     while (i < s1.length() && Character.isDigit(s1.charAt(i))) i++;
@@ -683,25 +730,24 @@ public class PresetUtils {
                     String num1 = s1.substring(start1, i);
                     String num2 = s2.substring(start2, j);
                     int cmp = Long.compare(Long.parseLong(num1), Long.parseLong(num2));
-                    if (cmp != 0) return ascending ? cmp : -cmp;
+                    if (cmp != 0) return ascendingNames ? cmp : -cmp;
                 } else {
                     int cmp = Character.compare(
                         Character.toLowerCase(c1),
                         Character.toLowerCase(c2)
                     );
-                    if (cmp != 0) return ascending ? cmp : -cmp;
+                    if (cmp != 0) return ascendingNames ? cmp : -cmp;
                     i++;
                     j++;
                 }
             }
-            return ascending ? Integer.compare(s1.length(), s2.length()) : Integer.compare(s2.length(), s1.length());
+            return ascendingNames ? Integer.compare(s1.length(), s2.length()) : Integer.compare(s2.length(), s1.length());
         });
-    
-        LinkedHashMap<String, String> sortedMap = new LinkedHashMap<>();
+
         for (String key : keys) {
-            sortedMap.put(key, input.get(key));
+            sortedMap.put(key, presets.get(key));
         }
-    
+        
         return sortedMap;
     }
 }
