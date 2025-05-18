@@ -430,23 +430,46 @@ public class FleetPresetManagementListener extends ActionListener {
                     SHIPLIST_SCALE_ = 0.7f;
                     SHIPLIST_PANEL_PADDING_DIVISOR_ = 1.65f;
                     
-                // 2048x1080
+                // 2048x1080 4096x2160
                 } else if (Math.abs(ratio - 0.52734375) < epsilon) {
-                    CONFIRM_DIALOG_WIDTH_DIVISOR_ = 3.3f;
-                    CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 2.15f;
+                    switch(DISPLAY_WIDTH) {
+                        case 2048:
+                            CONFIRM_DIALOG_WIDTH_DIVISOR_ = 3.3f;
+                            CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 2.15f;
 
-                    PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.4f) + 10f;
-                    PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.4f);
+                            PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.4f) + 10f;
+                            PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.4f);
 
-                    NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
-                    SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
-                    // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
-                    // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
+                            NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
+                            SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
 
-                    SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = 10f;
-                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
-                    SHIPLIST_SCALE_ = 0.9f;
-                    SHIPLIST_PANEL_PADDING_DIVISOR_ = 1.8f;
+                            SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = 10f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
+                            SHIPLIST_SCALE_ = 0.9f;
+                            SHIPLIST_PANEL_PADDING_DIVISOR_ = 1.8f;
+                            break;
+                        // 4096
+                        default:
+                            CONFIRM_DIALOG_WIDTH_DIVISOR_ = 5.0f;
+                            CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 3.25f;
+        
+                            PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
+                            PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.5f);
+        
+                            NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
+                            SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
+        
+                            SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = 20f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 40f;
+                            SHIPLIST_SCALE_ = 1.2f;
+                            SHIPLIST_PANEL_PADDING_DIVISOR_ = 4.4f;
+                            break;
+                    }
+
 
                 } else if (DISPLAY_WIDTH == 1366 || DISPLAY_WIDTH == 1360) {
                     CONFIRM_DIALOG_WIDTH_DIVISOR_ = 2.8f;
