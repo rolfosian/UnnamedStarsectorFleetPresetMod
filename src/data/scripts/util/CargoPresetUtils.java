@@ -2,16 +2,10 @@ package data.scripts.util;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CargoAPI;
-import com.fs.starfarer.api.campaign.CargoStackAPI;
-import com.fs.starfarer.api.characters.MutableCharacterStatsAPI.SkillLevelAPI;
-import com.fs.starfarer.api.characters.PersonAPI;
-import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.loading.WeaponGroupSpec;
-import com.fs.starfarer.api.loading.WeaponSlotAPI;
 
-import java.lang.reflect.Method;
 import java.util.*;
 import org.apache.log4j.Logger;
 

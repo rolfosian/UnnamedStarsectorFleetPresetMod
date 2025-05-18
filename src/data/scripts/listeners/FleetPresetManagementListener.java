@@ -34,32 +34,25 @@ import com.fs.starfarer.api.input.InputEventType;
 
 import com.fs.starfarer.api.util.Misc;
 
-// import data.scripts.listeners.SaveFleetPreset;
 import data.scripts.listeners.DialogDismissedListener;
 import data.scripts.listeners.DummyDialogListener;
+import data.scripts.listeners.DockingListener;
+
 import data.scripts.ui.BaseSelfRefreshingPanel;
 import data.scripts.ui.UIComponent;
 import data.scripts.ui.UIPanel;
-import data.scripts.listeners.DockingListener;
 
-import data.scripts.util.RandomStringList;
 import data.scripts.util.ReflectionUtilis;
 import data.scripts.util.UtilReflection;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.MiscUtils;
-import data.scripts.FleetPresetManagerCoreScript;
 
 import java.awt.Color;
-
-
 import java.lang.reflect.Method;
 import java.util.*;
 
-import javax.swing.text.TableView.TableRow;
-
 import org.apache.log4j.Logger;
 import org.lwjgl.input.Keyboard;
-import org.lwjgl.opengl.GL11;
 
 public class FleetPresetManagementListener extends ActionListener {
     public static final Logger logger = Logger.getLogger(FleetPresetManagementListener.class);
@@ -107,7 +100,7 @@ public class FleetPresetManagementListener extends ActionListener {
         double ratio = (double)DISPLAY_HEIGHT / (double)DISPLAY_WIDTH;
         double epsilon = 1e-6;
 
-        float screenScaleMult = Global.getSettings().getScreenScaleMult();
+        // float screenScaleMult = Global.getSettings().getScreenScaleMult();
 
         float CONFIRM_DIALOG_WIDTH_DIVISOR_;
         float CONFIRM_DIALOG_HEIGHT_DIVISOR_;
@@ -508,22 +501,22 @@ public class FleetPresetManagementListener extends ActionListener {
                 }
             }
     
-    CONFIRM_DIALOG_WIDTH_DIVISOR = CONFIRM_DIALOG_WIDTH_DIVISOR_;
-    CONFIRM_DIALOG_HEIGHT_DIVISOR = CONFIRM_DIALOG_HEIGHT_DIVISOR_;
+        CONFIRM_DIALOG_WIDTH_DIVISOR = CONFIRM_DIALOG_WIDTH_DIVISOR_;
+        CONFIRM_DIALOG_HEIGHT_DIVISOR = CONFIRM_DIALOG_HEIGHT_DIVISOR_;
 
-    PANEL_WIDTH_SUBTRACTOR = PANEL_WIDTH_SUBTRACTOR_;
-    PANEL_HEIGHT_SUBTRACTOR = PANEL_HEIGHT_SUBTRACTOR_;
+        PANEL_WIDTH_SUBTRACTOR = PANEL_WIDTH_SUBTRACTOR_;
+        PANEL_HEIGHT_SUBTRACTOR = PANEL_HEIGHT_SUBTRACTOR_;
 
-    NAME_COLUMN_WIDTH_DIVISOR = NAME_COLUMN_WIDTH_DIVISOR_;
-    SHIP_COLUMN_WIDTH_DIVISOR = SHIP_COLUMN_WIDTH_DIVISOR_;
-    // private static final float TABLE_HEADER_Y_OFFSET_PERCENT_BTM;
-    // private static final float TABLE_HEADER_Y_OFFSET_PERCENT_TOP;
-    SHIPLIST_PANEL_HEIGHT_SUBTRACTOR = SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_;
-    SHIPLIST_PANEL_PADDING_DIVISOR = SHIPLIST_PANEL_PADDING_DIVISOR_;
-    SHIPLIST_SCALE = SHIPLIST_SCALE_;
-    SHIPLIST_Y_OFFSET_MULTIPLIER = SHIPLIST_Y_OFFSET_MULTIPLIER_;
+        NAME_COLUMN_WIDTH_DIVISOR = NAME_COLUMN_WIDTH_DIVISOR_;
+        SHIP_COLUMN_WIDTH_DIVISOR = SHIP_COLUMN_WIDTH_DIVISOR_;
+        // private static final float TABLE_HEADER_Y_OFFSET_PERCENT_BTM;
+        // private static final float TABLE_HEADER_Y_OFFSET_PERCENT_TOP;
+        SHIPLIST_PANEL_HEIGHT_SUBTRACTOR = SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_;
+        SHIPLIST_PANEL_PADDING_DIVISOR = SHIPLIST_PANEL_PADDING_DIVISOR_;
+        SHIPLIST_SCALE = SHIPLIST_SCALE_;
+        SHIPLIST_Y_OFFSET_MULTIPLIER = SHIPLIST_Y_OFFSET_MULTIPLIER_;
 
-    SHIPLIST_SIZE = 60f * SHIPLIST_SCALE;
+        SHIPLIST_SIZE = 60f * SHIPLIST_SCALE;
     }
 
     private static final float CONFIRM_DIALOG_WIDTH = DISPLAY_WIDTH / CONFIRM_DIALOG_WIDTH_DIVISOR;
@@ -978,12 +971,16 @@ public class FleetPresetManagementListener extends ActionListener {
         if (selectedPresetName != EMPTY_STRING) {
             if (DockingListener.getPlayerCurrentMarket() != null && DockingListener.canPlayerAccessStorage(DockingListener.getPlayerCurrentMarket())) {
                 theButtons.get(RESTORE_BUTTON_ID).setEnabled(true);
-                theButtons.get(STORE_BUTTON_ID).setEnabled(true);
                 theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(true);
             } else {
                 theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(true);
             }
             theButtons.get(DELETE_BUTTON_ID).setEnabled(true);
+
+        } else {
+            if (DockingListener.getPlayerCurrentMarket() != null && DockingListener.canPlayerAccessStorage(DockingListener.getPlayerCurrentMarket())) {
+                theButtons.get(STORE_BUTTON_ID).setEnabled(true);
+            }
         }
     }
 
@@ -1037,7 +1034,7 @@ public class FleetPresetManagementListener extends ActionListener {
         private void processRow(Object row, String rowName, TooltipMakerAPI tableTipMaker, int id, PresetUtils.FleetPreset fleetpreset) {
             PositionAPI rowPos = (PositionAPI) ReflectionUtilis.invokeMethod("getPosition", row);
             
-            TableRowListener rowListener = new TableRowListener(row, rowPos, rowName, tableRowListeners, id, fleetpreset.fleetMembers);
+            TableRowListener rowListener = new TableRowListener(row, rowPos, rowName, id, fleetpreset.fleetMembers);
             CustomPanelAPI rowOverlayPanel = Global.getSettings().createCustom(NAME_COLUMN_WIDTH, 29f, rowListener);
             TooltipMakerAPI rowOverlayTooltipMaker = rowOverlayPanel.createUIElement(NAME_COLUMN_WIDTH, 29f, false);
 
@@ -1059,16 +1056,22 @@ public class FleetPresetManagementListener extends ActionListener {
             
             tableRowListeners.clear();
             int id;
-            int size = currentTableMap.size();
+            // int size = currentTableMap.size();
             
-            if (tableUp) {
+            // if (tableUp) {
                 id = 0;
-            } else {
-                id = (size == 1) ? 0 : size - 1;
-            }
+            // } else {
+                // id = (size == 1) ? 0 : size - 1;
+            // }
 
+            // boolean isPlayerFleetAPreset = PresetUtils.isPlayerFleetAPreset(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
             for (Map.Entry<String, PresetUtils.FleetPreset> entry: currentTableMap.entrySet()) {
                 String rowName = entry.getKey();
+                PresetUtils.FleetPreset fleetPreset = entry.getValue();
+
+                // boolean isFleetPresetAvailableInStorage = PresetUtils.isPresetAvailableAtCurrentMarket(DockingListener.getPlayerCurrentMarket(), rowName);
+                // boolean isActive = isFleetPresetAvailableInStorage || isPlayerFleetAPreset;
+
                 Object row;
                 if (selectedRowIndex == id) {
                     row = tableTipMaker.addRowWithGlow(
@@ -1080,9 +1083,17 @@ public class FleetPresetManagementListener extends ActionListener {
                         c1, 
                         rowName
                     );
-                }
-                processRow(row, rowName, tableTipMaker, id, entry.getValue());
-                id += tableUp ? 1 : -1;
+                } 
+                // else {
+                //     row = tableTipMaker.addRow(
+                //         c2, 
+                //         rowName
+                //     );
+                // }
+                
+                processRow(row, rowName, tableTipMaker, id, fleetPreset);
+                // id += tableUp ? 1 : -1;
+                id++;
             }
             tableTipMaker.addTable(BLANK_TABLE_TEXT, 0, 5f);
             panel.addUIElement(tableTipMaker);
@@ -1101,6 +1112,7 @@ public class FleetPresetManagementListener extends ActionListener {
         public void addShipList(List<FleetMemberAPI> fleetMembers) {
             fenaglePanele.parent.removeComponent(shipListPanel);
             shipListPanel = null;
+
             if (fleetMembers != null) {
                 shipListPanel = Global.getSettings().createCustom(SHIP_COLUMN_WIDTH, PANEL_HEIGHT - SHIPLIST_PANEL_HEIGHT_SUBTRACTOR, null);
                 TooltipMakerAPI shipListTooltip = shipListPanel.createUIElement(SHIP_COLUMN_WIDTH, PANEL_HEIGHT - MasterCancelButton.getPosition().getHeight() + SHIPLIST_PANEL_HEIGHT_SUBTRACTOR, true);
@@ -1141,21 +1153,19 @@ public class FleetPresetManagementListener extends ActionListener {
         public Object row;
         public String rowName;
         public int id;
-        // public List<TableRowListener> tableRowListeners;
         public CustomPanelAPI panel;
         public PositionAPI rowPos;
         public TooltipMakerAPI tooltipMaker;
-        public LabelAPI label;
         public List<FleetMemberAPI> fleetMembers;
-    
-        public TableRowListener(Object row,PositionAPI rowPos, String rowPresetName, List<TableRowListener> tableRowListeners, int id, List<FleetMemberAPI> fleetMembers) {
-            // this.tableRowListeners = tableRowListeners;
+        // public boolean isActive;
 
+        public TableRowListener(Object row, PositionAPI rowPos, String rowPresetName, int id, List<FleetMemberAPI> fleetMembers) {
             this.row = row;
             this.id = id;
             this.rowName = rowPresetName;
             this.rowPos = rowPos;
             this.fleetMembers = fleetMembers;
+            // this.isActive = isActive;
         }
     
         public void init(CustomPanelAPI panel, TooltipMakerAPI tooltipMaker, PositionAPI rowPos) {
@@ -1195,6 +1205,7 @@ public class FleetPresetManagementListener extends ActionListener {
         @Override
         public void processInput(List<InputEventAPI> arg0) {
             for (InputEventAPI event : arg0) {
+                // if (!isActive) continue;
                 // if (event.isMouseMoveEvent()) {
                 //     int eventX = event.getX();
                 //     int eventY = event.getY();
@@ -1320,7 +1331,7 @@ public class FleetPresetManagementListener extends ActionListener {
                     if (!isEmptyOrWhitespace(text)) {
                         if (currentTableMap.containsKey(text)) {
                             selectedPresetName = text;
-                            openOverwriteDialog(true);
+                            openOverwriteDialog(false);
                             selectedRowIndex = getTableMapIndex(text);
                         } else {
                             selectedPresetName = text;

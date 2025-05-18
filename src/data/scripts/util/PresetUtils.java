@@ -24,12 +24,10 @@ import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.fleet.FleetMemberType;
 
-import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 
 import com.fs.starfarer.api.util.Misc;
-import com.fs.starfarer.campaign.fleet.FleetData;
 
 import org.apache.log4j.Logger;
 
@@ -245,6 +243,7 @@ public class PresetUtils {
 
     // needs testing
     public static boolean isPresetAvailableAtCurrentMarket(MarketAPI market, String presetName) {
+        if (market == null) return false;
         FleetPreset preset = getFleetPresets().get(presetName);
         if (preset == null) return false;
 
