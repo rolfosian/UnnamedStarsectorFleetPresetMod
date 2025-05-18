@@ -1,4 +1,4 @@
-// THIS UI CODE IS A RAGING DUMPSTER FIRE SPAGHETTI MESS READ AT YOUR OWN RISK
+// THIS UI CODE IS A RAGING DUMPSTER FIRE SPAGHETTI ABOMINATION READ AT YOUR OWN RISK
 package data.scripts.listeners;
 
 import com.fs.starfarer.api.Global;
@@ -63,9 +63,12 @@ import org.lwjgl.opengl.GL11;
 
 public class FleetPresetManagementListener extends ActionListener {
     public static final Logger logger = Logger.getLogger(FleetPresetManagementListener.class);
+    private static void print(Object... args) {
+        MiscUtils.print(args);
+    }
 
-    private static final int DISPLAY_WIDTH = (int)Global.getSettings().getScreenWidth();
-    private static final int DISPLAY_HEIGHT = (int)Global.getSettings().getScreenHeight();
+    private static final int DISPLAY_WIDTH = (int)Global.getSettings().getScreenWidthPixels();
+    private static final int DISPLAY_HEIGHT = (int)Global.getSettings().getScreenHeightPixels();
 
     private static final float CONFIRM_DIALOG_WIDTH_DIVISOR;
     private static final float CONFIRM_DIALOG_HEIGHT_DIVISOR;
@@ -75,147 +78,428 @@ public class FleetPresetManagementListener extends ActionListener {
     private static final float SHIP_COLUMN_WIDTH_DIVISOR;
     // private static final float TABLE_HEADER_Y_OFFSET_PERCENT_BTM;
     // private static final float TABLE_HEADER_Y_OFFSET_PERCENT_TOP;
+    private static final float SHIPLIST_PANEL_HEIGHT_SUBTRACTOR;
+    private static final float SHIPLIST_PANEL_PADDING_DIVISOR;
     private static final float SHIPLIST_SCALE;
     private static final float SHIPLIST_SIZE;
     private static final float SHIPLIST_Y_OFFSET_MULTIPLIER;
 
+    private static final float ROW_HEIGHT;
+
     // These are teh values for 1080p
     // CONFIRM_DIALOG_WIDTH_DIVISOR = 3.3f;
     // CONFIRM_DIALOG_HEIGHT_DIVISOR = 2f;
-    // PANEL_WIDTH_SUBTRACTOR = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
+    // PANEL_WIDTH_SUBTRACTOR = (DISPLAY_WIDTH / 100 * 0.4f) + 10f;
+    // PANEL_HEIGHT_SUBTRACTOR = (DISPLAY_HEIGHT / 100 * 1.4f);
     // NAME_COLUMN_WIDTH_DIVISOR = 3.8f;
     // SHIP_COLUMN_WIDTH_DIVISOR = 1.8f;
+    // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+    // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
+    // SHIPLIST_PANEL_HEIGHT_SUBTRACTOR = 10f;
+    // SHIPLIST_Y_OFFSET_MULTIPLIER = 5f;
+    // SHIPLIST_SCALE = 0.9f;
+    // SHIPLIST_PANEL_PADDING_DIVISOR = 1.8f;
 
-    // private static finalMap<Double, Runnable>
-
+    // THERE HAS TO BE A BETTER WAY TO DO THIS HOLY FUCKING SHIT AM I RETARDED OR WHAT?
+    // THANK GOD THE WINDOW CANT BE RESIZED OR ID HAVE TO ACTUALLY LEARN ABOUT SCALING AND TRANSFORMATIONS
+    // TODO ULTRAWIDE RESOLUTIONS
     static {
-
         double ratio = (double)DISPLAY_HEIGHT / (double)DISPLAY_WIDTH;
         double epsilon = 1e-6;
-        boolean is169 = Math.abs(ratio - 0.5625) < epsilon;
 
-        // If 16:9
-        if (is169) {
+        float screenScaleMult = Global.getSettings().getScreenScaleMult();
+
+        float CONFIRM_DIALOG_WIDTH_DIVISOR_;
+        float CONFIRM_DIALOG_HEIGHT_DIVISOR_;
+        
+        float PANEL_WIDTH_SUBTRACTOR_;
+        float PANEL_HEIGHT_SUBTRACTOR_;
+        
+        float NAME_COLUMN_WIDTH_DIVISOR_;
+        float SHIP_COLUMN_WIDTH_DIVISOR_;
+        // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+        // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
+
+        float SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_;
+        float SHIPLIST_Y_OFFSET_MULTIPLIER_;
+        float SHIPLIST_SCALE_;
+        float SHIPLIST_PANEL_PADDING_DIVISOR_;
+
+        ROW_HEIGHT = 30f;
+
+        // 1920x1080 2560x1440 3840x2160 16:9
+        if (Math.abs(ratio - 0.5625) < epsilon) {
             switch(DISPLAY_WIDTH) {
                 case 1920:
-                    CONFIRM_DIALOG_WIDTH_DIVISOR = 3.3f;
-                    CONFIRM_DIALOG_HEIGHT_DIVISOR = 2f;
-                    PANEL_WIDTH_SUBTRACTOR = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
-                    PANEL_HEIGHT_SUBTRACTOR = (DISPLAY_HEIGHT / 100 * 1.3f);
+                    CONFIRM_DIALOG_WIDTH_DIVISOR_ = 3.3f;
+                    CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 2.15f;
 
-                    NAME_COLUMN_WIDTH_DIVISOR = 3.8f;
-                    SHIP_COLUMN_WIDTH_DIVISOR = 1.8f;
+                    PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.4f) + 10f;
+                    PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.4f);
+
+                    NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
+                    SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
                     // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
                     // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
 
-                    SHIPLIST_Y_OFFSET_MULTIPLIER = 0.42f;
-                    SHIPLIST_SCALE = 0.9f;
+                    SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = 10f;
+                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
+                    SHIPLIST_SCALE_ = 0.9f;
+                    SHIPLIST_PANEL_PADDING_DIVISOR_ = 1.8f;
                     break;
                     
                 case 2560:
-                    CONFIRM_DIALOG_WIDTH_DIVISOR = 3.8f;
-                    CONFIRM_DIALOG_HEIGHT_DIVISOR = 2.9f;
-                    PANEL_WIDTH_SUBTRACTOR = (DISPLAY_WIDTH / 100 * 0.62f) - 5f;
-                    PANEL_HEIGHT_SUBTRACTOR = (DISPLAY_HEIGHT / 100 * 1.4f);
+                    CONFIRM_DIALOG_WIDTH_DIVISOR_ = 3.9f;
+                    CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 2.9f;
 
-                    NAME_COLUMN_WIDTH_DIVISOR = 3.8f;
-                    SHIP_COLUMN_WIDTH_DIVISOR = 1.8f;
+                    PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.62f) + 10f;
+                    PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.1f);
+
+                    NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
+                    SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
                     // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
                     // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
 
-                    SHIPLIST_Y_OFFSET_MULTIPLIER = 0.25f;
-                    SHIPLIST_SCALE = 0.9f;
+                    SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = 20f;
+                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 17f;
+                    SHIPLIST_SCALE_ = 0.9f;
+                    SHIPLIST_PANEL_PADDING_DIVISOR_ = 1.8f;
                     break;
 
-                // TODO
                 case 3840:
-                    CONFIRM_DIALOG_WIDTH_DIVISOR = 3.3f;
-                    CONFIRM_DIALOG_HEIGHT_DIVISOR = 2f;
-                    PANEL_WIDTH_SUBTRACTOR = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
-                    PANEL_HEIGHT_SUBTRACTOR = (DISPLAY_HEIGHT / 100 * 1.4f);
+                    CONFIRM_DIALOG_WIDTH_DIVISOR_ = 5.0f;
+                    CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 3.25f;
 
-                    NAME_COLUMN_WIDTH_DIVISOR = 3.8f;
-                    SHIP_COLUMN_WIDTH_DIVISOR = 1.8f;
+                    PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
+                    PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.5f);
+
+                    NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
+                    SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
                     // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
                     // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
 
-                    SHIPLIST_Y_OFFSET_MULTIPLIER = 0.25f;
-                    SHIPLIST_SCALE = 1.2f;
+                    SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = 20f;
+                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 40f;
+                    SHIPLIST_SCALE_ = 1.2f;
+                    SHIPLIST_PANEL_PADDING_DIVISOR_ = 4.4f;
                     break;
 
-                // TODO 1600x900
+                // 1600x900
                 default:
-                    CONFIRM_DIALOG_WIDTH_DIVISOR = 3.3f;
-                    CONFIRM_DIALOG_HEIGHT_DIVISOR = 2f;
-                    PANEL_WIDTH_SUBTRACTOR = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
-                    PANEL_HEIGHT_SUBTRACTOR = (DISPLAY_HEIGHT / 100 * 1.4f);
+                    CONFIRM_DIALOG_WIDTH_DIVISOR_ = 3.3f;
+                    CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 2f;
+                    PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
+                    PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.5f);
 
-                    NAME_COLUMN_WIDTH_DIVISOR = 3.8f;
-                    SHIP_COLUMN_WIDTH_DIVISOR = 1.8f;
+                    NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
+                    SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
                     // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
                     // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
 
-                    SHIPLIST_Y_OFFSET_MULTIPLIER = 0.25f;
-                    SHIPLIST_SCALE = 1.2f;
+                    SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = 10f;
+                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                    SHIPLIST_SCALE_ = 0.7f;
+                    SHIPLIST_PANEL_PADDING_DIVISOR_ = 1.8f;
                     break;
             }
-        } else {            
-                //TODO outlier widths
-                //1366x768 1360x768 ITS 6 PIXELS SURELY THEY DONT NEED SEPARATE CONDITIONS
-                if (DISPLAY_WIDTH == 1366 || DISPLAY_WIDTH == 1360) {
-
-                // 1280x800 1440x900 1680x1050  2560x1600
-                } else if (Math.abs(ratio - 0.625) < epsilon) {
+        } else {
+                // 1280x800 1440x900 1680x1050 1920x1200 2560x1600 (16:10)
+                if (Math.abs(ratio - 0.625) < epsilon) {
                     switch(DISPLAY_WIDTH) {
                         case 1280:
+                            CONFIRM_DIALOG_WIDTH_DIVISOR_ = 2.8f;
+                            CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 2f;
+                            
+                            PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.7f) - 5f;
+                            PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.5f);
+                            
+                            NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
+                            SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
+
+                            SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = 10f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                            SHIPLIST_SCALE_ = 0.6f;
+                            SHIPLIST_PANEL_PADDING_DIVISOR_ = 1.485f;
                             break;
                             
                         case 1440:
+                            CONFIRM_DIALOG_WIDTH_DIVISOR_ = 2.8f;
+                            CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 2f;
+                            
+                            PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
+                            PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.5f);
+                            
+                            NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
+                            SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
+                            
+                            SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = 5f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                            SHIPLIST_SCALE_ = 0.7f;
+                            SHIPLIST_PANEL_PADDING_DIVISOR_ = 1.65f;
                             break;
                             
                         case 1680:
+                            CONFIRM_DIALOG_WIDTH_DIVISOR_ = 2.8f;
+                            CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 2f;
+                            
+                            PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
+                            PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.4f);
+                            
+                            NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
+                            SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
+
+                            SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = 10f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                            SHIPLIST_SCALE_ = 0.9f;
+                            SHIPLIST_PANEL_PADDING_DIVISOR_ = 2f;
                             break;
 
-                        case 2560:
+                        // ...GOOD ENOUGH
+                        case 1920:
+                            CONFIRM_DIALOG_WIDTH_DIVISOR_ = 2.8f;
+                            CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 2f;
+                            
+                            PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
+                            PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.4f);
+                            
+                            NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
+                            SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
+
+                            SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = 10f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                            SHIPLIST_SCALE_ = 0.9f;
+                            SHIPLIST_PANEL_PADDING_DIVISOR_ = 2f;
+                            break;
+
+                        // 2560
+                        default:
+                            CONFIRM_DIALOG_WIDTH_DIVISOR_ = 3.9f;
+                            CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 2.9f;
+                            PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.62f) + 10f;
+                            PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.1f);
+        
+                            NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
+                            SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
+        
+                            SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = 20f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 17f;
+                            SHIPLIST_SCALE_ = 0.9f;
+                            SHIPLIST_PANEL_PADDING_DIVISOR_ = 1.8f;
                             break;
                     }
 
                 // 1280x768
                 } else if (Math.abs(ratio - 0.6) < epsilon) {
+                    CONFIRM_DIALOG_WIDTH_DIVISOR_ = 2.8f;
+                    CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 2f;
+                    
+                    PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.7f) - 5f;
+                    PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 2f);
+                    
+                    NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
+                    SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
+                    // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+                    // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
 
-                
+                    SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = 10f;
+                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                    SHIPLIST_SCALE_ = 0.6f;
+                    SHIPLIST_PANEL_PADDING_DIVISOR_ = 1.485f;
+
                 // 1600x1024
                 } else if (Math.abs(ratio - 0.64) < epsilon) {
+                    CONFIRM_DIALOG_WIDTH_DIVISOR_ = 2.8f;
+                    CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 2f;
 
+                    PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
+                    PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.4f);
 
-                // 1280x960 2048x1536 1600x1200
+                    NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
+                    SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
+                    // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+                    // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
+
+                    SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = 10f;
+                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                    SHIPLIST_SCALE_ = 0.9f;
+                    SHIPLIST_PANEL_PADDING_DIVISOR_ = 2.2f;
+
+                // 1280x960 1600x1200 1920x1400 2048x1536 
                 } else if (Math.abs(ratio - 0.75) < epsilon) {
+                    switch(DISPLAY_WIDTH) {
+                        case 1280:
+                            CONFIRM_DIALOG_WIDTH_DIVISOR_ = 2.8f;
+                            CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 2.5f;
+                            
+                            PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.5f) - 5f;
+                            PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.5f);
+                            
+                            NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
+                            SHIP_COLUMN_WIDTH_DIVISOR_ = 3.6f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
 
+                            SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = -10f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                            SHIPLIST_SCALE_ = 0.5f;
+                            SHIPLIST_PANEL_PADDING_DIVISOR_ = -3.1f;
+                            break;
+
+                        case 1600:
+                            CONFIRM_DIALOG_WIDTH_DIVISOR_ = 2.8f;
+                            CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 2.5f;
+        
+                            PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
+                            PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.4f);
+        
+                            NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
+                            SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
+        
+                            SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = 25f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 30f;
+                            SHIPLIST_SCALE_ = 0.85f;
+                            SHIPLIST_PANEL_PADDING_DIVISOR_ = 2.2f;
+                            break;
+
+                        // GOOD ENOUGH
+                        case 1920:
+                            CONFIRM_DIALOG_WIDTH_DIVISOR_ = 2.8f;
+                            CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 2.5f;
+        
+                            PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
+                            PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.4f);
+        
+                            NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
+                            SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
+        
+                            SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = -10f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = -20f;
+                            SHIPLIST_SCALE_ = 0.85f;
+                            SHIPLIST_PANEL_PADDING_DIVISOR_ = 3.5f;
+                            break;
+                            
+                        // 2048
+                        default:
+                            CONFIRM_DIALOG_WIDTH_DIVISOR_ = 2.8f;
+                            CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 2.5f;
+        
+                            PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
+                            PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.4f);
+        
+                            NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
+                            SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+                            // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
+        
+                            SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = 25f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 70f;
+                            SHIPLIST_SCALE_ = 1f;
+                            SHIPLIST_PANEL_PADDING_DIVISOR_ = 2.2f;
+                            break;
+                    }
 
                 // 1280x1024 
                 } else if (Math.abs(ratio - 0.8) < epsilon) {
+                    CONFIRM_DIALOG_WIDTH_DIVISOR_ = 2.2f;
+                    CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 2.4f;
+                    
+                    PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
+                    PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.4f);
+                    
+                    NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
+                    SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
+                    // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+                    // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
 
+                    SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = 10f;
+                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                    SHIPLIST_SCALE_ = 0.7f;
+                    SHIPLIST_PANEL_PADDING_DIVISOR_ = 1.65f;
+                    
                 // 2048x1080
                 } else if (Math.abs(ratio - 0.52734375) < epsilon) {
+                    CONFIRM_DIALOG_WIDTH_DIVISOR_ = 3.3f;
+                    CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 2.15f;
 
+                    PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.4f) + 10f;
+                    PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.4f);
+
+                    NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
+                    SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
+                    // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+                    // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
+
+                    SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = 10f;
+                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
+                    SHIPLIST_SCALE_ = 0.9f;
+                    SHIPLIST_PANEL_PADDING_DIVISOR_ = 1.8f;
+
+                } else if (DISPLAY_WIDTH == 1366 || DISPLAY_WIDTH == 1360) {
+                    CONFIRM_DIALOG_WIDTH_DIVISOR_ = 2.8f;
+                    CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 2f;
+
+                    PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
+                    PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 2.5f);
+
+                    NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
+                    SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
+                    // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+                    // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
+
+                    SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = 10f;
+                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = -2f;
+                    SHIPLIST_SCALE_ = 0.65f;
+                    SHIPLIST_PANEL_PADDING_DIVISOR_ = 1.7f;
+
+                } else {
+                    // fallback using 1080p values
+                    CONFIRM_DIALOG_WIDTH_DIVISOR_ = 2.8f;
+                    CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 2f;
+
+                    PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
+                    PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.4f);
+
+                    NAME_COLUMN_WIDTH_DIVISOR_ = 3.8f;
+                    SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
+                    // TABLE_HEADER_Y_OFFSET_PERCENT_BTM = 4f;
+                    // TABLE_HEADER_Y_OFFSET_PERCENT_TOP = 2.6f;
+
+                    SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_ = 10f;
+                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                    SHIPLIST_SCALE_ = 0.9f;
+                    SHIPLIST_PANEL_PADDING_DIVISOR_ = 1.8f;
                 }
-                CONFIRM_DIALOG_WIDTH_DIVISOR = 2.8f;
-                CONFIRM_DIALOG_HEIGHT_DIVISOR = 2f;
-
-                PANEL_WIDTH_SUBTRACTOR = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
-                PANEL_HEIGHT_SUBTRACTOR = (DISPLAY_HEIGHT / 100 * 1.4f);
-
-                NAME_COLUMN_WIDTH_DIVISOR = 3.8f;
-                SHIP_COLUMN_WIDTH_DIVISOR = 1.8f;
-
-                SHIPLIST_Y_OFFSET_MULTIPLIER = 0.25f;
-                SHIPLIST_SCALE = 0.9f;
             }
-            
-        
-            
-
     
+    CONFIRM_DIALOG_WIDTH_DIVISOR = CONFIRM_DIALOG_WIDTH_DIVISOR_;
+    CONFIRM_DIALOG_HEIGHT_DIVISOR = CONFIRM_DIALOG_HEIGHT_DIVISOR_;
+
+    PANEL_WIDTH_SUBTRACTOR = PANEL_WIDTH_SUBTRACTOR_;
+    PANEL_HEIGHT_SUBTRACTOR = PANEL_HEIGHT_SUBTRACTOR_;
+
+    NAME_COLUMN_WIDTH_DIVISOR = NAME_COLUMN_WIDTH_DIVISOR_;
+    SHIP_COLUMN_WIDTH_DIVISOR = SHIP_COLUMN_WIDTH_DIVISOR_;
+    // private static final float TABLE_HEADER_Y_OFFSET_PERCENT_BTM;
+    // private static final float TABLE_HEADER_Y_OFFSET_PERCENT_TOP;
+    SHIPLIST_PANEL_HEIGHT_SUBTRACTOR = SHIPLIST_PANEL_HEIGHT_SUBTRACTOR_;
+    SHIPLIST_PANEL_PADDING_DIVISOR = SHIPLIST_PANEL_PADDING_DIVISOR_;
+    SHIPLIST_SCALE = SHIPLIST_SCALE_;
+    SHIPLIST_Y_OFFSET_MULTIPLIER = SHIPLIST_Y_OFFSET_MULTIPLIER_;
+
     SHIPLIST_SIZE = 60f * SHIPLIST_SCALE;
     }
 
@@ -223,12 +507,11 @@ public class FleetPresetManagementListener extends ActionListener {
     private static final float CONFIRM_DIALOG_HEIGHT = DISPLAY_HEIGHT / CONFIRM_DIALOG_HEIGHT_DIVISOR;
 
     private static final float PANEL_WIDTH = DISPLAY_WIDTH / CONFIRM_DIALOG_WIDTH_DIVISOR - PANEL_WIDTH_SUBTRACTOR;
-    private static final float PANEL_HEIGHT = DISPLAY_HEIGHT / CONFIRM_DIALOG_WIDTH_DIVISOR - PANEL_HEIGHT_SUBTRACTOR;
+    private static final float PANEL_HEIGHT = DISPLAY_HEIGHT / CONFIRM_DIALOG_HEIGHT_DIVISOR - PANEL_HEIGHT_SUBTRACTOR;
     
     private static final float NAME_COLUMN_WIDTH = PANEL_WIDTH / NAME_COLUMN_WIDTH_DIVISOR;
     private static final float SHIP_COLUMN_WIDTH = PANEL_WIDTH / SHIP_COLUMN_WIDTH_DIVISOR;
 
-    private static final float ROW_HEIGHT = 30f;
     private static final float FLOAT_ZERO = 0f;
     
     private static float CANCEL_CONFIRM_BUTTON_WIDTH;
@@ -288,7 +571,6 @@ public class FleetPresetManagementListener extends ActionListener {
     private LinkedHashMap<String, PresetUtils.FleetPreset> currentTableMap;
     private boolean tableUp = true;
     private boolean tableRight = false;
-    private boolean rebuild = false;
     private String tablePresetNamesColumnHeader = "Presets <Ascending>";
     // private String tableShipsColumnHeader = "Ships <Descending>";
 
@@ -356,7 +638,7 @@ public class FleetPresetManagementListener extends ActionListener {
         tablePlugin = new TablePlugin();
         CustomPanelAPI canvasPanel = Global.getSettings().createCustom(PANEL_WIDTH - CANCEL_CONFIRM_BUTTON_WIDTH - SHIP_COLUMN_WIDTH - 10f, PANEL_HEIGHT, tablePlugin);
         canvasPanel.addComponent(tableMasterPanel).inTL(FLOAT_ZERO, FLOAT_ZERO);
-        fenaglePanele = new FenaglePanele(master.panel, canvasPanel, tableMasterPanel);
+        fenaglePanele = new FenaglePanele(master.panel, canvasPanel);
 
         buttonsPanel.addUIElement(tooltipMaker);
         master.panel.addComponent(buttonsPanel).inTL(FLOAT_ZERO, FLOAT_ZERO);
@@ -400,17 +682,17 @@ public class FleetPresetManagementListener extends ActionListener {
         return;
     }
 
-    private UtilReflection.ConfirmDialogData openOverwriteDialog() {
+    private UtilReflection.ConfirmDialogData openOverwriteDialog(boolean overwrite) {
 
-        SaveListener saveListener = new SaveListener(true);
+        SaveListener saveListener = new SaveListener(true, overwrite);
         CustomPanelAPI textFieldPanel = Global.getSettings().createCustom(CONFIRM_DIALOG_WIDTH / 2 / 6, CONFIRM_DIALOG_HEIGHT / 2 / 18, null);
 
         UtilReflection.ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
             OVERWRITE_DIALOG_HEADE_PREFIX + selectedPresetName + QUESTON_MARK,
             CONFIRM_TEXT,
             CANCEL_TEXT,
-            CONFIRM_DIALOG_WIDTH,
-            CONFIRM_DIALOG_HEIGHT,
+            CONFIRM_DIALOG_WIDTH / 1.5f,
+            CONFIRM_DIALOG_HEIGHT / 4,
             saveListener);
 
         // PositionAPI subPos = subData.panel.getPosition();
@@ -421,7 +703,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
     private UtilReflection.ConfirmDialogData openSaveDialog() {
 
-        SaveListener saveListener = new SaveListener(false);
+        SaveListener saveListener = new SaveListener(false, true);
         BaseCustomUIPanelPlugin textPanelPlugin = new BaseCustomUIPanelPlugin() {
             @Override 
             public void processInput(List<InputEventAPI> events) {
@@ -553,7 +835,7 @@ public class FleetPresetManagementListener extends ActionListener {
                     openDeleteDialog();
                     return;
                 case OVERWRITE_PRESET_BUTTON_ID:
-                    openOverwriteDialog();
+                    openOverwriteDialog(false);
                     return;
                 default:
                     break;
@@ -692,7 +974,7 @@ public class FleetPresetManagementListener extends ActionListener {
     public class TablePlugin extends BaseSelfRefreshingPanel {
         public LabelAPI label;
         public boolean rebuild;
-        public UIPanelAPI root;
+        // public UIPanelAPI root;
         public CustomPanelAPI panel;
         private UIPanelAPI tablePanel;
         private TooltipMakerAPI tableTipMaker;
@@ -710,11 +992,11 @@ public class FleetPresetManagementListener extends ActionListener {
             super.rebuild();
         }
 
-        public void setRoot(CustomPanelAPI root, CustomPanelAPI panel) {
-            this.root = root;
-            this.panel = panel;
-            super.rebuild();
-        }
+        // public void setRoot(CustomPanelAPI root, CustomPanelAPI panel) {
+        //     this.root = root;
+        //     this.panel = panel;
+        //     super.rebuild();
+        // }
 
         @Override
         public void positionChanged(PositionAPI position) {
@@ -797,14 +1079,15 @@ public class FleetPresetManagementListener extends ActionListener {
             fenaglePanele.parent.removeComponent(shipListPanel);
             shipListPanel = null;
             if (fleetMembers != null) {
-                shipListPanel = Global.getSettings().createCustom(SHIP_COLUMN_WIDTH, PANEL_HEIGHT, null);
-                TooltipMakerAPI shipListTooltip = shipListPanel.createUIElement(SHIP_COLUMN_WIDTH, PANEL_HEIGHT, false);
+                shipListPanel = Global.getSettings().createCustom(SHIP_COLUMN_WIDTH, PANEL_HEIGHT - SHIPLIST_PANEL_HEIGHT_SUBTRACTOR, null);
+                TooltipMakerAPI shipListTooltip = shipListPanel.createUIElement(SHIP_COLUMN_WIDTH, PANEL_HEIGHT - MasterCancelButton.getPosition().getHeight() + SHIPLIST_PANEL_HEIGHT_SUBTRACTOR, true);
                 shipListTooltip.addShipList(4, 8, SHIPLIST_SIZE, Misc.getBasePlayerColor(), fleetMembers, 5f);
                 shipListPanel.addUIElement(shipListTooltip);
 
-                // have to do this because if directly added to refreshing panel the game crashes when the master panel is closed also the offsets are cause im retarded and dont know shit about panel position alignment
-                fenaglePanele.parent.addComponent(shipListPanel).rightOfTop(fenaglePanele.panel, 5f)
-                .setXAlignOffset(SHIP_COLUMN_WIDTH *0.25f).setYAlignOffset(-PANEL_HEIGHT * SHIPLIST_Y_OFFSET_MULTIPLIER);
+                // have to do this because if directly added to the refreshing panel then the game crashes when the master panel is closed
+                fenaglePanele.parent.addComponent(shipListPanel).rightOfTop(fenaglePanele.panel, NAME_COLUMN_WIDTH / SHIPLIST_PANEL_PADDING_DIVISOR)
+                // .setXAlignOffset(-PANEL_WIDTH - NAME_COLUMN_WIDTH)
+                .setYAlignOffset(-1f * SHIPLIST_Y_OFFSET_MULTIPLIER);
             }
         }
 
@@ -994,9 +1277,10 @@ public class FleetPresetManagementListener extends ActionListener {
     }
     private class SaveListener extends DialogDismissedListener {
         private boolean overwrite;
-
-        public SaveListener(boolean overwrite) {
+        private boolean cancel;
+        public SaveListener(boolean overwrite, boolean cancel) {
             this.overwrite = overwrite;
+            this.cancel = cancel;
         }
     
         @Override
@@ -1005,7 +1289,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
             if (option == 0) {
                 // confirm
-                if (overwrite) {
+                if (overwrite && !cancel) {
                     PresetUtils.saveFleetPreset(selectedPresetName);
                     currentTableMap = PresetUtils.getFleetPresetsMapForTable(tableUp, tableRight);
                 } else {
@@ -1013,7 +1297,7 @@ public class FleetPresetManagementListener extends ActionListener {
                     if (!isEmptyOrWhitespace(text)) {
                         if (currentTableMap.containsKey(text)) {
                             selectedPresetName = text;
-                            openOverwriteDialog();
+                            openOverwriteDialog(true);
                             selectedRowIndex = getTableMapIndex(text);
                         } else {
                             selectedPresetName = text;
@@ -1027,6 +1311,9 @@ public class FleetPresetManagementListener extends ActionListener {
                 tablePlugin.rebuild();
                 return;
             } else if (option == 1) {
+                if (overwrite && cancel) {
+                    openSaveDialog();
+                }
                 // cancel
                 return;
             }
@@ -1086,11 +1373,9 @@ public class FleetPresetManagementListener extends ActionListener {
     public class FenaglePanele  {
         public UIPanelAPI parent;
         public CustomPanelAPI panel;
-        public CustomPanelAPI tablePanel;
-        public FenaglePanele(UIPanelAPI parent, CustomPanelAPI panel, CustomPanelAPI tablePanel) {
+        public FenaglePanele(UIPanelAPI parent, CustomPanelAPI panel) {
             this.panel = panel;
             this.parent = parent;
-            this.tablePanel = tablePanel;
         }
     }
 }
