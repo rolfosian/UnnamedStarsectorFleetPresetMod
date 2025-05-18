@@ -56,8 +56,8 @@ public class CargoPresetUtils {
     }
 
     // manual implementation for refit because FleetMemberAPI.setvariant materializes weapons and fighters out of thin air and simply overwrites and i couldnt find any other avenue, someone please let me know if there's a better way
-    // PROBLEM: STAT COSTS FOR ORDNANCE POINTS??? I DONT KNOW HOW IT IS IMPLEMENTED. MAYBE ITS NOT A PROBLEM IDK
-    // TODO: make D/SMOD AGNOSTIC SETTINGS
+    // PROBLEM: STAT COSTS FOR ORDNANCE POINTS??? - Only a problem if we implement imports/exports of FleetPresets to and from different saves
+    // TODO: make D/Smod agnostic settings
     public static void refit(FleetMemberAPI targetMember, ShipVariantAPI sourceVariant, CargoAPI playerFleetCargo, CargoAPI storageCargo) {
         ShipVariantAPI targetVariantOriginal = targetMember.getVariant();
         ShipVariantAPI targetVariant = targetVariantOriginal.clone();
@@ -141,38 +141,34 @@ public class CargoPresetUtils {
         public float supplyRatio;
         public float totalNeededCrewToMaxPersonnelRatio;
 
-        public CargoResourceRatios(float rawCrewRatio, float crewToMarinesRatio, float fuelRatio, float supplyRatio, float totalNeededCrewToMaxPersonnelRatio) {
+        public CargoResourceRatios(List<FleetMemberAPI> fleetMembers, CargoAPI playerCargo) {
+            float totalCrew = playerCargo.getCrew();
+            float totalMarines = playerCargo.getMarines();
+            float maxPersonnel = playerCargo.getMaxPersonnel();
+            float supplies = playerCargo.getSupplies();
+            float cargoCapacity = playerCargo.getMaxCapacity();
+            float fuel = playerCargo.getFuel();
+            float maxFuel = playerCargo.getMaxFuel();
+    
+            float totalNeededCrew = 0f;
+    
+            for (FleetMemberAPI member : fleetMembers) {
+                totalNeededCrew += member.getNeededCrew();
+            }
+    
+            float totalNeededCrewToMaxPersonnelRatio = totalNeededCrew / maxPersonnel;
+    
+            float crewToMarinesRatio = totalMarines / totalCrew;
+            float rawCrewRatio = totalCrew / maxPersonnel;
+            float fuelRatio = fuel / maxFuel;
+            float supplyRatio = supplies / cargoCapacity;
+
             this.rawCrewRatio = rawCrewRatio;
             this.crewToMarinesRatio = crewToMarinesRatio;
             this.fuelRatio = fuelRatio;
             this.supplyRatio = supplyRatio;
             this.totalNeededCrewToMaxPersonnelRatio = totalNeededCrewToMaxPersonnelRatio;
         }
-    }
-
-    public static CargoResourceRatios getCargoResourceRatios(List<FleetMemberAPI> fleetMembers, CargoAPI playerCargo) {
-        float totalCrew = playerCargo.getCrew();
-        float totalMarines = playerCargo.getMarines();
-        float maxPersonnel = playerCargo.getMaxPersonnel();
-        float supplies = playerCargo.getSupplies();
-        float cargoCapacity = playerCargo.getMaxCapacity();
-        float fuel = playerCargo.getFuel();
-        float maxFuel = playerCargo.getMaxFuel();
-
-        float totalNeededCrew = 0f;
-
-        for (FleetMemberAPI member : fleetMembers) {
-            totalNeededCrew += member.getNeededCrew();
-        }
-
-        float totalNeededCrewToMaxPersonnelRatio = totalNeededCrew / maxPersonnel;
-
-        float crewToMarinesRatio = totalMarines / totalCrew;
-        float rawCrewRatio = totalCrew / maxPersonnel;
-        float fuelRatio = fuel / maxFuel;
-        float supplyRatio = supplies / cargoCapacity;
-
-        return new CargoResourceRatios(rawCrewRatio, crewToMarinesRatio, fuelRatio, supplyRatio, totalNeededCrewToMaxPersonnelRatio);
     }
 
     public static void equalizeCargo(List<FleetMemberAPI> fleetMembers, CargoAPI storageCargo, CargoAPI playerCargo, CargoResourceRatios previousCargoRatios) {

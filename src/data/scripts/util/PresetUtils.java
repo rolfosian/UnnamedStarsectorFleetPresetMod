@@ -33,6 +33,8 @@ import com.fs.starfarer.campaign.fleet.FleetData;
 
 import org.apache.log4j.Logger;
 
+import data.scripts.util.CargoPresetUtils.CargoResourceRatios;
+
 public class PresetUtils {
     public static final Logger logger = Logger.getLogger(PresetUtils.class);
 
@@ -442,7 +444,7 @@ public class PresetUtils {
         if (market == null) return;
 
         SubmarketAPI storage = market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
-        CargoPresetUtils.CargoResourceRatios cargoRatios = CargoPresetUtils.getCargoResourceRatios(playerFleet.getFleetData().getMembersInPriorityOrder(), playerFleet.getCargo());
+        CargoResourceRatios cargoRatios = new CargoResourceRatios(playerFleet.getFleetData().getMembersInPriorityOrder(), playerFleet.getCargo());
         SubmarketPlugin storagePlugin = storage.getPlugin();
         if (!isPlayerPaidForStorage(storagePlugin)) return;
         
@@ -551,7 +553,6 @@ public class PresetUtils {
     }
 
     // this is because variant1.equals(variant2) doesnt always work, idk why and i dont really care
-    
     public static boolean areSameVariant(ShipVariantAPI variant1, ShipVariantAPI variant2) {
         return (variant1.getFullDesignationWithHullNameForShip().equals(variant2.getFullDesignationWithHullNameForShip())
             && variant1.getSMods().equals(variant2.getSMods())
@@ -568,8 +569,8 @@ public class PresetUtils {
         return (variant1.getHullMods().equals(variant2.getHullMods()));
     }
 
-    // TODO make D/SMOD AGNOSTIC SETTINGS, FRESH HULLS? 
-    // WHAT IF PLAYER ACTUALLY /WANTS/ VERY SPECIFIC DMOD/OFFICER VARIANTS?
+    // TODO make D/SMOD AGNOSTIC SETTINGS, NEW HULLS? 
+    // WHAT IF PLAYER WANTS VERY SPECIFIC DMOD/OFFICER VARIANTS?
     @SuppressWarnings("unchecked")
     public static void restoreFleetFromPreset(String name) {
         CampaignFleetAPI playerFleet = Global.getSector().getPlayerFleet();
@@ -586,8 +587,8 @@ public class PresetUtils {
         
         FleetDataAPI playerFleetData = playerFleet.getFleetData();
         List<FleetMemberAPI> playerFleetMembers = playerFleet.getFleetData().getMembersInPriorityOrder();
+        CargoResourceRatios cargoRatios = new CargoResourceRatios(playerFleetMembers, playerCargo);
 
-        CargoPresetUtils.CargoResourceRatios cargoRatios = CargoPresetUtils.getCargoResourceRatios(playerFleetMembers, playerCargo);
         FleetMemberAPI playerFleetMember = getPlayerFleetMemberCopy(playerFleetData);
 
         for (FleetMemberAPI member : playerFleetMembers) {
