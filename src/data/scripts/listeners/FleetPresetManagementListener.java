@@ -42,7 +42,7 @@ import data.scripts.ui.BaseSelfRefreshingPanel;
 import data.scripts.ui.UIComponent;
 import data.scripts.ui.UIPanel;
 
-import data.scripts.util.ReflectionUtilis;
+// import data.scripts.util.ReflectionUtilis;
 import data.scripts.util.UtilReflection;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.MiscUtils;
@@ -1031,8 +1031,8 @@ public class FleetPresetManagementListener extends ActionListener {
         public void render(float alphaMult) {
         }
 
-        private void processRow(Object row, String rowName, TooltipMakerAPI tableTipMaker, int id, PresetUtils.FleetPreset fleetpreset) {
-            PositionAPI rowPos = (PositionAPI) ReflectionUtilis.invokeMethod("getPosition", row);
+        private void processRow(UIPanelAPI row, String rowName, TooltipMakerAPI tableTipMaker, int id, PresetUtils.FleetPreset fleetpreset) {
+            PositionAPI rowPos = row.getPosition();
             
             TableRowListener rowListener = new TableRowListener(row, rowPos, rowName, id, fleetpreset.fleetMembers);
             CustomPanelAPI rowOverlayPanel = Global.getSettings().createCustom(NAME_COLUMN_WIDTH, 29f, rowListener);
@@ -1072,14 +1072,14 @@ public class FleetPresetManagementListener extends ActionListener {
                 // boolean isFleetPresetAvailableInStorage = PresetUtils.isPresetAvailableAtCurrentMarket(DockingListener.getPlayerCurrentMarket(), rowName);
                 // boolean isActive = isFleetPresetAvailableInStorage || isPlayerFleetAPreset;
 
-                Object row;
+                UIPanelAPI row;
                 if (selectedRowIndex == id) {
-                    row = tableTipMaker.addRowWithGlow(
+                    row = (UIPanelAPI) tableTipMaker.addRowWithGlow(
                         TEXT_HIGHLIGHT_COLOR, 
                         rowName
                     );
                 } else {
-                    row = tableTipMaker.addRowWithGlow(
+                    row = (UIPanelAPI) tableTipMaker.addRowWithGlow(
                         c1, 
                         rowName
                     );
