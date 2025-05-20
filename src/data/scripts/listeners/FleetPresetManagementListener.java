@@ -524,22 +524,14 @@ public class FleetPresetManagementListener extends ActionListener {
                 theButtons.get(STORE_BUTTON_ID).setEnabled(true);
                 theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(true);
                 theButtons.get(DELETE_BUTTON_ID).setEnabled(true);
-
-                if (PresetUtils.isPresetAvailableAtCurrentMarket(DockingListener.getPlayerCurrentMarket(), selectedPresetName, 
-                    Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder())) {
-                    theButtons.get(RESTORE_BUTTON_ID).setEnabled(true);
-                }
-                // } else {
-                //     theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
-                // }
-
-            } else {
-                theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
-                theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(true);
-                theButtons.get(DELETE_BUTTON_ID).setEnabled(true);
-                theButtons.get(STORE_BUTTON_ID).setEnabled(false);
+                theButtons.get(RESTORE_BUTTON_ID).setEnabled(true);
             }
 
+        } else {
+            theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
+            theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(true);
+            theButtons.get(DELETE_BUTTON_ID).setEnabled(true);
+            theButtons.get(STORE_BUTTON_ID).setEnabled(false);
         }
     }
 
@@ -657,7 +649,7 @@ public class FleetPresetManagementListener extends ActionListener {
                     theButtons.get(RESTORE_BUTTON_ID).setEnabled(true);
 
                 } else {
-                    theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
+                    // theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
 
                     if (PresetUtils.isPresetPlayerFleet(selectedPresetName)) {
                         isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet"));
