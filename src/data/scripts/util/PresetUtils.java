@@ -241,8 +241,105 @@ public class PresetUtils {
         return false;
     }
 
-    // needs testing
-    public static boolean isPresetAvailableAtCurrentMarket(MarketAPI market, String presetName) {
+    public static boolean isPresetPlayerFleet(String presetName) {
+        FleetPreset preset = getFleetPresets().get(presetName);
+        if (preset == null) return false;
+
+        List<FleetMemberAPI> playerFleetMembers = Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder();
+        if (playerFleetMembers.size() != preset.shipIds.size()) {
+            return false;
+        }
+
+        boolean allShipsMatched = true;
+        for (FleetMemberAPI member : playerFleetMembers) {
+            String hullId = member.getHullId();
+            ShipVariantAPI variant = member.getVariant();
+            PersonAPI captain = member.getCaptain();
+
+            if (!preset.shipIds.contains(hullId)) {
+                allShipsMatched = false;
+                break;
+            }
+
+            List<ShipVariantAPI> presetVariants = preset.variantsMap.get(hullId);
+            if (presetVariants == null) {
+                allShipsMatched = false;
+                break;
+            }
+
+            boolean variantMatched = false;
+            for (ShipVariantAPI presetVariant : presetVariants) {
+                if (areSameVariant(presetVariant, variant)) {
+                    if (preset.officersMap.containsKey(hullId)) {
+                        List<OfficerVariantPair> pairs = preset.officersMap.get(hullId);
+                        boolean officerMatched = false;
+                        for (OfficerVariantPair pair : pairs) {
+                            if (areSameVariant(pair.variant, variant)) {
+                                if (captain != null && pair.officer.getId().equals(captain.getId())) {
+                                    officerMatched = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!officerMatched) {
+                            allShipsMatched = false;
+                            break;
+                        }
+                    }
+                    variantMatched = true;
+                    break;
+                }
+            }
+
+            if (!variantMatched) {
+                allShipsMatched = false;
+                break;
+            }
+        }
+
+        return allShipsMatched;
+    }
+
+    private static Map<String, Integer> findNeededShips(FleetPreset preset, List<FleetMemberAPI> playerCurrentFleet) {
+        Map<String, Integer> requiredShips = new HashMap<>();
+        Map<String, Integer> foundShips = new HashMap<>();
+
+        // First count required ships from preset
+        for (String hullId : preset.shipIds) {
+            requiredShips.put(hullId, requiredShips.getOrDefault(hullId, 0) + 1);
+        }
+
+        // Then count ships already in player's fleet
+        if (playerCurrentFleet != null) {
+            for (FleetMemberAPI member : playerCurrentFleet) {
+                String hullId = member.getHullId();
+                if (!requiredShips.containsKey(hullId)) continue;
+
+                List<ShipVariantAPI> presetVariants = preset.variantsMap.get(hullId);
+                if (presetVariants == null) continue;
+
+                for (ShipVariantAPI presetVariant : presetVariants) {
+                    if (areSameVariant(presetVariant, member.getVariant())) {
+                        foundShips.put(hullId, foundShips.getOrDefault(hullId, 0) + 1);
+                        break;
+                    }
+                }
+            }
+        }
+
+
+        Map<String, Integer> neededShips = new HashMap<>();
+        for (Map.Entry<String, Integer> entry : requiredShips.entrySet()) {
+            int needed = entry.getValue() - foundShips.getOrDefault(entry.getKey(), 0);
+            if (needed > 0) {
+                neededShips.put(entry.getKey(), needed);
+            }
+        }
+
+        return neededShips;
+    }
+
+    public static boolean isPresetAvailableAtCurrentMarket(MarketAPI market, String presetName, List<FleetMemberAPI> currentPlayerFleet) {
         if (market == null) return false;
         FleetPreset preset = getFleetPresets().get(presetName);
         if (preset == null) return false;
@@ -257,19 +354,17 @@ public class PresetUtils {
         initMothballedShips(storageCargo);
         FleetDataAPI mothballedShipsFleetData = storageCargo.getMothballedShips();
 
-        Map<String, Integer> requiredShips = new HashMap<>();
-        for (String hullId : preset.shipIds) {
-            requiredShips.put(hullId, requiredShips.getOrDefault(hullId, 0) + 1);
-        }
+        Map<String, Integer> neededShips = findNeededShips(preset, currentPlayerFleet);
+        if (neededShips.isEmpty()) return true;
 
         Map<String, Integer> foundShips = new HashMap<>();
 
         for (FleetMemberAPI storedMember : mothballedShipsFleetData.getMembersInPriorityOrder()) {
             String hullId = storedMember.getHullId();
             
-            if (!requiredShips.containsKey(hullId)) continue;
+            if (!neededShips.containsKey(hullId)) continue;
 
-            if (foundShips.getOrDefault(hullId, 0) >= requiredShips.get(hullId)) continue;
+            if (foundShips.getOrDefault(hullId, 0) >= neededShips.get(hullId)) continue;
 
             List<ShipVariantAPI> presetVariants = preset.variantsMap.get(hullId);
             if (presetVariants == null) continue;
@@ -282,7 +377,7 @@ public class PresetUtils {
             }
         }
 
-        for (Map.Entry<String, Integer> entry : requiredShips.entrySet()) {
+        for (Map.Entry<String, Integer> entry : neededShips.entrySet()) {
             if (foundShips.getOrDefault(entry.getKey(), 0) < entry.getValue()) {
                 return false;
             }
@@ -443,7 +538,7 @@ public class PresetUtils {
         if (market == null) return;
 
         SubmarketAPI storage = market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
-        CargoResourceRatios cargoRatios = new CargoResourceRatios(playerFleet.getFleetData().getMembersInPriorityOrder(), playerFleet.getCargo());
+        // CargoResourceRatios cargoRatios = new CargoResourceRatios(playerFleet.getFleetData().getMembersInPriorityOrder(), playerFleet.getCargo());
         SubmarketPlugin storagePlugin = storage.getPlugin();
         if (!isPlayerPaidForStorage(storagePlugin)) return;
         
@@ -464,7 +559,9 @@ public class PresetUtils {
             mothballedShipsFleetData.addFleetMember(member);
         }
         refreshFleetUI();
-        CargoPresetUtils.equalizeCargo(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder(), storageCargo, playerCargo, cargoRatios);
+
+        // this needs more work and conditional logic with options
+        // CargoPresetUtils.MaxFuelSuppliesAndCrew(playerCargo, storageCargo);
     }
 
     public static boolean isMemberInFleet(FleetDataAPI fleetData, FleetMemberAPI memberToCheck) {
@@ -586,7 +683,7 @@ public class PresetUtils {
         
         FleetDataAPI playerFleetData = playerFleet.getFleetData();
         List<FleetMemberAPI> playerFleetMembers = playerFleet.getFleetData().getMembersInPriorityOrder();
-        CargoResourceRatios cargoRatios = new CargoResourceRatios(playerFleetMembers, playerCargo);
+        // CargoResourceRatios cargoRatios = new CargoResourceRatios(playerFleetMembers, playerCargo);
 
         FleetMemberAPI playerFleetMember = getPlayerFleetMemberCopy(playerFleetData);
 
@@ -676,8 +773,10 @@ public class PresetUtils {
             }
         }
 
-        CargoPresetUtils.equalizeCargo(playerFleetData.getMembersInPriorityOrder(), playerCargo, storageCargo, cargoRatios);
         refreshFleetUI();
+
+        // this needs more work and conditional logic with options
+        // CargoPresetUtils.equalizeCargo(playerFleetData.getMembersInPriorityOrder(), playerCargo, storageCargo, cargoRatios);
 
         if (allFound) {
             CampaignUIMessage msg = new CampaignUIMessage(PresetUtils.RESTOREMESSAGE_SUCCESS_PREFIX + name, Misc.getPositiveHighlightColor());
@@ -705,6 +804,7 @@ public class PresetUtils {
             return Objects.hash(message);
         }
     }
+
 
     public static void addMessagesToCampaignUI() {
         List<PresetUtils.CampaignUIMessage> messageQueue = (List<PresetUtils.CampaignUIMessage>) Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.MESSAGEQUEUE_KEY);

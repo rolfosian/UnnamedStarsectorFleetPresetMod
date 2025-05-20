@@ -51,7 +51,7 @@ public class CargoPresetUtils {
 
     // manual implementation for refit because FleetMemberAPI.setvariant materializes weapons and fighters out of thin air and simply overwrites and i couldnt find any other avenue, someone please let me know if there's a better way
     // PROBLEM: STAT COSTS FOR ORDNANCE POINTS??? - Only a problem if we implement imports/exports of FleetPresets to and from different saves
-    // TODO: make D/Smod agnostic settings
+    // TODO: make D/Smod agnostic settings and implement conditional logic for options
     public static void refit(FleetMemberAPI targetMember, ShipVariantAPI sourceVariant, CargoAPI playerFleetCargo, CargoAPI storageCargo) {
         ShipVariantAPI targetVariantOriginal = targetMember.getVariant();
         ShipVariantAPI targetVariant = targetVariantOriginal.clone();
@@ -130,10 +130,9 @@ public class CargoPresetUtils {
 
     public static class CargoResourceRatios {
         public float rawCrewRatio;
-        public float crewToMarinesRatio;
+        public float marinesRatio;
         public float fuelRatio;
         public float supplyRatio;
-        public float totalNeededCrewToMaxPersonnelRatio;
 
         public CargoResourceRatios(List<FleetMemberAPI> fleetMembers, CargoAPI playerCargo) {
             float totalCrew = playerCargo.getCrew();
@@ -143,28 +142,20 @@ public class CargoPresetUtils {
             float cargoCapacity = playerCargo.getMaxCapacity();
             float fuel = playerCargo.getFuel();
             float maxFuel = playerCargo.getMaxFuel();
-    
-            float totalNeededCrew = 0f;
-    
-            for (FleetMemberAPI member : fleetMembers) {
-                totalNeededCrew += member.getNeededCrew();
-            }
-    
-            float totalNeededCrewToMaxPersonnelRatio = totalNeededCrew / maxPersonnel;
-    
-            float crewToMarinesRatio = totalMarines / totalCrew;
+
+            float rawMarinesRatio = totalMarines / maxPersonnel;
             float rawCrewRatio = totalCrew / maxPersonnel;
             float fuelRatio = fuel / maxFuel;
             float supplyRatio = supplies / cargoCapacity;
 
             this.rawCrewRatio = rawCrewRatio;
-            this.crewToMarinesRatio = crewToMarinesRatio;
+            this.marinesRatio = rawMarinesRatio;
             this.fuelRatio = fuelRatio;
             this.supplyRatio = supplyRatio;
-            this.totalNeededCrewToMaxPersonnelRatio = totalNeededCrewToMaxPersonnelRatio;
         }
     }
 
+    // needs debugging, more work and conditional logic with params for options
     public static void equalizeCargo(List<FleetMemberAPI> fleetMembers, CargoAPI storageCargo, CargoAPI playerCargo, CargoResourceRatios previousCargoRatios) {
         float maxPersonnel = playerCargo.getMaxPersonnel();
         float playerCargoCapacity = playerCargo.getMaxCapacity();
@@ -176,6 +167,12 @@ public class CargoPresetUtils {
         float storageFuel = storageCargo.getFuel();
         float storageSupplies = storageCargo.getSupplies();
         float storageCrew = storageCargo.getCrew();
+        float storageMarines = storageCargo.getMarines();
+
+        float totalNeededCrew = 0f;
+        for (FleetMemberAPI member : fleetMembers) {
+            totalNeededCrew += member.getNeededCrew();
+        }
 
         // minimum fuel is 20% of max fuel
         float desiredFuel = Math.max(maxFuel * previousCargoRatios.fuelRatio, maxFuel * 0.2f);
@@ -188,34 +185,51 @@ public class CargoPresetUtils {
         float actualSupplies = Math.min(desiredSupplies, storageSupplies);
         playerCargo.addSupplies(actualSupplies);
         storageCargo.removeSupplies(actualSupplies);
-        
-        float newNeededCrew = 0f;
-        for (FleetMemberAPI member : fleetMembers) {
-            newNeededCrew += member.getNeededCrew();
-        }
 
-        float baseCrew = Math.max(maxPersonnel * previousCargoRatios.rawCrewRatio, newNeededCrew * 1.1f);
-        float totalCrew = Math.max(baseCrew, newNeededCrew);
-        float totalMarines = 0f;
-        
-        if (previousCargoRatios.crewToMarinesRatio > 0) {
-            totalMarines = totalCrew * previousCargoRatios.crewToMarinesRatio;
-            totalCrew -= totalMarines;
-        }
-
-        float actualCrew = Math.min(totalCrew, storageCrew);
+        // minimum is needed crew + 10%
+        float desiredCrew = Math.max(maxPersonnel * previousCargoRatios.rawCrewRatio, totalNeededCrew * 1.1f);
+        float actualCrew = Math.min(desiredCrew, storageCrew);
         playerCargo.addCrew((int)actualCrew);
         storageCargo.removeCrew((int)actualCrew);
-        
-        if (totalMarines > 0) {
-            float storageMarines = storageCargo.getMarines();
-            float actualMarines = Math.min(totalMarines, storageMarines);
 
-            playerCargo.addMarines((int)actualMarines);
-            storageCargo.removeMarines((int)actualMarines);
-        }
+        float desiredMarines = maxPersonnel * previousCargoRatios.marinesRatio;
+        float actualMarines = Math.min(desiredMarines, storageMarines);
+        playerCargo.addMarines((int)actualMarines);
+        storageCargo.removeMarines((int)actualMarines);
     }
 
+    // needs more work and conditional logic with params for options
+    public static void MaxFuelSuppliesAndCrew(CargoAPI playerCargo, CargoAPI storageCargo) {
+        storageCargo.addFuel(playerCargo.getFuel());
+        storageCargo.addSupplies(playerCargo.getSupplies());
+        storageCargo.addCrew(playerCargo.getCrew());
+        playerCargo.removeFuel(playerCargo.getFuel());
+        playerCargo.removeSupplies(playerCargo.getSupplies());
+        playerCargo.removeCrew(playerCargo.getCrew());
+
+        float maxFuel = playerCargo.getMaxFuel();
+        float maxSupplies = playerCargo.getMaxCapacity();
+        float maxCrew = playerCargo.getMaxPersonnel();
+
+        float storageFuel = storageCargo.getFuel();
+        float storageSupplies = storageCargo.getSupplies();
+        float storageCrew = storageCargo.getCrew();
+
+        float actualFuel = Math.min(maxFuel, storageFuel);
+        float actualSupplies = Math.min(maxSupplies, storageSupplies);
+        float actualCrew = Math.min(maxCrew, storageCrew);
+
+        playerCargo.addFuel(actualFuel);
+        playerCargo.addSupplies(actualSupplies);
+        playerCargo.addCrew((int)actualCrew);
+
+        storageCargo.removeFuel(actualFuel);
+        storageCargo.removeSupplies(actualSupplies);
+        storageCargo.removeCrew((int)actualCrew);
+    }
+    
+    // this wont work for any valid usecase at the moment because the refit method will currently overwrite all the built-in/d/s hullmods and that would be stupid
+    // needs conditional logic for hullmod agnosticism
     public static void refitAllHullsOfIdInFleetWithVariant(String hullId, ShipVariantAPI variant, List<FleetMemberAPI> fleetMembers, CargoAPI playerCargo, CargoAPI storageCargo) {
         for (FleetMemberAPI member : fleetMembers) {
             if (member.getHullId().equals(hullId)) {
