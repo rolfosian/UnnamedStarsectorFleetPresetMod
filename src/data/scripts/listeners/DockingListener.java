@@ -16,7 +16,10 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 public class DockingListener implements CampaignEventListener {
-    public static final Logger logger = Logger.getLogger(DockingListener.class);
+        public static final Logger logger = Logger.getLogger(DockingListener.class);
+
+    public static final String PLAYERCURRENTMARKET_KEY = PresetUtils.PLAYERCURRENTMARKET_KEY;
+    public static final String ISPLAYERPAIDFORSTORAGE_KEY = PresetUtils.ISPLAYERPAIDFORSTORAGE_KEY;
 
     public static boolean canPlayerAccessStorage(MarketAPI market) {
         return (market != null && PresetUtils.isPlayerPaidForStorage(market.getSubmarket(Submarkets.SUBMARKET_STORAGE).getPlugin()));
@@ -30,13 +33,13 @@ public class DockingListener implements CampaignEventListener {
     @Override
     public void reportPlayerOpenedMarket(MarketAPI market) {
         MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
-        mem.set(PresetUtils.PLAYERCURRENTMARKET_KEY, market);
+        mem.set(PLAYERCURRENTMARKET_KEY, market);
     }
 
     @Override
     public void reportPlayerClosedMarket(MarketAPI market) {
         MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
-        mem.unset(PresetUtils.PLAYERCURRENTMARKET_KEY);
+        mem.unset(PLAYERCURRENTMARKET_KEY);
         mem.unset(PresetUtils.ISPLAYERPAIDFORSTORAGE_KEY);
         PresetUtils.addMessagesToCampaignUI();
     }

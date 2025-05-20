@@ -65,7 +65,8 @@ public class FleetPanelInjector {
             new UIPanel(fleetInfoPanel).add(presetFleetsButton).set(officerAutoAssignButtonPosition);
             PositionAPI presetFleetsButtonPosition = presetFleetsButton.getPosition();
             // presetFleetsButtonPosition.setXAlignOffset(-0.25f);
-            presetFleetsButtonPosition.setYAlignOffset(-officerAutoAssignButtonHeight * 1.55f);
+            // presetFleetsButtonPosition.setYAlignOffset(-officerAutoAssignButtonHeight * 1.55f);
+            presetFleetsButtonPosition.setYAlignOffset(-officerAutoAssignButtonHeight * 8f);
         }
     }
 

@@ -84,6 +84,7 @@ public class FleetPresetManagementListener extends ActionListener {
     private static final String SAVE_DIALOG_YES_TEXT = "Save preset";
     private static final String DELETE_DIALOG_HEADER_PREFIX = "Are you sure you want to delete ";
     private static final String OVERWRITE_DIALOG_HEADE_PREFIX = "Are you sure you want to overwrite ";
+    private static final String OVERWRITE_DIALOG_HEADE_SUFFIX = " with the current fleet?";
     
     private static final String SAVE_DIALOG_BUTTON_ID = "saveDialogButton";
     private static final String SAVE_DIALOG_BUTTON_TOOLTIP_PARA_TEXT = "Saves the current fleet as preset.";
@@ -102,8 +103,8 @@ public class FleetPresetManagementListener extends ActionListener {
     private static final String DELETE_BUTTON_TEXT = "DELETE";
 
     private static final String OVERWRITE_PRESET_BUTTON_ID = "overwriteToPresetButton";
-    private static final String OVERWRITE_PRESET_BUTTON_TOOLTIP_PARA_TEXT = "Overwrites the current fleet to the selected preset.";
-    private static final String OVERWRITE_PRESET_BUTTON_TEXT = "OVERWRITE";
+    private static final String OVERWRITE_PRESET_BUTTON_TOOLTIP_PARA_TEXT = "Overwrites the selected preset with the current fleet.";
+    private static final String OVERWRITE_PRESET_BUTTON_TEXT = "UPDATE";
     
     private static final String BLANK_TABLE_TEXT = "Presets Go Here";
     private static final Color c1 = Global.getSettings().getBasePlayerColor();
@@ -113,11 +114,20 @@ public class FleetPresetManagementListener extends ActionListener {
     private TextFieldAPI saveNameField;
 
     private String selectedPresetName = EMPTY_STRING;
+    
     private LabelAPI selectedPresetNamePara;
     private String selectedPresetNameParaFormat = "Selected Preset: %s";
+
+    private LabelAPI isSelectedPresetAvailablePara;
+    private String isSelectedPresetAvailableParaFormat = "Selected Preset is %s at this location";
+
+    private LabelAPI isSelectedPresetFleetPara;
+
     private int selectedRowIndex = -1;
     private int currentPresetsNum = 0;
 
+
+    CustomPanelAPI buttonsPanel;
     private Map<String, ButtonAPI> theButtons = new HashMap<>();
     private ButtonAPI MasterCancelButton;
     private final HashMap<String, String> buttonToolTipParas = new HashMap<>();
@@ -172,7 +182,7 @@ public class FleetPresetManagementListener extends ActionListener {
         CANCEL_CONFIRM_BUTTON_WIDTH = cancelButtonPosition.getWidth();
 
         ButtonPlugin buttonPlugin = new ButtonPlugin(buttonIds);
-        CustomPanelAPI buttonsPanel = Global.getSettings().createCustom(CANCEL_CONFIRM_BUTTON_WIDTH, PANEL_HEIGHT, buttonPlugin);
+        buttonsPanel = Global.getSettings().createCustom(CANCEL_CONFIRM_BUTTON_WIDTH, PANEL_HEIGHT, buttonPlugin);
         TooltipMakerAPI tooltipMaker = buttonsPanel.createUIElement(CANCEL_CONFIRM_BUTTON_WIDTH, PANEL_HEIGHT, true);
         buttonPlugin.init(buttonsPanel, tooltipMaker);
 
@@ -188,7 +198,10 @@ public class FleetPresetManagementListener extends ActionListener {
             storageAvailableColor = Misc.getNegativeHighlightColor();
         }
         tooltipMaker.addPara(storageAvailableText, storageAvailableColor, 5f);
-        selectedPresetNamePara = tooltipMaker.addParaWithMarkup(String.format(selectedPresetNameParaFormat, selectedPresetName), c1, 5f);
+        // selectedPresetNamePara = tooltipMaker.addParaWithMarkup(String.format(selectedPresetNameParaFormat, selectedPresetName), c1, 5f);
+
+        isSelectedPresetAvailablePara = tooltipMaker.addParaWithMarkup("", c1, 5f);
+        isSelectedPresetFleetPara = tooltipMaker.addParaWithMarkup("", c1, 5f);
 
         master.panel.removeComponent(confirmButton);
         // data.panel.removeComponent(cancelButton);
@@ -204,7 +217,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
         tablePlugin.setRoot(tableMasterPanel);
     }
-
+    
     private void addTheButtons(TooltipMakerAPI tooltipMaker, PositionAPI confirmPosition, PositionAPI cancelPosition) {
         float buttonWidth = confirmPosition.getWidth();
         float buttonHeight = cancelPosition.getHeight();
@@ -240,13 +253,13 @@ public class FleetPresetManagementListener extends ActionListener {
         return;
     }
 
-    private UtilReflection.ConfirmDialogData openOverwriteDialog(boolean overwrite) {
+    private void openOverwriteDialog(boolean overwrite) {
 
         SaveListener saveListener = new SaveListener(true, overwrite);
         CustomPanelAPI textFieldPanel = Global.getSettings().createCustom(CONFIRM_DIALOG_WIDTH / 2 / 6, CONFIRM_DIALOG_HEIGHT / 2 / 18, null);
 
         UtilReflection.ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
-            OVERWRITE_DIALOG_HEADE_PREFIX + selectedPresetName + QUESTON_MARK,
+            OVERWRITE_DIALOG_HEADE_PREFIX + selectedPresetName + OVERWRITE_DIALOG_HEADE_SUFFIX,
             CONFIRM_TEXT,
             CANCEL_TEXT,
             CONFIRM_DIALOG_WIDTH / 1.5f,
@@ -255,23 +268,22 @@ public class FleetPresetManagementListener extends ActionListener {
 
         // PositionAPI subPos = subData.panel.getPosition();
         subData.panel.addComponent(textFieldPanel).inTL(0f, 0f);
-
-        return subData;
     }
 
-    private UtilReflection.ConfirmDialogData openSaveDialog() {
+    private void openSaveDialog() {
 
         SaveListener saveListener = new SaveListener(false, true);
-        BaseCustomUIPanelPlugin textPanelPlugin = new BaseCustomUIPanelPlugin() {
-            @Override 
-            public void processInput(List<InputEventAPI> events) {
-                for (InputEventAPI event : events) {
-                    if (event.isKeyDownEvent() && (Keyboard.isKeyDown(Keyboard.KEY_RETURN) || Keyboard.isKeyDown(Keyboard.KEY_NUMPADENTER))) {
-                        MiscUtils.pressKey(Keyboard.KEY_RETURN);
-                    }
-                }
-            }
-        };
+        BaseCustomUIPanelPlugin textPanelPlugin = new BaseCustomUIPanelPlugin(); //{
+            // @Override 
+            // public void processInput(List<InputEventAPI> events) {
+            //     for (InputEventAPI event : events) {
+                    // if (event.isKeyDownEvent() && (Keyboard.isKeyDown(Keyboard.KEY_RETURN) || Keyboard.isKeyDown(Keyboard.KEY_NUMPADENTER))) {
+                        // MiscUtils.pressKey(Keyboard.KEY_RETURN); this crashes the game with nosuchmethoderror in the obfuscated code and i am incapable of debugging it
+                        // i think the textField consumes the event anyway so this proposed workaround doesnt work regardless
+                    // }
+                // }
+            // }
+        // };
 
         CustomPanelAPI textFieldPanel = Global.getSettings().createCustom(CONFIRM_DIALOG_WIDTH / 2 / 6, CONFIRM_DIALOG_HEIGHT / 2 / 12, textPanelPlugin);
         TooltipMakerAPI textFieldTooltipMaker = textFieldPanel.createUIElement(CONFIRM_DIALOG_WIDTH / 2 / 5, CONFIRM_DIALOG_HEIGHT / 2 / 10, false);
@@ -289,11 +301,9 @@ public class FleetPresetManagementListener extends ActionListener {
         // PositionAPI subPos = subData.panel.getPosition();
         subData.panel.addComponent(textFieldPanel).inTL(0f, 0f).setXAlignOffset(CONFIRM_DIALOG_WIDTH / 2 / 2 / 2).setYAlignOffset(-CONFIRM_DIALOG_HEIGHT / 2 / 2 / 2);
         saveNameField.grabFocus();
-
-        return subData;
     }
 
-    private UtilReflection.ConfirmDialogData openDeleteDialog() {
+    private void openDeleteDialog() {
 
         DeleteListener deleteListener = new DeleteListener();
         CustomPanelAPI textPanel = Global.getSettings().createCustom(CONFIRM_DIALOG_WIDTH / 2 / 10, CONFIRM_DIALOG_HEIGHT / 2 / 20, null);
@@ -307,7 +317,6 @@ public class FleetPresetManagementListener extends ActionListener {
             deleteListener);
 
         subData.panel.addComponent(textPanel).inTL(0f, 0f);
-        return subData;
     }
 
     public static boolean isEmptyOrWhitespace(String s) {
@@ -512,17 +521,25 @@ public class FleetPresetManagementListener extends ActionListener {
     private void enableButtonsRequiringSelection() {
         if (selectedPresetName != EMPTY_STRING) {
             if (DockingListener.getPlayerCurrentMarket() != null && DockingListener.canPlayerAccessStorage(DockingListener.getPlayerCurrentMarket())) {
-                theButtons.get(RESTORE_BUTTON_ID).setEnabled(true);
-                theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(true);
-            } else {
-                theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(true);
-            }
-            theButtons.get(DELETE_BUTTON_ID).setEnabled(true);
-
-        } else {
-            if (DockingListener.getPlayerCurrentMarket() != null && DockingListener.canPlayerAccessStorage(DockingListener.getPlayerCurrentMarket())) {
                 theButtons.get(STORE_BUTTON_ID).setEnabled(true);
+                theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(true);
+                theButtons.get(DELETE_BUTTON_ID).setEnabled(true);
+
+                if (PresetUtils.isPresetAvailableAtCurrentMarket(DockingListener.getPlayerCurrentMarket(), selectedPresetName, 
+                    Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder())) {
+                    theButtons.get(RESTORE_BUTTON_ID).setEnabled(true);
+                }
+                // } else {
+                //     theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
+                // }
+
+            } else {
+                theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
+                theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(true);
+                theButtons.get(DELETE_BUTTON_ID).setEnabled(true);
+                theButtons.get(STORE_BUTTON_ID).setEnabled(false);
             }
+
         }
     }
 
@@ -573,7 +590,7 @@ public class FleetPresetManagementListener extends ActionListener {
         public void render(float alphaMult) {
         }
 
-        private void processRow(UIPanelAPI row, String rowName, TooltipMakerAPI tableTipMaker, int id, PresetUtils.FleetPreset fleetpreset) {
+        private void processRow(UIPanelAPI row, String rowName, int id, PresetUtils.FleetPreset fleetpreset) {
             PositionAPI rowPos = row.getPosition();
             
             TableRowListener rowListener = new TableRowListener(row, rowPos, rowName, id, fleetpreset.fleetMembers);
@@ -600,19 +617,16 @@ public class FleetPresetManagementListener extends ActionListener {
             int id;
             // int size = currentTableMap.size();
             
+            // this mechanism works if there's a table header but i took it out because it was a superfluous and unnecessary feature, see tablerowlistener processinput for more details
             // if (tableUp) {
                 id = 0;
             // } else {
                 // id = (size == 1) ? 0 : size - 1;
             // }
 
-            // boolean isPlayerFleetAPreset = PresetUtils.isPlayerFleetAPreset(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
             for (Map.Entry<String, PresetUtils.FleetPreset> entry: currentTableMap.entrySet()) {
                 String rowName = entry.getKey();
                 PresetUtils.FleetPreset fleetPreset = entry.getValue();
-
-                // boolean isFleetPresetAvailableInStorage = PresetUtils.isPresetAvailableAtCurrentMarket(DockingListener.getPlayerCurrentMarket(), rowName);
-                // boolean isActive = isFleetPresetAvailableInStorage || isPlayerFleetAPreset;
 
                 UIPanelAPI row;
                 if (selectedRowIndex == id) {
@@ -626,14 +640,8 @@ public class FleetPresetManagementListener extends ActionListener {
                         rowName
                     );
                 } 
-                // else {
-                //     row = tableTipMaker.addRow(
-                //         c2, 
-                //         rowName
-                //     );
-                // }
                 
-                processRow(row, rowName, tableTipMaker, id, fleetPreset);
+                processRow(row, rowName, id, fleetPreset);
                 // id += tableUp ? 1 : -1;
                 id++;
             }
@@ -641,10 +649,31 @@ public class FleetPresetManagementListener extends ActionListener {
             panel.addUIElement(tableTipMaker);
 
             if (selectedPresetName != EMPTY_STRING) {
-                selectedPresetNamePara.setText(String.format(selectedPresetNameParaFormat, selectedPresetName));
+                if (PresetUtils.isPresetAvailableAtCurrentMarket(DockingListener.getPlayerCurrentMarket(), selectedPresetName, 
+                    Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder())) {
+
+                    isSelectedPresetAvailablePara.setText(String.format(isSelectedPresetAvailableParaFormat, "available"));
+                    isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
+                    theButtons.get(RESTORE_BUTTON_ID).setEnabled(true);
+
+                } else {
+                    theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
+
+                    if (PresetUtils.isPresetPlayerFleet(selectedPresetName)) {
+                        isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet"));
+                        isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
+                    } else {
+                        isSelectedPresetAvailablePara.setText(String.format(isSelectedPresetAvailableParaFormat, "unavailable"));
+                        isSelectedPresetAvailablePara.setColor(Misc.getNegativeHighlightColor());
+                    }
+                }
+
+                // selectedPresetNamePara.setText(String.format(selectedPresetNameParaFormat, selectedPresetName));
                 addShipList(currentTableMap.get(selectedPresetName).fleetMembers);
+
             } else {
-                selectedPresetNamePara.setText(String.format(selectedPresetNameParaFormat, EMPTY_STRING));
+                // selectedPresetNamePara.setText(EMPTY_STRING);
+                isSelectedPresetAvailablePara.setText(EMPTY_STRING);
                 addShipList(null);
             };
 
@@ -773,7 +802,8 @@ public class FleetPresetManagementListener extends ActionListener {
                     float rH = rowPos.getHeight();
 
                     
-                    // For table headers. I couldnt get mouse events to register on the header itself, idk what is blocking them. Above and below worked fine lol
+                    // For table headers to sort the table by ascending or descending.
+                    // I couldnt get mouse events to register on the header itself, idk what is blocking them. Above and below worked fine lol
                     // if (tableUp && this.id == 0 || (!tableUp && this.id == tableRowListeners.size() - 1)) {
                     //     float yOffsetBottom = rY / 100 * 4;
                     //     float yOffsetTop = rY / 100 * 2.6f;
@@ -851,6 +881,7 @@ public class FleetPresetManagementListener extends ActionListener {
         }
         return -1;
     }
+
     private class SaveListener extends DialogDismissedListener {
         private boolean overwrite;
         private boolean cancel;

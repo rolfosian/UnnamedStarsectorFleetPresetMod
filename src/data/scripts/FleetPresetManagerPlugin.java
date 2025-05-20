@@ -49,6 +49,10 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
 
         Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.MESSAGEQUEUE_KEY, new ArrayList<>());
 
+        if (Global.getSector().getPersistentData().get(PresetUtils.PRESETS_MEMORY_KEY) == null) {
+            Global.getSector().getPersistentData().put(PresetUtils.PRESETS_MEMORY_KEY, new HashMap<String, PresetUtils.FleetPreset>());
+        }
+
         @SuppressWarnings("resource")
         ClassLoader cl = new ReflectionEnabledClassLoader(url, getClass().getClassLoader());
         try {
