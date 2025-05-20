@@ -11,7 +11,6 @@ import com.fs.starfarer.api.campaign.CargoAPI;
 import com.fs.starfarer.api.campaign.CoreUIAPI;
 import com.fs.starfarer.api.campaign.FactionAPI;
 import com.fs.starfarer.api.campaign.FleetDataAPI;
-import com.fs.starfarer.api.campaign.InteractionDialogAPI;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.campaign.econ.SubmarketAPI;
 import com.fs.starfarer.api.campaign.SubmarketPlugin;
@@ -678,11 +677,12 @@ public class PresetUtils {
         
         SubmarketAPI storage = market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
         CargoAPI storageCargo = storage.getCargo();
-        CargoAPI playerCargo = playerFleet.getCargo();
         initMothballedShips(storageCargo);
         
         FleetDataAPI playerFleetData = playerFleet.getFleetData();
         List<FleetMemberAPI> playerFleetMembers = playerFleet.getFleetData().getMembersInPriorityOrder();
+
+        // CargoAPI playerCargo = playerFleet.getCargo();
         // CargoResourceRatios cargoRatios = new CargoResourceRatios(playerFleetMembers, playerCargo);
 
         FleetMemberAPI playerFleetMember = getPlayerFleetMemberCopy(playerFleetData);
