@@ -672,14 +672,19 @@ public class FleetPresetManagementListener extends ActionListener {
             tableTipMaker.getExternalScroller().setYOffset(yScrollOffset);
         }
 
-        public void addShipList(List<FleetMemberAPI> fleetMembers) {
+        public void addShipList(List<PresetUtils.FleetMemberWrapper> fleetMembers) {
             fenaglePanele.parent.removeComponent(shipListPanel);
             shipListPanel = null;
 
             if (fleetMembers != null) {
+                List<FleetMemberAPI> members = new ArrayList<>();
+                for (PresetUtils.FleetMemberWrapper member : fleetMembers) {
+                    members.add(member.member);
+                }
+
                 shipListPanel = Global.getSettings().createCustom(SHIP_COLUMN_WIDTH, PANEL_HEIGHT - UiConfig.SHIPLIST_PANEL_HEIGHT_SUBTRACTOR, null);
                 TooltipMakerAPI shipListTooltip = shipListPanel.createUIElement(SHIP_COLUMN_WIDTH, PANEL_HEIGHT - MasterCancelButton.getPosition().getHeight() + UiConfig.SHIPLIST_PANEL_HEIGHT_SUBTRACTOR, true);
-                shipListTooltip.addShipList(4, 8, UiConfig.SHIPLIST_SIZE, Misc.getBasePlayerColor(), fleetMembers, 5f);
+                shipListTooltip.addShipList(4, 8, UiConfig.SHIPLIST_SIZE, Misc.getBasePlayerColor(), members, 5f);
                 shipListPanel.addUIElement(shipListTooltip);
 
                 // have to do this because if directly added to the refreshing panel then the game crashes when the master panel is closed
@@ -719,10 +724,10 @@ public class FleetPresetManagementListener extends ActionListener {
         public CustomPanelAPI panel;
         public PositionAPI rowPos;
         public TooltipMakerAPI tooltipMaker;
-        public List<FleetMemberAPI> fleetMembers;
+        public List<PresetUtils.FleetMemberWrapper> fleetMembers;
         // public boolean isActive;
 
-        public TableRowListener(Object row, PositionAPI rowPos, String rowPresetName, int id, List<FleetMemberAPI> fleetMembers) {
+        public TableRowListener(Object row, PositionAPI rowPos, String rowPresetName, int id, List<PresetUtils.FleetMemberWrapper> fleetMembers) {
             this.row = row;
             this.id = id;
             this.rowName = rowPresetName;
