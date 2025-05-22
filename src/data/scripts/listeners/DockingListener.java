@@ -49,18 +49,13 @@ public class DockingListener implements CampaignEventListener {
         mem.unset(PresetUtils.ISPLAYERPAIDFORSTORAGE_KEY);
         PresetUtils.addMessagesToCampaignUI();
 
-        FleetDataAPI playerFleetData = Global.getSector().getPlayerFleet().getFleetData();
-        if (PresetUtils.isPlayerFleetAPreset(playerFleetData.getMembersInPriorityOrder())) {
-            mem.set(PresetUtils.UNDOCKED_PRESET_KEY, playerFleetData);
+        FleetPreset preset = PresetUtils.getPresetOfPlayerFleet(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
+        if (preset != null) {
+            mem.set(PresetUtils.UNDOCKED_PRESET_KEY, preset);
         }
     }
 
-    @Override
-    public void reportBattleFinished(CampaignFleetAPI primaryWinner, BattleAPI battle) {
-        if (battle.isPlayerInvolved()) {
-            PresetUtils.afterBattleFinished();
-        }
-    }
+    public void reportBattleFinished(CampaignFleetAPI primaryWinner, BattleAPI battle) {}
 
     public void reportBattleOccurred(CampaignFleetAPI primaryWinner, BattleAPI battle) {}
 

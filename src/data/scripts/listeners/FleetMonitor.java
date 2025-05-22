@@ -1,0 +1,126 @@
+package data.scripts.listeners;
+
+import java.util.*;
+
+import com.fs.starfarer.api.EveryFrameScript;
+import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.campaign.CampaignFleetAPI;
+import com.fs.starfarer.api.campaign.rules.MemoryAPI;
+import com.fs.starfarer.api.fleet.FleetMemberAPI;
+import com.fs.starfarer.api.util.Misc;
+import data.scripts.util.PresetUtils;
+import data.scripts.util.PresetUtils.FleetPreset;
+
+
+public class FleetMonitor implements EveryFrameScript {
+    @Override
+    public void advance(float arg0) {
+        checkFleetAgainstPreset();
+    }
+
+    public static boolean isPlayerFleetChanged(FleetPreset preset, List<FleetMemberAPI> playerFleetMembers) {
+        for (PresetUtils.FleetMemberWrapper member : preset.fleetMembers) {
+            FleetMemberAPI playerFleetMember = playerFleetMembers.get(member.index);
+
+            if (!PresetUtils.areSameVariant(playerFleetMember.getVariant(), member.member.getVariant())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static void checkFleetAgainstPreset() {
+        MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
+        FleetPreset preset = (FleetPreset) mem.get(PresetUtils.UNDOCKED_PRESET_KEY);
+        if (preset == null) return;
+
+        boolean isUpdate = mem.getBoolean(PresetUtils.IS_UPDATE_KEY);
+
+        CampaignFleetAPI playerFleet = Global.getSector().getPlayerFleet();
+        List<FleetMemberAPI> playerFleetMembers = playerFleet.getFleetData().getMembersListCopy();
+
+        if (isUpdate) {
+            boolean updated = false;
+
+            if (playerFleetMembers.size() != preset.fleetMembers.size()) {
+                Map<String, List<FleetMemberAPI>> currentFleetByHull = new HashMap<>();
+                Map<String, List<FleetMemberAPI>> presetFleetByHull = new HashMap<>();
+
+                for (FleetMemberAPI member : playerFleetMembers) {
+                    String hullId = member.getHullId();
+                    if (!currentFleetByHull.containsKey(hullId)) {
+                        currentFleetByHull.put(hullId, new ArrayList<>());
+                    }
+                    currentFleetByHull.get(hullId).add(member);
+                }
+
+                for (PresetUtils.FleetMemberWrapper wrapper : preset.fleetMembers) {
+                    String hullId = wrapper.member.getHullId();
+                    if (!presetFleetByHull.containsKey(hullId)) {
+                        presetFleetByHull.put(hullId, new ArrayList<>());
+                    }
+                    presetFleetByHull.get(hullId).add(wrapper.member);
+                }
+                
+                preset.fleetMembers.clear();
+                preset.shipIds.clear();
+                preset.variantsMap.clear();
+                preset.officersMap.clear();
+                
+                for (int i = 0; i < playerFleetMembers.size(); i++) {
+                    FleetMemberAPI member = playerFleetMembers.get(i);
+                    String hullId = member.getHullId();
+                    
+                    preset.fleetMembers.add(PresetUtils.wrapFleetMember(member, i));
+                    
+                    preset.shipIds.add(hullId);
+                    
+                    if (!preset.variantsMap.containsKey(hullId)) {
+                        preset.variantsMap.put(hullId, new ArrayList<>());
+                    }
+                    preset.variantsMap.get(hullId).add(new PresetUtils.IndexedVariant(i, member.getVariant()));
+                    
+                    if (member.getCaptain() != null) {
+                        PresetUtils.OfficerVariantPair pair = new PresetUtils.OfficerVariantPair(member.getCaptain(), member.getVariant(), i);
+                        if (!preset.officersMap.containsKey(hullId)) {
+                            preset.officersMap.put(hullId, new ArrayList<>());
+                        }
+                        preset.officersMap.get(hullId).add(pair);
+                    }
+                }
+                Global.getSector().getCampaignUI().addMessage("The fleet composition has changed and the fleet preset has been updated.", Misc.getBasePlayerColor());
+
+            } else {
+                for (PresetUtils.FleetMemberWrapper member : preset.fleetMembers) {
+                    FleetMemberAPI playerFleetMember = playerFleetMembers.get(member.index);
+
+                    if (!PresetUtils.areSameVariant(playerFleetMember.getVariant(), member.member.getVariant())) {
+                        preset.updateVariant(member.index, playerFleetMember.getVariant());
+                        updated = true; 
+                    }
+                }
+            }
+
+            if (updated) {
+                Global.getSector().getCampaignUI().addMessage("The fleet composition has changed and the fleet preset has been updated.", Misc.getBasePlayerColor());
+            }
+
+        } else {
+            if (isPlayerFleetChanged(preset, playerFleetMembers)) {
+                Global.getSector().getCampaignUI().addMessage("The fleet composition has changed. Consider updating the fleet preset to match the current fleet.", Misc.getNegativeHighlightColor());
+                mem.unset(PresetUtils.UNDOCKED_PRESET_KEY);
+            }
+        }
+    }
+
+    @Override
+    public boolean isDone() {
+        return false;
+    }
+
+    @Override
+    public boolean runWhilePaused() {
+        return false;
+    }
+    
+}
