@@ -22,9 +22,11 @@ public class FleetMonitor implements EveryFrameScript {
         for (PresetUtils.FleetMemberWrapper member : preset.fleetMembers) {
             FleetMemberAPI playerFleetMember = playerFleetMembers.get(member.index);
 
-            if (!PresetUtils.areSameVariant(playerFleetMember.getVariant(), member.member.getVariant())) {
+            if (!PresetUtils.areSameVariant(playerFleetMember.getVariant(), member.member.getVariant()) 
+                || (playerFleetMember.getCaptain() != null && !(playerFleetMember.getCaptain().getId() == member.captainId))) {
                 return true;
             }
+
         }
         return false;
     }
