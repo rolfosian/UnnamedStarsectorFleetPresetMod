@@ -145,17 +145,10 @@ public class PresetUtils {
         }
     }
 
-    public static FleetMemberWrapper wrapFleetMember(FleetMemberAPI member, int index) {
-        if (member.getCaptain() != null) {
-            return new FleetMemberWrapper(member, member.getCaptain(), index);
-        }
-        return new FleetMemberWrapper(member, null, index);
-    }
-
     public static class FleetPreset {
         public final String name;
         public List<String> shipIds = new ArrayList<>();
-        public Map<String, List<IndexedVariant>> variantsMap = new HashMap<>();
+        public Map<String, List<IndexedVariant>> variantsMap = new HashMap<>(); // this could probably be refactored to use indexes as keys directly without using list values but that makes problems for comparing with variants in market storage that aren't indexed so it isn't readily apparent what to do for now
         public Map<String, List<OfficerVariantPair>> officersMap = new HashMap<>();
         public List<FleetMemberWrapper> fleetMembers = new ArrayList<>();
         public FleetPreset(String name, List<FleetMemberAPI> fleetMembers) {
@@ -268,8 +261,7 @@ public class PresetUtils {
                     ShipVariantAPI presetVariant = indexedVariant.variant;
 
                     if (areSameVariant(presetVariant, variant)) {
-
-                        if (preset.officersMap.containsKey(hullId)) {
+                        if (captain != null && preset.officersMap.containsKey(hullId)) {
                             List<OfficerVariantPair> pairs = preset.officersMap.get(hullId);
                             boolean officerMatched = false;
                             for (OfficerVariantPair pair : pairs) {
@@ -333,7 +325,7 @@ public class PresetUtils {
                 ShipVariantAPI presetVariant = indexedVariant.variant;
 
                 if (areSameVariant(presetVariant, variant)) {
-                    if (preset.officersMap.containsKey(hullId)) {
+                    if (captain != null && preset.officersMap.containsKey(hullId)) {
                         List<OfficerVariantPair> pairs = preset.officersMap.get(hullId);
                         boolean officerMatched = false;
                         for (OfficerVariantPair pair : pairs) {

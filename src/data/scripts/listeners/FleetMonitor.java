@@ -9,6 +9,7 @@ import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.util.Misc;
 import data.scripts.util.PresetUtils;
+import data.scripts.util.PresetUtils.FleetMemberWrapper;
 import data.scripts.util.PresetUtils.FleetPreset;
 
 
@@ -73,7 +74,7 @@ public class FleetMonitor implements EveryFrameScript {
                     FleetMemberAPI member = playerFleetMembers.get(i);
                     String hullId = member.getHullId();
                     
-                    preset.fleetMembers.add(PresetUtils.wrapFleetMember(member, i));
+                    preset.fleetMembers.add(new FleetMemberWrapper(member, member.getCaptain(), i));
                     
                     preset.shipIds.add(hullId);
                     
