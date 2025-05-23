@@ -7,8 +7,8 @@ import java.awt.event.InputEvent;
 import org.apache.log4j.Logger;
 import com.fs.starfarer.api.Global;
 
-public class MiscUtils {
-    private static final Logger logger = Global.getLogger(MiscUtils.class);
+public class PresetMiscUtils {
+    private static final Logger logger = Global.getLogger(PresetMiscUtils.class);
     
     public static void clickAt(float x, float y) {
         try {

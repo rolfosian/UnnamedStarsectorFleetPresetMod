@@ -36,11 +36,11 @@ public class PresetUtils {
     public static final Logger logger = Logger.getLogger(PresetUtils.class);
 
     public static void print(Object... args) {
-        MiscUtils.print(args);
+        PresetMiscUtils.print(args);
     }
 
     // Persistent data keys
-    public static final String PRESETS_MEMORY_KEY = "$player_fleet_presets";
+    public static final String PRESETS_MEMORY_KEY = "$playerFleetPresets";
     public static final String IS_AUTO_UPDATE_KEY = "$isPresetAutoUpdate";
 
     // Non-persistent data keys
@@ -55,7 +55,6 @@ public class PresetUtils {
     public static final String RESTOREMESSAGE_FAIL_PREFIX = "Could not find one or more of ";
     public static final String RESTOREMESSAGE_FAIL_SUFFIX = " in storage to load for preset: ";
 
-    
     private static final HullSize[] SIZE_ORDER_DESCENDING = {
         HullSize.CAPITAL_SHIP,
         HullSize.DEFAULT,
@@ -347,28 +346,23 @@ public class PresetUtils {
         Map<String, Integer> requiredShips = new HashMap<>();
         Map<String, Integer> foundShips = new HashMap<>();
 
-        // First count required ships from preset
         for (String hullId : preset.shipIds) {
             requiredShips.put(hullId, requiredShips.getOrDefault(hullId, 0) + 1);
         }
 
-        // Then count ships already in player's fleet
         if (playerCurrentFleet != null) {
-            for (int i = 0; i < playerCurrentFleet.size(); i++) {
-                FleetMemberAPI member = playerCurrentFleet.get(i);
+            for (FleetMemberAPI member : playerCurrentFleet) {
                 String hullId = member.getHullId();
                 if (!requiredShips.containsKey(hullId)) continue;
 
-                ShipVariantAPI presetVariant = preset.variantsMap.get(i);
-                if (presetVariant == null) continue;
-
-                if (areSameVariant(presetVariant, member.getVariant())) {
-                    foundShips.put(hullId, foundShips.getOrDefault(hullId, 0) + 1);
-                    break;
+                for (ShipVariantAPI presetVariant : preset.variantsMap.values()) {
+                    if (areSameVariant(presetVariant, member.getVariant())) {
+                        foundShips.put(hullId, foundShips.getOrDefault(hullId, 0) + 1);
+                        break;
+                    }
                 }
             }
         }
-
 
         Map<String, Integer> neededShips = new HashMap<>();
         for (Map.Entry<String, Integer> entry : requiredShips.entrySet()) {
@@ -712,7 +706,6 @@ public class PresetUtils {
         
         FleetDataAPI playerFleetData = playerFleet.getFleetData();
         List<FleetMemberAPI> playerFleetMembers = playerFleet.getFleetData().getMembersInPriorityOrder();
-
         // CargoAPI playerCargo = playerFleet.getCargo();
         // CargoResourceRatios cargoRatios = new CargoResourceRatios(playerFleetMembers, playerCargo);
 
@@ -733,10 +726,10 @@ public class PresetUtils {
         List<FleetMemberAPI> membersDone = new ArrayList<>();
         boolean allFound = true;
 
-        for (int i = 0; i < preset.shipIds.size(); i++) {
+        for (int i = 0; i < preset.shipIds.size() - 1; i++) {
             String hullId = preset.shipIds.get(i);
             ShipVariantAPI variant = preset.variantsMap.get(i);
-            
+
             boolean found = false;
             for (FleetMemberAPI storedMember : storageCargo.getMothballedShips().getMembersInPriorityOrder()) {
                 if (storedMember.getHullId().equals(hullId)) {
@@ -940,7 +933,7 @@ public class PresetUtils {
             String ships = createShipCountString(shipCountMap, shipHullSizes, shipHullSpecs, shipOrder);
             map.put(fleetPresetName, ships);
         }
-        return MiscUtils.sortByKeyAlphanumerically(map, ascendingNames);
+        return PresetMiscUtils.sortByKeyAlphanumerically(map, ascendingNames);
     }
 
     public static LinkedHashMap<String, FleetPreset> getFleetPresetsMapForTable(boolean ascendingNames, boolean ascendingShips) {

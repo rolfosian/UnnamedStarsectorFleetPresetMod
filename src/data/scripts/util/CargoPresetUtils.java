@@ -13,7 +13,7 @@ public class CargoPresetUtils {
     private static Logger logger = Logger.getLogger(CargoPresetUtils.class);
 
     public static void print(Object... args) {
-        MiscUtils.print(args);
+        PresetMiscUtils.print(args);
     }
 
     public static boolean playerKnowsHullmod(String modId) {

@@ -11,12 +11,12 @@ import com.fs.starfarer.api.util.Misc;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.PresetUtils.FleetMemberWrapper;
 import data.scripts.util.PresetUtils.FleetPreset;
-import data.scripts.util.MiscUtils;
+import data.scripts.util.PresetMiscUtils;
 
 
 public class FleetMonitor implements EveryFrameScript {
     private static void print(Object... args) {
-        MiscUtils.print(args);
+        PresetMiscUtils.print(args);
     }
 
     @Override
@@ -115,7 +115,7 @@ public class FleetMonitor implements EveryFrameScript {
 
         } else {
             if (isPlayerFleetChanged(preset, playerFleetMembers)) {
-                Global.getSector().getCampaignUI().addMessage("The fleet composition has changed. Consider updating the fleet preset to match the current fleet.", Misc.getNegativeHighlightColor());
+                Global.getSector().getCampaignUI().addMessage("The fleet composition has changed. Consider updating the fleet preset you're using to match the current fleet.", Misc.getNegativeHighlightColor());
                 mem.unset(PresetUtils.UNDOCKED_PRESET_KEY);
             }
         }
