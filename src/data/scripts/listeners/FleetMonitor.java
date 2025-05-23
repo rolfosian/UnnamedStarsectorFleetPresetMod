@@ -77,11 +77,7 @@ public class FleetMonitor implements EveryFrameScript {
                     preset.fleetMembers.add(new FleetMemberWrapper(member, member.getCaptain(), i));
                     
                     preset.shipIds.add(hullId);
-                    
-                    if (!preset.variantsMap.containsKey(hullId)) {
-                        preset.variantsMap.put(hullId, new ArrayList<>());
-                    }
-                    preset.variantsMap.get(hullId).add(new PresetUtils.IndexedVariant(i, member.getVariant()));
+                    preset.variantsMap.put(i, member.getVariant());
                     
                     if (member.getCaptain() != null) {
                         PresetUtils.OfficerVariantPair pair = new PresetUtils.OfficerVariantPair(member.getCaptain(), member.getVariant(), i);

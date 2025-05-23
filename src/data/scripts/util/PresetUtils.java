@@ -148,7 +148,7 @@ public class PresetUtils {
     public static class FleetPreset {
         public final String name;
         public List<String> shipIds = new ArrayList<>();
-        public Map<String, List<IndexedVariant>> variantsMap = new HashMap<>(); // this could probably be refactored to use indexes as keys directly without using list values but that makes problems for comparing with variants in market storage that aren't indexed so it isn't readily apparent what to do for now
+        public Map<Integer, ShipVariantAPI> variantsMap = new HashMap<>();
         public Map<String, List<OfficerVariantPair>> officersMap = new HashMap<>();
         public List<FleetMemberWrapper> fleetMembers = new ArrayList<>();
         public FleetPreset(String name, List<FleetMemberAPI> fleetMembers) {
@@ -161,12 +161,7 @@ public class PresetUtils {
 
         public void updateVariant(int index, ShipVariantAPI variant) {
             this.fleetMembers.get(index).member.setVariant(variant, true, true);
-            for (IndexedVariant indexedVariant : this.variantsMap.get(variant.getHullSpec().getHullId())) {
-                if (indexedVariant.index == index) {
-                    indexedVariant.variant = variant;
-                    break;
-                }
-            }
+            this.variantsMap.put(index, variant);
 
             List<OfficerVariantPair> pairs = this.officersMap.get(variant.getHullSpec().getHullId());
             if (pairs != null) {
@@ -238,49 +233,42 @@ public class PresetUtils {
                 continue;
             }
 
-            Map<String, Integer> matchedShips = new HashMap<>();
             boolean allShipsMatched = true;
 
-            for (FleetMemberAPI playerMember : playerFleetMembers) {
+            for (int i = 0; i < playerFleetMembers.size(); i++) {
+                FleetMemberAPI playerMember = playerFleetMembers.get(i);
                 String hullId = playerMember.getHullId();
                 ShipVariantAPI variant = playerMember.getVariant();
                 PersonAPI captain = playerMember.getCaptain();
 
-                matchedShips.put(hullId, matchedShips.getOrDefault(hullId, 0) + 1);
-                int count = matchedShips.get(hullId);
-
-
-                List<IndexedVariant> presetVariants = preset.variantsMap.get(hullId);
-                if (presetVariants == null || count > presetVariants.size()) {
+                ShipVariantAPI presetVariant = preset.variantsMap.get(i);
+                if (presetVariant == null) {
                     allShipsMatched = false;
                     break;
                 }
 
                 boolean variantMatched = false;
-                for (IndexedVariant indexedVariant : presetVariants) {
-                    ShipVariantAPI presetVariant = indexedVariant.variant;
-
-                    if (areSameVariant(presetVariant, variant)) {
-                        if (captain != null && preset.officersMap.containsKey(hullId)) {
-                            List<OfficerVariantPair> pairs = preset.officersMap.get(hullId);
-                            boolean officerMatched = false;
-                            for (OfficerVariantPair pair : pairs) {
-                                if (areSameVariant(pair.variant, variant)) {
-                                    if (captain != null && pair.officer.getId().equals(captain.getId())) {
-                                        officerMatched = true;
-                                        break;
-                                    }
+                if (areSameVariant(presetVariant, variant)) {
+                    if (captain != null && preset.officersMap.containsKey(hullId)) {
+                        List<OfficerVariantPair> pairs = preset.officersMap.get(hullId);
+                        boolean officerMatched = false;
+                        for (OfficerVariantPair pair : pairs) {
+                            if (areSameVariant(pair.variant, variant)) {
+                                if (captain != null && pair.officer.getId().equals(captain.getId())) {
+                                    officerMatched = true;
+                                    break;
                                 }
                             }
-                            if (!officerMatched) {
-                                allShipsMatched = false;
-                                break;
-                            }
                         }
-                        variantMatched = true;
-                        break;
+                        if (!officerMatched) {
+                            allShipsMatched = false;
+                            break;
+                        }
                     }
+                    variantMatched = true;
+                    break;
                 }
+                
                 if (!variantMatched) {
                     allShipsMatched = false;
                     break;
@@ -304,7 +292,8 @@ public class PresetUtils {
         }
 
         boolean allShipsMatched = true;
-        for (FleetMemberAPI member : playerFleetMembers) {
+        for (int i = 0; i < playerFleetMembers.size(); i++) {
+            FleetMemberAPI member = playerFleetMembers.get(i);
             String hullId = member.getHullId();
             ShipVariantAPI variant = member.getVariant();
             PersonAPI captain = member.getCaptain();
@@ -314,38 +303,34 @@ public class PresetUtils {
                 break;
             }
 
-            List<IndexedVariant> presetVariants = preset.variantsMap.get(hullId);
-            if (presetVariants == null) {
+            ShipVariantAPI presetVariant = preset.variantsMap.get(i);
+            if (presetVariant == null) {
                 allShipsMatched = false;
                 break;
             }
 
             boolean variantMatched = false;
-            for (IndexedVariant indexedVariant : presetVariants) {
-                ShipVariantAPI presetVariant = indexedVariant.variant;
-
-                if (areSameVariant(presetVariant, variant)) {
-                    if (captain != null && preset.officersMap.containsKey(hullId)) {
-                        List<OfficerVariantPair> pairs = preset.officersMap.get(hullId);
-                        boolean officerMatched = false;
-                        for (OfficerVariantPair pair : pairs) {
-                            if (areSameVariant(pair.variant, variant)) {
-                                if (captain != null && pair.officer.getId().equals(captain.getId())) {
-                                    officerMatched = true;
-                                    break;
-                                }
+            if (areSameVariant(presetVariant, variant)) {
+                if (captain != null && preset.officersMap.containsKey(hullId)) {
+                    List<OfficerVariantPair> pairs = preset.officersMap.get(hullId);
+                    boolean officerMatched = false;
+                    for (OfficerVariantPair pair : pairs) {
+                        if (areSameVariant(pair.variant, variant)) {
+                            if (captain != null && pair.officer.getId().equals(captain.getId())) {
+                                officerMatched = true;
+                                break;
                             }
                         }
-                        if (!officerMatched) {
-                            allShipsMatched = false;
-                            break;
-                        }
                     }
-                    variantMatched = true;
-                    break;
+                    if (!officerMatched) {
+                        allShipsMatched = false;
+                        break;
+                    }
                 }
+                variantMatched = true;
+                break;
             }
-
+            
             if (!variantMatched) {
                 allShipsMatched = false;
                 break;
@@ -366,20 +351,17 @@ public class PresetUtils {
 
         // Then count ships already in player's fleet
         if (playerCurrentFleet != null) {
-            for (FleetMemberAPI member : playerCurrentFleet) {
+            for (int i = 0; i < playerCurrentFleet.size(); i++) {
+                FleetMemberAPI member = playerCurrentFleet.get(i);
                 String hullId = member.getHullId();
                 if (!requiredShips.containsKey(hullId)) continue;
 
-                List<IndexedVariant> presetVariants = preset.variantsMap.get(hullId);
-                if (presetVariants == null) continue;
+                ShipVariantAPI presetVariant = preset.variantsMap.get(i);
+                if (presetVariant == null) continue;
 
-                for (IndexedVariant indexedVariant : presetVariants) {
-                    ShipVariantAPI presetVariant = indexedVariant.variant;
-
-                    if (areSameVariant(presetVariant, member.getVariant())) {
-                        foundShips.put(hullId, foundShips.getOrDefault(hullId, 0) + 1);
-                        break;
-                    }
+                if (areSameVariant(presetVariant, member.getVariant())) {
+                    foundShips.put(hullId, foundShips.getOrDefault(hullId, 0) + 1);
+                    break;
                 }
             }
         }
@@ -423,13 +405,11 @@ public class PresetUtils {
 
             if (foundShips.getOrDefault(hullId, 0) >= neededShips.get(hullId)) continue;
 
-            List<IndexedVariant> presetVariants = preset.variantsMap.get(hullId);
+            Collection<ShipVariantAPI> presetVariants = preset.variantsMap.values();
             if (presetVariants == null) continue;
 
-            for (IndexedVariant indexedVariant : presetVariants) {
-                ShipVariantAPI presetVariant = indexedVariant.variant;
-
-                if (areSameVariant(presetVariant, storedMember.getVariant())) {
+            for (ShipVariantAPI indexedVariant : presetVariants) {
+                if (areSameVariant(indexedVariant, storedMember.getVariant())) {
                     foundShips.put(hullId, foundShips.getOrDefault(hullId, 0) + 1);
                     break;
                 }
@@ -671,12 +651,7 @@ public class PresetUtils {
             PersonAPI captain = member.getCaptain();
 
             preset.shipIds.add(hullId);
-            
-            if (!preset.variantsMap.containsKey(hullId)) {
-                List<IndexedVariant> variants = new ArrayList<>();
-                preset.variantsMap.put(hullId, variants);
-            }
-            preset.variantsMap.get(hullId).add(new IndexedVariant(i, variant));
+            preset.variantsMap.put(i, variant);
 
             if (captain != null) {
                 OfficerVariantPair pair = new OfficerVariantPair(captain, variant, i);
@@ -691,27 +666,6 @@ public class PresetUtils {
             }
         }
         getFleetPresets().put(name, preset);
-    }
-    
-    // unused
-    public static List<FleetMemberAPI> getFleetMembersOfPreset(String name) {
-        FleetPreset preset = getFleetPresets().get(name);
-        if (preset == null) return null;
-
-        List<FleetMemberAPI> members = new ArrayList<>();
-        List<String> doneHullIds = new ArrayList<>();
-
-        for (String hullId : preset.shipIds) {
-            if (doneHullIds.contains(hullId)) continue;
-
-            for (IndexedVariant indexedVariant : preset.variantsMap.get(hullId)) {
-                members.add(Global.getFactory().createFleetMember(FleetMemberType.SHIP, indexedVariant.variant));
-            }
-
-            doneHullIds.add(hullId);
-        }
-
-        return members;
     }
 
     public static FleetMemberAPI getPlayerFleetMemberCopy(FleetDataAPI playerFleetData) {
@@ -776,62 +730,55 @@ public class PresetUtils {
         List<FleetMemberAPI> membersDone = new ArrayList<>();
         boolean allFound = true;
 
-        for (String hullId : preset.shipIds) {
-            List<IndexedVariant> variants = preset.variantsMap.get(hullId);
-            int variantsToGet = Collections.frequency(preset.shipIds, hullId);
+        for (int i = 0; i < preset.shipIds.size(); i++) {
+            String hullId = preset.shipIds.get(i);
+            ShipVariantAPI variant = preset.variantsMap.get(i);
             
-            int found = 0;
-            for (IndexedVariant indexedVariant : variants) {
-                ShipVariantAPI variant = indexedVariant.variant;
-
-                for (FleetMemberAPI storedMember : storageCargo.getMothballedShips().getMembersInPriorityOrder()) {
-                    if (found == variantsToGet) break;
-
-                    if (storedMember.getHullId().equals(hullId)) {
-                        if (preset.officersMap.containsKey(hullId)) {
-                            
-                            List<OfficerVariantPair> pairs = preset.officersMap.get(hullId);
-                            boolean officerVariantFound = false;
-                            for (OfficerVariantPair pair : pairs) {
-                                if (areSameVariant(pair.variant, variant) && !doneofficers.contains(pair.officer.getId())) {
-                                    storedMember.setCaptain(pair.officer);
-
-                                    storageCargo.getMothballedShips().removeFleetMember(storedMember);
-                                    membersDone.add(storedMember);
-                                    // CargoPresetUtils.refit(storedMember, variant, playerCargo, storageCargo);
-
-                                    doneofficers.add(pair.officer.getId());
-                                    officerVariantFound = true;
-                                    found++;
-
-                                    ;
-                                    break;
-                                }
-                                if (officerVariantFound) break;
-                            }
-                            if (officerVariantFound) continue;
-                        }
+            boolean found = false;
+            for (FleetMemberAPI storedMember : storageCargo.getMothballedShips().getMembersInPriorityOrder()) {
+                if (storedMember.getHullId().equals(hullId)) {
+                    if (preset.officersMap.containsKey(hullId)) {
                         
-                        if (areSameVariant(variant, storedMember.getVariant())) {
-                            storageCargo.getMothballedShips().removeFleetMember(storedMember);
-                            membersDone.add(storedMember);
-                            // CargoPresetUtils.refit(storedMember, variant, playerCargo, storageCargo);
-                            found++;
+                        List<OfficerVariantPair> pairs = preset.officersMap.get(hullId);
+                        boolean officerVariantFound = false;
+                        for (OfficerVariantPair pair : pairs) {
+                            if (areSameVariant(pair.variant, variant) && !doneofficers.contains(pair.officer.getId())) {
+                                storedMember.setCaptain(pair.officer);
 
-                            membersDone.add(storedMember);
-                            break;
+                                storageCargo.getMothballedShips().removeFleetMember(storedMember);
+                                membersDone.add(storedMember);
+                                // CargoPresetUtils.refit(storedMember, variant, playerCargo, storageCargo);
+
+                                doneofficers.add(pair.officer.getId());
+                                officerVariantFound = true;
+                                found = true;
+                                break;
+                            }
+                            if (officerVariantFound) break;
                         }
+                        if (officerVariantFound) continue;
                     }
-                }
-                if (found < variantsToGet) {
-                    allFound = false;
-                    CampaignUIMessage msg = new CampaignUIMessage(RESTOREMESSAGE_FAIL_PREFIX + variant.getFullDesignationWithHullName() + RESTOREMESSAGE_FAIL_SUFFIX + name, Misc.getNegativeHighlightColor());
+                    
+                    if (areSameVariant(variant, storedMember.getVariant())) {
+                        storageCargo.getMothballedShips().removeFleetMember(storedMember);
+                        membersDone.add(storedMember);
+                        // CargoPresetUtils.refit(storedMember, variant, playerCargo, storageCargo);
+                        found = true;
 
-                    if (!messageQueue.contains(msg)){
-                        messageQueue.add(msg);
+                        membersDone.add(storedMember);
+                        break;
                     }
                 }
             }
+            if (!found) {
+                allFound = false;
+                CampaignUIMessage msg = new CampaignUIMessage(RESTOREMESSAGE_FAIL_PREFIX + variant.getFullDesignationWithHullName() + RESTOREMESSAGE_FAIL_SUFFIX + name, Misc.getNegativeHighlightColor());
+
+                if (!messageQueue.contains(msg)){
+                    messageQueue.add(msg);
+                }
+            }
+            
         }
 
         for (FleetMemberAPI member : membersDone) {
@@ -978,17 +925,13 @@ public class PresetUtils {
             Map<String, HullSize> shipHullSizes = new HashMap<>();
             Map<String, ShipHullSpecAPI> shipHullSpecs = new HashMap<>();
 
-            for (Map.Entry<String, List<IndexedVariant>> variantsEntry : fleetPreset.variantsMap.entrySet()) {
-                List<IndexedVariant> variantList = variantsEntry.getValue();
+            for (Map.Entry<Integer, ShipVariantAPI> variantsEntry : fleetPreset.variantsMap.entrySet()) {
+                ShipVariantAPI variant = variantsEntry.getValue();
 
-                for (IndexedVariant variant_ : variantList) {
-                    ShipVariantAPI variant = variant_.variant;
-
-                    String name = variant.getHullSpec().getHullName();
-                    shipCountMap.put(name, shipCountMap.getOrDefault(name, 0) + 1);
-                    shipHullSizes.put(name, variant.getHullSize());
-                    shipHullSpecs.put(name, variant.getHullSpec());
-                }
+                String name = variant.getHullSpec().getHullName();
+                shipCountMap.put(name, shipCountMap.getOrDefault(name, 0) + 1);
+                shipHullSizes.put(name, variant.getHullSize());
+                shipHullSpecs.put(name, variant.getHullSpec());
             }
 
             String ships = createShipCountString(shipCountMap, shipHullSizes, shipHullSpecs, shipOrder);
