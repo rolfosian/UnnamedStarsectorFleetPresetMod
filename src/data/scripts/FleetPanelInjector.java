@@ -61,12 +61,12 @@ public class FleetPanelInjector {
                     officerAutoAssignButtonPosition.getWidth(),
                     officerAutoAssignButtonPosition.getHeight(),
                     Keyboard.KEY_A);
-            UIPanel presetFleetsButtonPanel = new UIPanel(fleetInfoPanel);
+            // UIPanel presetFleetsButtonPanel = new UIPanel(fleetInfoPanel);
             new UIPanel(fleetInfoPanel).add(presetFleetsButton).set(officerAutoAssignButtonPosition);
             PositionAPI presetFleetsButtonPosition = presetFleetsButton.getPosition();
             // presetFleetsButtonPosition.setXAlignOffset(-0.25f);
             // presetFleetsButtonPosition.setYAlignOffset(-officerAutoAssignButtonHeight * 1.55f);
-            presetFleetsButtonPosition.setYAlignOffset(-officerAutoAssignButtonHeight * 8f);
+            presetFleetsButtonPosition.setYAlignOffset(-officerAutoAssignButtonHeight * 10f);
         }
     }
 
