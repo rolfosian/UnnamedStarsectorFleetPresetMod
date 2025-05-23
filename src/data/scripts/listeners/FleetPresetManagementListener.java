@@ -46,7 +46,7 @@ import data.scripts.ui.UiConfig;
 // import data.scripts.util.ReflectionUtilis;
 import data.scripts.util.UtilReflection;
 import data.scripts.util.PresetUtils;
-import data.scripts.util.MiscUtils;
+import data.scripts.util.PresetMiscUtils;
 
 import java.awt.Color;
 import java.lang.reflect.Method;
@@ -58,7 +58,7 @@ import org.lwjgl.input.Keyboard;
 public class FleetPresetManagementListener extends ActionListener {
     public static final Logger logger = Logger.getLogger(FleetPresetManagementListener.class);
     private static void print(Object... args) {
-        MiscUtils.print(args);
+        PresetMiscUtils.print(args);
     }
 
     private static final float CONFIRM_DIALOG_WIDTH = UiConfig.DISPLAY_WIDTH / UiConfig.CONFIRM_DIALOG_WIDTH_DIVISOR;
@@ -284,17 +284,16 @@ public class FleetPresetManagementListener extends ActionListener {
     private void openSaveDialog() {
 
         SaveListener saveListener = new SaveListener(false, true);
-        BaseCustomUIPanelPlugin textPanelPlugin = new BaseCustomUIPanelPlugin(); //{
-            // @Override 
-            // public void processInput(List<InputEventAPI> events) {
-            //     for (InputEventAPI event : events) {
-                    // if (event.isKeyDownEvent() && (Keyboard.isKeyDown(Keyboard.KEY_RETURN) || Keyboard.isKeyDown(Keyboard.KEY_NUMPADENTER))) {
-                        // MiscUtils.pressKey(Keyboard.KEY_RETURN); this crashes the game with nosuchmethoderror in the obfuscated code and i am incapable of debugging it
-                        // i think the textField consumes the event anyway so this proposed workaround doesnt work regardless
-                    // }
-                // }
-            // }
-        // };
+        BaseCustomUIPanelPlugin textPanelPlugin = new BaseCustomUIPanelPlugin() {
+            @Override 
+            public void processInput(List<InputEventAPI> events) {
+                for (InputEventAPI event : events) {
+                    if (event.isKeyDownEvent() && (Keyboard.isKeyDown(Keyboard.KEY_RETURN) || Keyboard.isKeyDown(Keyboard.KEY_NUMPADENTER))) {
+                        PresetMiscUtils.pressKey(Keyboard.KEY_RETURN); // THIS DOESNT EVEN WORK - THE TEXTFIELD CONSUMES THE EVENT BEFORE IT GETS HERE...
+                    }
+                }
+            }
+        };
 
         CustomPanelAPI textFieldPanel = Global.getSettings().createCustom(CONFIRM_DIALOG_WIDTH / 2 / 6, CONFIRM_DIALOG_HEIGHT / 2 / 12, textPanelPlugin);
         TooltipMakerAPI textFieldTooltipMaker = textFieldPanel.createUIElement(CONFIRM_DIALOG_WIDTH / 2 / 5, CONFIRM_DIALOG_HEIGHT / 2 / 10, false);
