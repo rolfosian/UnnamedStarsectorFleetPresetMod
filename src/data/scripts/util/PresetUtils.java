@@ -39,14 +39,17 @@ public class PresetUtils {
         MiscUtils.print(args);
     }
 
+    // Persistent data keys
     public static final String PRESETS_MEMORY_KEY = "$player_fleet_presets";
+    public static final String IS_AUTO_UPDATE_KEY = "$isPresetAutoUpdate";
+
+    // Non-persistent data keys
     public static final String FLEETINFOPANEL_KEY = "$fleetInfoPanel";
     public static final String UNDOCKED_PRESET_KEY = "$presetUndocked";
     public static final String PLAYERCURRENTMARKET_KEY = "$playerCurrentMarket";
     public static final String COREUI_KEY = "$coreUI";
     public static final String ISPLAYERPAIDFORSTORAGE_KEY = "$isPlayerPaidForStorage";
     public static final String MESSAGEQUEUE_KEY = "$presetsMessageQueue";
-    public static final String IS_UPDATE_KEY = "$isPresetUpdate";
 
     public static final String RESTOREMESSAGE_SUCCESS_PREFIX = "Successfully restored fleet preset: ";
     public static final String RESTOREMESSAGE_FAIL_PREFIX = "Could not find one or more of ";

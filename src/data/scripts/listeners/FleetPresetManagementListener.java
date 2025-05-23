@@ -105,6 +105,10 @@ public class FleetPresetManagementListener extends ActionListener {
     private static final String OVERWRITE_PRESET_BUTTON_ID = "overwriteToPresetButton";
     private static final String OVERWRITE_PRESET_BUTTON_TOOLTIP_PARA_TEXT = "Overwrites the selected preset with the current fleet.";
     private static final String OVERWRITE_PRESET_BUTTON_TEXT = "UPDATE";
+
+    private static final String AUTO_UPDATE_BUTTON_ID = "autoUpdateButton";
+    private static final String AUTO_UPDATE_BUTTON_TOOLTIP_PARA_TEXT = "Toggle to automatically update the preset when the fleet changes, if undocked with fleet as a preset.";
+    private static final String AUTO_UPDATE_BUTTON_TEXT = "AUTO UPDATE";
     
     private static final String BLANK_TABLE_TEXT = "Presets Go Here";
     private static final Color c1 = Global.getSettings().getBasePlayerColor();
@@ -153,6 +157,7 @@ public class FleetPresetManagementListener extends ActionListener {
         buttonToolTipParas.put(STORE_BUTTON_ID, STORE_BUTTON_TOOLTIP_PARA_TEXT);
         buttonToolTipParas.put(DELETE_BUTTON_ID, DELETE_BUTTON_TOOLTIP_PARA_TEXT);
         buttonToolTipParas.put(OVERWRITE_PRESET_BUTTON_ID, OVERWRITE_PRESET_BUTTON_TOOLTIP_PARA_TEXT);
+        buttonToolTipParas.put(AUTO_UPDATE_BUTTON_ID, AUTO_UPDATE_BUTTON_TOOLTIP_PARA_TEXT);
     }
 
     @Override
@@ -242,11 +247,17 @@ public class FleetPresetManagementListener extends ActionListener {
         Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
         overwriteToPresetButton.setShortcut(Keyboard.KEY_5, false);
 
+        ButtonAPI autoUpdateButton = tooltipMaker.addCheckbox(buttonWidth, buttonHeight, AUTO_UPDATE_BUTTON_TEXT, AUTO_UPDATE_BUTTON_ID, "graphics/fonts/arial10.fnt", c1,
+        ButtonAPI.UICheckboxSize.SMALL, 5f);
+        // autoUpdateButton.setShortcut(Keyboard.KEY_6, false);
+        autoUpdateButton.setChecked((boolean)Global.getSector().getPersistentData().get(PresetUtils.IS_AUTO_UPDATE_KEY));
+
         theButtons.put(SAVE_DIALOG_BUTTON_ID, saveDialogButton);
         theButtons.put(RESTORE_BUTTON_ID, restorePresetButton);
         theButtons.put(STORE_BUTTON_ID, storeAllButton);
         theButtons.put(DELETE_BUTTON_ID, deleteButton);
         theButtons.put(OVERWRITE_PRESET_BUTTON_ID, overwriteToPresetButton);
+        theButtons.put(AUTO_UPDATE_BUTTON_ID, autoUpdateButton);
         disableButtonsRequiringSelection();
         enableButtonsRequiringSelection();
 
@@ -404,6 +415,13 @@ public class FleetPresetManagementListener extends ActionListener {
                 case OVERWRITE_PRESET_BUTTON_ID:
                     openOverwriteDialog(false);
                     return;
+                case AUTO_UPDATE_BUTTON_ID:
+                    if (theButtons.get(AUTO_UPDATE_BUTTON_ID).isChecked()) {
+                        Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, true);
+                    } else {
+                        Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, false);
+                    }
+                    return;
                 default:
                     break;
             }
@@ -521,7 +539,11 @@ public class FleetPresetManagementListener extends ActionListener {
     private void enableButtonsRequiringSelection() {
         if (selectedPresetName != EMPTY_STRING) {
             if (DockingListener.getPlayerCurrentMarket() != null && DockingListener.canPlayerAccessStorage(DockingListener.getPlayerCurrentMarket())) {
-                theButtons.get(STORE_BUTTON_ID).setEnabled(true);
+                if (Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder().size() > 1) {
+                    theButtons.get(STORE_BUTTON_ID).setEnabled(true);
+                } else {
+                    theButtons.get(STORE_BUTTON_ID).setEnabled(false);
+                }
                 theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(true);
                 theButtons.get(DELETE_BUTTON_ID).setEnabled(true);
                 theButtons.get(RESTORE_BUTTON_ID).setEnabled(true);
@@ -531,15 +553,27 @@ public class FleetPresetManagementListener extends ActionListener {
             theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
             theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(true);
             theButtons.get(DELETE_BUTTON_ID).setEnabled(true);
-            theButtons.get(STORE_BUTTON_ID).setEnabled(false);
+
+            if (DockingListener.getPlayerCurrentMarket() != null && DockingListener.canPlayerAccessStorage(DockingListener.getPlayerCurrentMarket())
+                && Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder().size() > 1) {
+                theButtons.get(STORE_BUTTON_ID).setEnabled(true);
+            } else {
+                theButtons.get(STORE_BUTTON_ID).setEnabled(false);
+            }
         }
     }
 
     private void disableButtonsRequiringSelection() {
         theButtons.get(DELETE_BUTTON_ID).setEnabled(false);
         theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
-        theButtons.get(STORE_BUTTON_ID).setEnabled(false);
         theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(false);
+
+        if (DockingListener.getPlayerCurrentMarket() != null && DockingListener.canPlayerAccessStorage(DockingListener.getPlayerCurrentMarket())
+            && Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder().size() > 1) {
+            theButtons.get(STORE_BUTTON_ID).setEnabled(true);
+        } else {
+            theButtons.get(STORE_BUTTON_ID).setEnabled(false);
+        }
     }
 
     public class TablePlugin extends BaseSelfRefreshingPanel {
@@ -896,6 +930,9 @@ public class FleetPresetManagementListener extends ActionListener {
                 if (overwrite && !cancel) {
                     PresetUtils.saveFleetPreset(selectedPresetName);
                     currentTableMap = PresetUtils.getFleetPresetsMapForTable(tableUp, tableRight);
+                    // if (Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY) == null) {
+                        Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, PresetUtils.getFleetPresets().get(selectedPresetName));
+                    // }
                 } else {
                     String text = saveNameField.getText();
                     if (!isEmptyOrWhitespace(text)) {
@@ -903,9 +940,13 @@ public class FleetPresetManagementListener extends ActionListener {
                             selectedPresetName = text;
                             openOverwriteDialog(false);
                             selectedRowIndex = getTableMapIndex(text);
+
                         } else {
                             selectedPresetName = text;
                             PresetUtils.saveFleetPreset(text);
+                            // if (Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY) == null) {
+                                Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, PresetUtils.getFleetPresets().get(selectedPresetName));
+                            // }
                             refreshTableMap();
                             selectedRowIndex = getTableMapIndex(text);
                             enableButtonsRequiringSelection();

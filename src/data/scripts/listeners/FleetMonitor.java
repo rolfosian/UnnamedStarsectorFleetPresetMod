@@ -11,15 +11,24 @@ import com.fs.starfarer.api.util.Misc;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.PresetUtils.FleetMemberWrapper;
 import data.scripts.util.PresetUtils.FleetPreset;
+import data.scripts.util.MiscUtils;
 
 
 public class FleetMonitor implements EveryFrameScript {
+    private static void print(Object... args) {
+        MiscUtils.print(args);
+    }
+
     @Override
     public void advance(float arg0) {
         checkFleetAgainstPreset();
     }
 
     public static boolean isPlayerFleetChanged(FleetPreset preset, List<FleetMemberAPI> playerFleetMembers) {
+        if (playerFleetMembers.size() != preset.fleetMembers.size()) {
+            return true;
+        }
+
         for (PresetUtils.FleetMemberWrapper member : preset.fleetMembers) {
             FleetMemberAPI playerFleetMember = playerFleetMembers.get(member.index);
 
@@ -37,12 +46,12 @@ public class FleetMonitor implements EveryFrameScript {
         FleetPreset preset = (FleetPreset) mem.get(PresetUtils.UNDOCKED_PRESET_KEY);
         if (preset == null) return;
 
-        boolean isUpdate = mem.getBoolean(PresetUtils.IS_UPDATE_KEY);
+        boolean isAutoUpdate = (boolean)Global.getSector().getPersistentData().get(PresetUtils.IS_AUTO_UPDATE_KEY);
 
         CampaignFleetAPI playerFleet = Global.getSector().getPlayerFleet();
         List<FleetMemberAPI> playerFleetMembers = playerFleet.getFleetData().getMembersListCopy();
 
-        if (isUpdate) {
+        if (isAutoUpdate) {
             boolean updated = false;
 
             if (playerFleetMembers.size() != preset.fleetMembers.size()) {

@@ -13,6 +13,7 @@ import data.scripts.util.PresetUtils;
 import data.scripts.util.UtilReflection;
 import data.scripts.FleetPresetManagerCoreScript;
 import data.scripts.listeners.DockingListener;
+import data.scripts.listeners.FleetMonitor;
 import data.scripts.listeners.OfficerDismissalTracker;
 
 import java.util.*;
@@ -53,12 +54,17 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
             Global.getSector().getPersistentData().put(PresetUtils.PRESETS_MEMORY_KEY, new HashMap<String, PresetUtils.FleetPreset>());
         }
 
+        if (Global.getSector().getPersistentData().get(PresetUtils.IS_AUTO_UPDATE_KEY) == null) {
+            Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, false);
+        }
+
         @SuppressWarnings("resource")
         ClassLoader cl = new ReflectionEnabledClassLoader(url, getClass().getClassLoader());
         try {
             Global.getSector().addTransientScript((EveryFrameScript) UtilReflection.instantiateClassNoParams(cl.loadClass("data.scripts.FleetPresetManagerCoreScript")));
 
             Global.getSector().addTransientScript(new OfficerDismissalTracker());
+            Global.getSector().addTransientScript(new FleetMonitor());
             Global.getSector().addListener(new DockingListener());
         } catch (Exception e) {
             logger.error("Failure to load core script class; exiting", e);
@@ -69,6 +75,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
     @Override
     public void onNewGame() {
         Global.getSector().getPersistentData().put(PresetUtils.PRESETS_MEMORY_KEY, new HashMap<String, PresetUtils.FleetPreset>());
+        Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, false);
     }
 
     @Override

@@ -52,6 +52,8 @@ public class DockingListener implements CampaignEventListener {
         FleetPreset preset = PresetUtils.getPresetOfPlayerFleet(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
         if (preset != null) {
             mem.set(PresetUtils.UNDOCKED_PRESET_KEY, preset);
+        } else {
+            mem.unset(PresetUtils.UNDOCKED_PRESET_KEY);
         }
     }
 
