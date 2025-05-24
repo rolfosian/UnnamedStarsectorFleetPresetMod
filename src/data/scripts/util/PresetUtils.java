@@ -14,6 +14,7 @@ import com.fs.starfarer.api.campaign.FleetDataAPI;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.campaign.econ.SubmarketAPI;
 import com.fs.starfarer.api.campaign.SubmarketPlugin;
+import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
@@ -144,6 +145,23 @@ public class PresetUtils {
 
             this.index = index;
         }
+
+        public void updateOfficer(PersonAPI captain) {
+            if (captain == null) {
+                this.captain = null;
+                this.captainId = null;
+                this.member.setCaptain(null);
+                return;
+            }
+
+            this.captain = captain;
+            this.captainId = captain.getId();
+
+            PersonAPI captainCopy = Global.getFactory().createPerson();
+            captainCopy.setPortraitSprite(captain.getPortraitSprite());
+            captainCopy.setName(captain.getName());
+            this.member.setCaptain(captainCopy);
+        }
     }
 
     public static class FleetPreset {
@@ -171,6 +189,33 @@ public class PresetUtils {
                     if (pair.index == index) {
                         pair.variant = variant;
                         break;
+                    }
+                }
+            }
+        }
+
+        public void updateOfficer(int index, PersonAPI captain) {
+            FleetMemberWrapper member = this.fleetMembers.get(index);
+            String hullId = member.member.getHullId();
+            
+            member.updateOfficer(captain);
+
+            if (captain != null) {
+                OfficerVariantPair pair = new OfficerVariantPair(captain, member.member.getVariant(), index);
+                if (!this.officersMap.containsKey(hullId)) {
+                    this.officersMap.put(hullId, new ArrayList<>());
+                }
+                
+                List<OfficerVariantPair> pairs = this.officersMap.get(hullId);
+                pairs.removeIf(p -> p.index == index);
+                pairs.add(pair);
+
+            } else {
+                List<OfficerVariantPair> pairs = this.officersMap.get(hullId);
+                if (pairs != null) {
+                    pairs.removeIf(p -> p.index == index);
+                    if (pairs.isEmpty()) {
+                        this.officersMap.remove(hullId);
                     }
                 }
             }
@@ -217,7 +262,116 @@ public class PresetUtils {
     //     // PROBLEM: How to handle officers from different save and apply new ones
     // }
 
+    public static boolean isPlayerFleetChanged(FleetPreset preset, List<FleetMemberAPI> playerFleetMembers) {
+        if (playerFleetMembers.size() != preset.fleetMembers.size()) {
+            return true;
+        }
 
+        for (PresetUtils.FleetMemberWrapper member : preset.fleetMembers) {
+            FleetMemberAPI playerFleetMember = playerFleetMembers.get(member.index);
+
+            if (!PresetUtils.areSameVariant(playerFleetMember.getVariant(), member.member.getVariant()) 
+                || !isOfficerSameAsPresetMember(playerFleetMember, member)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static void checkFleetAgainstPreset() {
+        MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
+        FleetPreset preset = (FleetPreset) mem.get(PresetUtils.UNDOCKED_PRESET_KEY);
+        if (preset == null) return;
+
+        boolean isAutoUpdate = (boolean)Global.getSector().getPersistentData().get(PresetUtils.IS_AUTO_UPDATE_KEY);
+
+        CampaignFleetAPI playerFleet = Global.getSector().getPlayerFleet();
+        List<FleetMemberAPI> playerFleetMembers = playerFleet.getFleetData().getMembersListCopy();
+
+        if (isAutoUpdate) {
+            boolean updated = false;
+
+            if (playerFleetMembers.size() != preset.fleetMembers.size()) {
+                Map<String, List<FleetMemberAPI>> currentFleetByHull = new HashMap<>();
+                Map<String, List<FleetMemberAPI>> presetFleetByHull = new HashMap<>();
+
+                for (FleetMemberAPI member : playerFleetMembers) {
+                    String hullId = member.getHullId();
+                    if (!currentFleetByHull.containsKey(hullId)) {
+                        currentFleetByHull.put(hullId, new ArrayList<>());
+                    }
+                    currentFleetByHull.get(hullId).add(member);
+                }
+
+                for (PresetUtils.FleetMemberWrapper wrapper : preset.fleetMembers) {
+                    String hullId = wrapper.member.getHullId();
+                    if (!presetFleetByHull.containsKey(hullId)) {
+                        presetFleetByHull.put(hullId, new ArrayList<>());
+                    }
+                    presetFleetByHull.get(hullId).add(wrapper.member);
+                }
+                
+                preset.fleetMembers.clear();
+                preset.shipIds.clear();
+                preset.variantsMap.clear();
+                preset.officersMap.clear();
+                
+                for (int i = 0; i < playerFleetMembers.size(); i++) {
+                    FleetMemberAPI member = playerFleetMembers.get(i);
+                    String hullId = member.getHullId();
+                    
+                    preset.fleetMembers.add(new FleetMemberWrapper(member, member.getCaptain(), i));
+                    
+                    preset.shipIds.add(hullId);
+                    preset.variantsMap.put(i, member.getVariant());
+                    
+                    if (member.getCaptain() != null) {
+                        PresetUtils.OfficerVariantPair pair = new PresetUtils.OfficerVariantPair(member.getCaptain(), member.getVariant(), i);
+                        if (!preset.officersMap.containsKey(hullId)) {
+                            preset.officersMap.put(hullId, new ArrayList<>());
+                        }
+                        preset.officersMap.get(hullId).add(pair);
+                    }
+                }
+                Global.getSector().getCampaignUI().addMessage("The fleet composition has changed and the fleet preset has been updated.", Misc.getBasePlayerColor());
+
+            } else {
+                for (PresetUtils.FleetMemberWrapper member : preset.fleetMembers) {
+                    FleetMemberAPI playerFleetMember = playerFleetMembers.get(member.index);
+
+                    if (!PresetUtils.areSameVariant(playerFleetMember.getVariant(), member.member.getVariant())) {
+                        preset.updateVariant(member.index, playerFleetMember.getVariant());
+                        updated = true; 
+                    }
+                    
+                    if (!isOfficerSameAsPresetMember(playerFleetMember, member)) {
+                        preset.updateOfficer(member.index, playerFleetMember.getCaptain());
+                        updated = true;
+                    }
+                }
+            }
+
+            if (updated) {
+                Global.getSector().getCampaignUI().addMessage("The fleet composition has changed and the fleet preset has been updated.", Misc.getBasePlayerColor());
+            }
+
+        } else {
+            if (isPlayerFleetChanged(preset, playerFleetMembers)) {
+                Global.getSector().getCampaignUI().addMessage("The fleet composition has changed. Consider updating the fleet preset you undocked with to match the current fleet.", Misc.getBasePlayerColor());
+                mem.unset(PresetUtils.UNDOCKED_PRESET_KEY);
+            }
+        }
+    }
+
+    public static boolean isOfficerSameAsPresetMember(FleetMemberAPI playerFleetMember, PresetUtils.FleetMemberWrapper presetMember) {
+        if (playerFleetMember.getCaptain() == null && presetMember.captainId == null) {
+            return true;
+        }
+        if (playerFleetMember.getCaptain() == null || presetMember.captainId == null) {
+            return false;
+        }
+        return playerFleetMember.getCaptain().getId().equals(presetMember.captainId);
+    }
 
     public static void initMothballedShips(CargoAPI storageCargo) {
         for (FactionAPI faction : Global.getSector().getAllFactions()) {
