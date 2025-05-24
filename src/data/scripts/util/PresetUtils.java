@@ -29,13 +29,9 @@ import com.fs.starfarer.api.ui.UIPanelAPI;
 
 import com.fs.starfarer.api.util.Misc;
 
-import org.apache.log4j.Logger;
-
 import data.scripts.util.CargoPresetUtils.CargoResourceRatios;
 
 public class PresetUtils {
-    public static final Logger logger = Logger.getLogger(PresetUtils.class);
-
     public static void print(Object... args) {
         PresetMiscUtils.print(args);
     }
@@ -61,12 +57,12 @@ public class PresetUtils {
         HullSize.DEFAULT,
         HullSize.CRUISER,
         HullSize.DESTROYER,
-        HullSize.FIGHTER,
-        HullSize.FRIGATE
+        HullSize.FRIGATE,
+        HullSize.FIGHTER
     };
     private static final HullSize[] SIZE_ORDER_ASCENDING = {
-        HullSize.FRIGATE,
         HullSize.FIGHTER,
+        HullSize.FRIGATE,
         HullSize.DESTROYER,
         HullSize.CRUISER,
         HullSize.DEFAULT,
@@ -125,8 +121,8 @@ public class PresetUtils {
 
     public static class FleetMemberWrapper {
         public final FleetMemberAPI member;
-        public final PersonAPI captain;
-        public final String captainId;
+        public PersonAPI captain;
+        public String captainId;
         public final int index;
 
         public FleetMemberWrapper(FleetMemberAPI member, PersonAPI captain, int index) {
@@ -156,6 +152,7 @@ public class PresetUtils {
         public Map<Integer, ShipVariantAPI> variantsMap = new HashMap<>();
         public Map<String, List<OfficerVariantPair>> officersMap = new HashMap<>();
         public List<FleetMemberWrapper> fleetMembers = new ArrayList<>();
+
         public FleetPreset(String name, List<FleetMemberAPI> fleetMembers) {
             this.name = name;
 
@@ -867,7 +864,6 @@ public class PresetUtils {
         Map<String, FleetPreset> presets = getFleetPresets();
 
         for (FleetPreset fleetPreset : presets.values()) {
-
             List<String> doneHullIds = new ArrayList<>();
             for (String hullId : fleetPreset.shipIds) {
                 if (doneHullIds.contains(hullId)) continue;
@@ -884,10 +880,18 @@ public class PresetUtils {
                         if (numCaptainsAndVariants == 1) {
                             fleetPreset.officersMap.remove(hullId);
                         }
-                        return;
+                        break;
                     }
                 }
                 doneHullIds.add(hullId);
+            }
+
+            for (FleetMemberWrapper member : fleetPreset.fleetMembers) {
+                if (member.captainId != null && member.captainId.equals(officerId)) {
+                    member.captain = null;
+                    member.captainId = null;
+                    break;
+                }
             }
         }
     }
