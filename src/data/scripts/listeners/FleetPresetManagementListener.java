@@ -95,7 +95,7 @@ public class FleetPresetManagementListener extends ActionListener {
     private static final String RESTORE_BUTTON_TEXT  = "RESTORE";
 
     private static final String STORE_BUTTON_ID = "storeButton";
-    private static final String STORE_BUTTON_TOOLTIP_PARA_TEXT = "Store current fleet in storage.";
+    private static final String STORE_BUTTON_TOOLTIP_PARA_TEXT = "Stores the current fleet in storage.";
     private static final String STORE_BUTTON_TEXT  = "STORE FLEET";
 
     private static final String DELETE_BUTTON_ID = "deleteButton";
@@ -107,7 +107,7 @@ public class FleetPresetManagementListener extends ActionListener {
     private static final String OVERWRITE_PRESET_BUTTON_TEXT = "UPDATE";
 
     private static final String AUTO_UPDATE_BUTTON_ID = "autoUpdateButton";
-    private static final String AUTO_UPDATE_BUTTON_TOOLTIP_PARA_TEXT = "Toggle to automatically update the preset when the fleet changes, if undocked with fleet as a preset.";
+    private static final String AUTO_UPDATE_BUTTON_TOOLTIP_PARA_TEXT = "Toggle to automatically update the preset when the fleet changes, if undocked with a preset fleet.";
     private static final String AUTO_UPDATE_BUTTON_TEXT = "AUTO UPDATE";
     
     private static final String BLANK_TABLE_TEXT = "Presets Go Here";
@@ -129,6 +129,11 @@ public class FleetPresetManagementListener extends ActionListener {
 
     private int selectedRowIndex = -1;
     private int currentPresetsNum = 0;
+
+    private void selectPreset(String presetName, int rowIndex) {
+        this.selectedPresetName = presetName;
+        this.selectedRowIndex = rowIndex;
+    }
 
 
     CustomPanelAPI buttonsPanel;
@@ -166,6 +171,10 @@ public class FleetPresetManagementListener extends ActionListener {
         List<String> buttonIds = new ArrayList<>();
         buttonIds.add(SAVE_DIALOG_BUTTON_ID);
         buttonIds.add(RESTORE_BUTTON_ID);
+        buttonIds.add(STORE_BUTTON_ID);
+        buttonIds.add(DELETE_BUTTON_ID);
+        buttonIds.add(OVERWRITE_PRESET_BUTTON_ID);
+        buttonIds.add(AUTO_UPDATE_BUTTON_ID);
 
         CustomPanelAPI tableMasterPanel = Global.getSettings().createCustom(PANEL_WIDTH - CANCEL_CONFIRM_BUTTON_WIDTH - 5f, PANEL_HEIGHT, new BaseCustomUIPanelPlugin() );
         DialogDismissedListener dummyListener = new DummyDialogListener();
@@ -348,15 +357,16 @@ public class FleetPresetManagementListener extends ActionListener {
             this.isTooltip = false;
             this.buttonIds = buttonIds;
 
-            // for (String buttonId : buttonIds) {
-            //     CustomPanelAPI tooltipPanel = Global.getSettings().createCustom(250f, 60f, null);
-            //     TooltipMakerAPI tooltip = tooltipPanel.createUIElement(250f, 60f, false);
-            //     tooltip.addPara(buttonToolTipParas.get(buttonId), 0f);
-            //     tooltipPanel.wrapTooltipWithBox(tooltip, Misc.getBasePlayerColor());
+            for (String buttonId : buttonIds) {
+                CustomPanelAPI tooltipPanel = Global.getSettings().createCustom(250f, 60f, null);
+                TooltipMakerAPI tooltip = tooltipPanel.createUIElement(250f, 60f, false);
+                tooltip.setParaFont("graphics/fonts/orbitron20aa.fnt");
+                tooltip.addPara(buttonToolTipParas.get(buttonId), 0f);
+                tooltipPanel.wrapTooltipWithBox(tooltip, Misc.getBasePlayerColor());
             
-            //     tooltipPanel.addUIElement(tooltip).inTL(0f, 0f);
-            //     tooltipMap.put(buttonId, tooltipPanel);
-            // }
+                tooltipPanel.addUIElement(tooltip).inTL(0f, 0f);
+                tooltipMap.put(buttonId, tooltipPanel);
+            }
 
 
         }
@@ -366,30 +376,24 @@ public class FleetPresetManagementListener extends ActionListener {
             this.masterTooltip = tooltip;
         }
 
-        // private void showButtonToolTipAtLocation(String buttonId) {
-        //     CustomPanelAPI toolTipPanel = tooltipMap.get(buttonId);
-        //     toolTipPanel.setOpacity(100f);
-        //     float width = 0f;
-        //     float height = 0f;
+        private void showButtonToolTipAtLocation(String buttonId) {
+            CustomPanelAPI toolTipPanel = tooltipMap.get(buttonId);
+            toolTipPanel.setOpacity(100f);
+            // PositionAPI buttonPos = theButtons.get(buttonId).getPosition();
 
-        //     for (Map.Entry<String, ButtonAPI> entry: theButtons.entrySet()) {
-        //         ButtonAPI button = entry.getValue();
-        //         if (button.getCustomData().equals(buttonId)) {
-        //             PositionAPI pos = button.getPosition();
-        //             width = pos.getWidth();
-        //             height = pos.getHeight();
-        //             break;
-        //         }
-        //     }
+            if (buttonId.equals(AUTO_UPDATE_BUTTON_ID)) {
+                buttonsPanel.addComponent(toolTipPanel).setYAlignOffset(40f);
+            } else {
+                buttonsPanel.addComponent(toolTipPanel);
+            }
+        }
 
-        //     this.masterTooltip.addComponent(toolTipPanel).inTL(width + 5f, height - 10f);
-        // }
-
-        // private void destroyButtonToolTip(String buttonId) {
-        //     CustomPanelAPI toolTipPanel = tooltipMap.get(buttonId);
-        //     toolTipPanel.setOpacity(0f);
-        //     this.masterTooltip.removeComponent(toolTipPanel);
-        // }
+        private void destroyButtonToolTip(String buttonId) {
+            CustomPanelAPI toolTipPanel = tooltipMap.get(buttonId);
+            toolTipPanel.setOpacity(0f);
+            this.masterPanel.removeComponent(toolTipPanel);
+            // toolTipPanel = null;
+        }
 
         @Override
         public void advance(float amount) {
@@ -404,6 +408,7 @@ public class FleetPresetManagementListener extends ActionListener {
                     return;
                 case RESTORE_BUTTON_ID:
                     PresetUtils.restoreFleetFromPreset(selectedPresetName);
+                    enableButtonsRequiringSelection();
                     return;
                 case STORE_BUTTON_ID:
                     PresetUtils.storeFleetInStorage(selectedPresetName);
@@ -434,30 +439,30 @@ public class FleetPresetManagementListener extends ActionListener {
         @Override
         public void processInput(List<InputEventAPI> arg0) {
             for (InputEventAPI event : arg0) {
-            //     if (event.isMouseMoveEvent()) {
-            //         int mouseX = event.getX();
-            //         int mouseY = event.getY();
+                if (event.isMouseMoveEvent()) {
+                    int mouseX = event.getX();
+                    int mouseY = event.getY();
 
-            //         ButtonAPI button = getButton(theButtons, mouseX, mouseY);
-            //         if (button != null) {
-            //             String buttonId = (String) button.getCustomData();
-            //             this.isTooltip = true;
-            //             this.currentTooltipId = new String(buttonId);
-            //             showButtonToolTipAtLocation(buttonId);
-            //             return;
-            //         }
-            //         if (this.isTooltip && this.currentTooltipId != null) {
-            //             destroyButtonToolTip(this.currentTooltipId);
-            //             this.isTooltip = false;
-            //             this.currentTooltipId = null;
-            //             return;
-            //             // i dont know why we have to do this, probably because concurrency ticks take too long
-            //         } else {
-            //             for (String buttonId : this.buttonIds) {
-            //                 tooltipMap.get(buttonId).setOpacity(0f);
-            //             }
-            //         }
-            //     }
+                    ButtonAPI button = getButton(theButtons, mouseX, mouseY);
+                    if (button != null) {
+                        String buttonId = (String) button.getCustomData();
+                        this.isTooltip = true;
+                        this.currentTooltipId = new String(buttonId);
+                        showButtonToolTipAtLocation(buttonId);
+                        return;
+                    }
+                    if (this.isTooltip && this.currentTooltipId != null) {
+                        destroyButtonToolTip(this.currentTooltipId);
+                        this.isTooltip = false;
+                        this.currentTooltipId = null;
+                        return;
+                        // i dont know why we have to do this, probably because concurrency ticks take too long
+                    } else {
+                        for (String buttonId : this.buttonIds) {
+                            tooltipMap.get(buttonId).setOpacity(0f);
+                        }
+                    }
+                }
                 
                 if (event.isKeyDownEvent()) {
                     if (Keyboard.isKeyDown(Keyboard.KEY_RETURN) || Keyboard.isKeyDown(Keyboard.KEY_NUMPADENTER)) {
@@ -506,7 +511,7 @@ public class FleetPresetManagementListener extends ActionListener {
             }
         }
 
-        private ButtonAPI getButton (HashMap<String, ButtonAPI> buttons, int mouseX, int mouseY) {
+        private ButtonAPI getButton (Map<String, ButtonAPI> buttons, int mouseX, int mouseY) {
             for (Map.Entry<String, ButtonAPI> entry: theButtons.entrySet()) {
                 ButtonAPI button = entry.getValue();
                 PositionAPI pos = button.getPosition();
@@ -543,15 +548,15 @@ public class FleetPresetManagementListener extends ActionListener {
                 } else {
                     theButtons.get(STORE_BUTTON_ID).setEnabled(false);
                 }
-                theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(true);
-                theButtons.get(DELETE_BUTTON_ID).setEnabled(true);
                 theButtons.get(RESTORE_BUTTON_ID).setEnabled(true);
             }
+            theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(true);
+            theButtons.get(DELETE_BUTTON_ID).setEnabled(true);
 
         } else {
             theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
-            theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(true);
-            theButtons.get(DELETE_BUTTON_ID).setEnabled(true);
+            theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(false);
+            theButtons.get(DELETE_BUTTON_ID).setEnabled(false);
 
             if (DockingListener.getPlayerCurrentMarket() != null && DockingListener.canPlayerAccessStorage(DockingListener.getPlayerCurrentMarket())
                 && Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder().size() > 1) {
@@ -877,8 +882,7 @@ public class FleetPresetManagementListener extends ActionListener {
                     eventX <= rX + rW &&
                     eventY >= rY &&
                     eventY <= rY + rH) {
-                        selectedPresetName = rowName;
-                        selectedRowIndex = id;
+                        selectPreset(rowName, id);
                         enableButtonsRequiringSelection();
                         tablePlugin.rebuild();
                         // event.consume();
@@ -936,18 +940,16 @@ public class FleetPresetManagementListener extends ActionListener {
                     String text = saveNameField.getText();
                     if (!isEmptyOrWhitespace(text)) {
                         if (currentTableMap.containsKey(text)) {
-                            selectedPresetName = text;
+                            selectPreset(text, getTableMapIndex(text));
                             openOverwriteDialog(false);
-                            selectedRowIndex = getTableMapIndex(text);
 
                         } else {
-                            selectedPresetName = text;
                             PresetUtils.saveFleetPreset(text);
                             // if (Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY) == null) {
                                 Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, PresetUtils.getFleetPresets().get(selectedPresetName));
                             // }
                             refreshTableMap();
-                            selectedRowIndex = getTableMapIndex(text);
+                            selectPreset(text, getTableMapIndex(text));
                             enableButtonsRequiringSelection();
                         }
                     }
@@ -997,11 +999,10 @@ public class FleetPresetManagementListener extends ActionListener {
                     tableRowListeners.remove(actualIndex);
                     
                     if (tableRowListeners.isEmpty()) {
-                        selectedRowIndex = -1;
-                        selectedPresetName = EMPTY_STRING;
+                        selectPreset(EMPTY_STRING, -1);
                     } else {
-                        selectedRowIndex = Math.min(selectedRowIndex, tableRowListeners.size() - 1);
-                        selectedPresetName = tableRowListeners.get(tableRowListeners.size() - selectedRowIndex - 1).rowName;
+                        selectPreset(tableRowListeners.get(tableRowListeners.size() - selectedRowIndex - 1).rowName,
+                         tableRowListeners.size() - selectedRowIndex - 1);
                         enableButtonsRequiringSelection();
                     }
                     tablePlugin.rebuild();

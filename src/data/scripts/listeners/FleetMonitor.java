@@ -33,7 +33,7 @@ public class FleetMonitor implements EveryFrameScript {
             FleetMemberAPI playerFleetMember = playerFleetMembers.get(member.index);
 
             if (!PresetUtils.areSameVariant(playerFleetMember.getVariant(), member.member.getVariant()) 
-                || (playerFleetMember.getCaptain() != null && !(playerFleetMember.getCaptain().getId() == member.captainId))) {
+                || (playerFleetMember.getCaptain() != null && !(playerFleetMember.getCaptain().getId().equals(member.captainId)))) {
                 return true;
             }
 
@@ -115,7 +115,7 @@ public class FleetMonitor implements EveryFrameScript {
 
         } else {
             if (isPlayerFleetChanged(preset, playerFleetMembers)) {
-                Global.getSector().getCampaignUI().addMessage("The fleet composition has changed. Consider updating the fleet preset you're using to match the current fleet.", Misc.getNegativeHighlightColor());
+                Global.getSector().getCampaignUI().addMessage("The fleet composition has changed. Consider updating the fleet preset you undocked with to match the current fleet.", Misc.getBasePlayerColor());
                 mem.unset(PresetUtils.UNDOCKED_PRESET_KEY);
             }
         }

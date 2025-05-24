@@ -18,6 +18,7 @@ import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
+import com.fs.starfarer.api.loading.WeaponGroupSpec;
 import com.fs.starfarer.api.characters.PersonAPI;
 
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
@@ -134,8 +135,10 @@ public class PresetUtils {
             if (captain != null) {
                 this.captain = captain;
                 this.captainId = captain.getId();
+
                 PersonAPI captainCopy = Global.getFactory().createPerson();
                 captainCopy.setPortraitSprite(captain.getPortraitSprite());
+                captainCopy.setName(captain.getName());
                 this.member.setCaptain(captainCopy);
 
             } else {
@@ -227,7 +230,8 @@ public class PresetUtils {
     }
 
     // needs testing
-    public static FleetPreset getPresetOfPlayerFleet(List<FleetMemberAPI> playerFleetMembers) {
+    public static FleetPreset getPresetOfPlayerFleet() {
+        List<FleetMemberAPI> playerFleetMembers = Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder();
         Map<String, FleetPreset> presets = getFleetPresets();
         
         for (FleetPreset preset : presets.values()) {
@@ -310,8 +314,8 @@ public class PresetUtils {
                 allShipsMatched = false;
                 break;
             }
-
             boolean variantMatched = false;
+
             if (areSameVariant(presetVariant, variant)) {
                 if (captain != null && preset.officersMap.containsKey(hullId)) {
                     List<OfficerVariantPair> pairs = preset.officersMap.get(hullId);
@@ -391,6 +395,7 @@ public class PresetUtils {
         FleetDataAPI mothballedShipsFleetData = storageCargo.getMothballedShips();
 
         Map<String, Integer> neededShips = findNeededShips(preset, currentPlayerFleet);
+        
         if (neededShips.isEmpty()) return true;
 
         Map<String, Integer> foundShips = new HashMap<>();
@@ -674,13 +679,29 @@ public class PresetUtils {
 
     // this is because variant1.equals(variant2) doesnt always work, idk why and i dont really care
     public static boolean areSameVariant(ShipVariantAPI variant1, ShipVariantAPI variant2) {
+        // xstream serializer mangles weapon groups on game save/load or something? so we need to do this
+        List<WeaponGroupSpec> variant1WeaponGroups = variant1.getWeaponGroups();
+        List<WeaponGroupSpec> variant2WeaponGroups = variant2.getWeaponGroups();
+
+        if (variant1WeaponGroups.size() != variant2WeaponGroups.size()) return false;
+        for (int i = 0; i < variant1WeaponGroups.size(); i++) {
+            List<String> slots1 = variant1WeaponGroups.get(i).getSlots();
+            List<String> slots2 = variant2WeaponGroups.get(i).getSlots();
+            // slots1.equals(slots2) doesnt work, we actually have to go through it and compare each directly
+
+            if (slots1.size() != slots2.size()) return false;
+            for (int j = 0; j < slots1.size(); j++) {
+                if (!slots1.get(j).equals(slots2.get(j))) return false;
+            }
+        }
+
         return (variant1.getFullDesignationWithHullNameForShip().equals(variant2.getFullDesignationWithHullNameForShip())
             && variant1.getSMods().equals(variant2.getSMods())
             && variant1.getHullMods().equals(variant2.getHullMods())
             && variant1.getWings().equals(variant2.getWings())
             && variant1.getFittedWeaponSlots().equals(variant2.getFittedWeaponSlots())
             && variant1.getSModdedBuiltIns().equals(variant2.getSModdedBuiltIns())
-            && variant1.getWeaponGroups().equals(variant2.getWeaponGroups())
+            // && variant1.getWeaponGroups().equals(variant2.getWeaponGroups())
             && variant1.getNumFluxCapacitors() == variant2.getNumFluxCapacitors()
             && variant1.getNumFluxVents() == variant2.getNumFluxVents());
     }
@@ -726,13 +747,14 @@ public class PresetUtils {
         List<FleetMemberAPI> membersDone = new ArrayList<>();
         boolean allFound = true;
 
-        for (int i = 0; i < preset.shipIds.size() - 1; i++) {
+        for (int i = 0; i < preset.shipIds.size(); i++) {
             String hullId = preset.shipIds.get(i);
             ShipVariantAPI variant = preset.variantsMap.get(i);
 
             boolean found = false;
             for (FleetMemberAPI storedMember : storageCargo.getMothballedShips().getMembersInPriorityOrder()) {
                 if (storedMember.getHullId().equals(hullId)) {
+
                     if (preset.officersMap.containsKey(hullId)) {
                         
                         List<OfficerVariantPair> pairs = preset.officersMap.get(hullId);
@@ -750,9 +772,9 @@ public class PresetUtils {
                                 found = true;
                                 break;
                             }
-                            if (officerVariantFound) break;
                         }
-                        if (officerVariantFound) continue;
+                        if (officerVariantFound) break;
+                        continue;
                     }
                     
                     if (areSameVariant(variant, storedMember.getVariant())) {
@@ -760,8 +782,6 @@ public class PresetUtils {
                         membersDone.add(storedMember);
                         // CargoPresetUtils.refit(storedMember, variant, playerCargo, storageCargo);
                         found = true;
-
-                        membersDone.add(storedMember);
                         break;
                     }
                 }

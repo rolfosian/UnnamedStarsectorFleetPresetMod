@@ -10,6 +10,7 @@ import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 
 import data.scripts.util.PresetUtils;
+import data.scripts.util.PresetUtils.FleetPreset;
 import data.scripts.util.UtilReflection;
 import data.scripts.FleetPresetManagerCoreScript;
 import data.scripts.listeners.DockingListener;
@@ -56,6 +57,11 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
 
         if (Global.getSector().getPersistentData().get(PresetUtils.IS_AUTO_UPDATE_KEY) == null) {
             Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, false);
+        }
+
+        FleetPreset activePreset = PresetUtils.getPresetOfPlayerFleet();
+        if (activePreset != null &&(boolean)Global.getSector().getPersistentData().get(PresetUtils.IS_AUTO_UPDATE_KEY)) {
+            Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, activePreset);
         }
 
         @SuppressWarnings("resource")
