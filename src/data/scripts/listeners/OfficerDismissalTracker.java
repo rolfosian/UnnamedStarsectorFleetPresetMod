@@ -10,11 +10,7 @@ import data.scripts.util.PresetUtils;
 
 import java.util.*;
 
-import org.apache.log4j.Logger;
-
 public class OfficerDismissalTracker implements EveryFrameScript {
-    public static final Logger logger = Logger.getLogger(FleetPresetManagementListener.class);
-
     private final Set<String> knownOfficers = new HashSet<>();
 
     public OfficerDismissalTracker() {

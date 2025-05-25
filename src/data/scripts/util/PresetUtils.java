@@ -168,7 +168,7 @@ public class PresetUtils {
         public final String name;
         public List<String> shipIds = new ArrayList<>();
         public Map<Integer, ShipVariantAPI> variantsMap = new HashMap<>();
-        public Map<String, List<OfficerVariantPair>> officersMap = new HashMap<>();
+        public Map<String, List<OfficerVariantPair>> officersMap = new HashMap<>(); // this can probably be refactored to use integer index keys like variantsMap but im not going to fix what isnt broken for now
         public List<FleetMemberWrapper> fleetMembers = new ArrayList<>();
 
         public FleetPreset(String name, List<FleetMemberAPI> fleetMembers) {
@@ -989,8 +989,7 @@ public class PresetUtils {
 
             for (FleetMemberWrapper member : fleetPreset.fleetMembers) {
                 if (member.captainId != null && member.captainId.equals(officerId)) {
-                    member.captain = null;
-                    member.captainId = null;
+                    member.updateCaptain(null);
                     break;
                 }
             }
