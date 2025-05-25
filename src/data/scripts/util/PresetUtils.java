@@ -146,7 +146,7 @@ public class PresetUtils {
             this.index = index;
         }
 
-        public void updateOfficer(PersonAPI captain) {
+        public void updateCaptain(PersonAPI captain) {
             if (captain == null) {
                 this.captain = null;
                 this.captainId = null;
@@ -198,7 +198,7 @@ public class PresetUtils {
             FleetMemberWrapper member = this.fleetMembers.get(index);
             String hullId = member.member.getHullId();
             
-            member.updateOfficer(captain);
+            member.updateCaptain(captain);
 
             if (captain != null) {
                 OfficerVariantPair pair = new OfficerVariantPair(captain, member.member.getVariant(), index);
@@ -222,46 +222,6 @@ public class PresetUtils {
         }
     }
 
-
-        // JEEPERS FEATURE CREEPERS???
-        // will require variant d/smod agnostic implementation for comparisons in restoreFleetFromPreset functions
-        // public void exportPresetasJSON() {
-        //     // TODO implement this and corresponding import function
-                
-        //     // PROBLEM: How to handle officers
-        // }
-
-        // public String deserializePreset() {
-        //     
-        //     return "";
-        // }
-
-        // public Map<String, List<ShipVariantAPI>> getVariantsMapString(String name) {
-        //     return this.variantsMap.get(name);
-        // }
-        // public List<String> getShipIds() {
-        //     return this.shipIds;
-        // }
-        // public Map<String, List<List<Object>>> getOfficersMap() {
-        //     return this.officersMap;
-        // }
-    // }
-
-    // JEEPERS FEATURE CREEPERS???
-    // public static FleetPreset serializeFleetPreset(String deserializedPreset) {
-    //     // TODO implement this for use in import function
-    //     // FleetPreset presetSerialized = new FleetPreset();
-
-    //     // return presetSerialized;
-    // }
-
-    // would require logic for refit functions to check player ordnance point bonuses? i personally cant be bothered
-    // public static void importPreset(String presetName) {
-    //     // TODO implement
-
-    //     // PROBLEM: How to handle officers from different save and apply new ones
-    // }
-
     public static boolean isPlayerFleetChanged(FleetPreset preset, List<FleetMemberAPI> playerFleetMembers) {
         if (playerFleetMembers.size() != preset.fleetMembers.size()) {
             return true;
@@ -280,10 +240,10 @@ public class PresetUtils {
 
     public static void checkFleetAgainstPreset() {
         MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
-        FleetPreset preset = (FleetPreset) mem.get(PresetUtils.UNDOCKED_PRESET_KEY);
+        FleetPreset preset = (FleetPreset) mem.get(UNDOCKED_PRESET_KEY);
         if (preset == null) return;
 
-        boolean isAutoUpdate = (boolean)Global.getSector().getPersistentData().get(PresetUtils.IS_AUTO_UPDATE_KEY);
+        boolean isAutoUpdate = (boolean)Global.getSector().getPersistentData().get(IS_AUTO_UPDATE_KEY);
 
         CampaignFleetAPI playerFleet = Global.getSector().getPlayerFleet();
         List<FleetMemberAPI> playerFleetMembers = playerFleet.getFleetData().getMembersListCopy();
@@ -380,7 +340,6 @@ public class PresetUtils {
         }
     }
 
-    // needs testing
     public static FleetPreset getPresetOfPlayerFleet() {
         List<FleetMemberAPI> playerFleetMembers = Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder();
         Map<String, FleetPreset> presets = getFleetPresets();
@@ -537,7 +496,6 @@ public class PresetUtils {
 
         SubmarketAPI storage = market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
         if (storage == null) return false;
-
         SubmarketPlugin storagePlugin = storage.getPlugin();
         if (!isPlayerPaidForStorage(storagePlugin)) return false;
 
@@ -762,7 +720,7 @@ public class PresetUtils {
     public static boolean isMemberInFleet(FleetDataAPI fleetData, FleetMemberAPI memberToCheck) {
         for (FleetMemberAPI member : fleetData.getMembersInPriorityOrder()) {
             if (member.getHullId().equals(memberToCheck.getHullId()) &&
-                member.getVariant().equals(memberToCheck.getVariant())) {
+                areSameVariant(member.getVariant(), memberToCheck.getVariant())) {
     
                 PersonAPI captain = member.getCaptain();
                 PersonAPI captainToCheck = memberToCheck.getCaptain();
@@ -778,16 +736,6 @@ public class PresetUtils {
             }
         }
         return false;
-    }
-
-    public static class IndexedVariant {
-        public int index;
-        public ShipVariantAPI variant;
-
-        public IndexedVariant(int index, ShipVariantAPI variant) {
-            this.index = index;
-            this.variant = variant;
-        }
     }
 
     public static void saveFleetPreset(String name) {
@@ -925,7 +873,6 @@ public class PresetUtils {
                             }
                         }
                         if (officerVariantFound) break;
-                        continue;
                     }
                     
                     if (areSameVariant(variant, storedMember.getVariant())) {
