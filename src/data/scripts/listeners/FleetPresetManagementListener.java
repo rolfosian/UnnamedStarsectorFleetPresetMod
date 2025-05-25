@@ -684,7 +684,8 @@ public class FleetPresetManagementListener extends ActionListener {
 
                     isSelectedPresetAvailablePara.setText(String.format(isSelectedPresetAvailableParaFormat, "available"));
                     isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
-                    theButtons.get(RESTORE_BUTTON_ID).setEnabled(true);
+
+                    if (PresetUtils.isPresetPlayerFleet(selectedPresetName)) theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
 
                 } else {
                     // theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
