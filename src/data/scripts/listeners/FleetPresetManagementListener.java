@@ -38,7 +38,7 @@ import data.scripts.ui.UIComponent;
 import data.scripts.ui.UIPanel;
 import data.scripts.ui.UiConfig;
 
-// import data.scripts.util.ReflectionUtilis;
+import data.scripts.util.ReflectionUtilis;
 import data.scripts.util.UtilReflection;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.PresetMiscUtils;
@@ -136,6 +136,7 @@ public class FleetPresetManagementListener extends ActionListener {
     private ButtonAPI MasterCancelButton;
     private FenaglePanele fenaglePanele;
 
+    private Object tablePanel;
     private List<TableRowListener> tableRowListeners = new ArrayList<>();
     private TablePlugin tablePlugin;
     private PositionAPI tableCanvasPos;
@@ -239,7 +240,6 @@ public class FleetPresetManagementListener extends ActionListener {
 
         ButtonAPI autoUpdateButton = tooltipMaker.addCheckbox(buttonWidth, buttonHeight, AUTO_UPDATE_BUTTON_TEXT, AUTO_UPDATE_BUTTON_ID, Fonts.ORBITRON_12, c1,
         ButtonAPI.UICheckboxSize.SMALL, 5f);
-        // autoUpdateButton.setShortcut(Keyboard.KEY_6, false);
         autoUpdateButton.setChecked((boolean)Global.getSector().getPersistentData().get(PresetUtils.IS_AUTO_UPDATE_KEY));
         tooltipMaker.addTooltipTo(tc(AUTO_UPDATE_BUTTON_TOOLTIP_PARA_TEXT), autoUpdateButton, TooltipLocation.RIGHT, false);
 
@@ -289,6 +289,7 @@ public class FleetPresetManagementListener extends ActionListener {
         CustomPanelAPI textFieldPanel = Global.getSettings().createCustom(CONFIRM_DIALOG_WIDTH / 2 / 6, CONFIRM_DIALOG_HEIGHT / 2 / 12, textPanelPlugin);
         TooltipMakerAPI textFieldTooltipMaker = textFieldPanel.createUIElement(CONFIRM_DIALOG_WIDTH / 2 / 5, CONFIRM_DIALOG_HEIGHT / 2 / 10, false);
         saveNameField = textFieldTooltipMaker.addTextField(CONFIRM_DIALOG_WIDTH/3, CONFIRM_DIALOG_HEIGHT/2/3, "graphics/fonts/orbitron24aabold.fnt", 10f);
+
         textFieldPanel.addUIElement(textFieldTooltipMaker).inTL(0f, 0f);
 
         UtilReflection.ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
@@ -475,7 +476,7 @@ public class FleetPresetManagementListener extends ActionListener {
         public boolean rebuild;
         // public UIPanelAPI root;
         public CustomPanelAPI panel;
-        private UIPanelAPI tablePanel;
+        
         private TooltipMakerAPI tableTipMaker;
         private CustomPanelAPI shipListPanel;
         public float yScrollOffset;
@@ -513,7 +514,7 @@ public class FleetPresetManagementListener extends ActionListener {
             tableRowListeners.add(rowListener);
         }
 
-        @Override
+        @Override @SuppressWarnings("unchecked")
         public void buildTooltip(CustomPanelAPI panel) {
             refreshTableMap();
             tableTipMaker = panel.createUIElement(NAME_COLUMN_WIDTH, PANEL_HEIGHT, true);
@@ -534,6 +535,7 @@ public class FleetPresetManagementListener extends ActionListener {
                 // id = (size == 1) ? 0 : size - 1;
             // }
 
+            UIPanelAPI selectedRow = null;
             for (Map.Entry<String, PresetUtils.FleetPreset> entry: currentTableMap.entrySet()) {
                 String rowName = entry.getKey();
                 PresetUtils.FleetPreset fleetPreset = entry.getValue();
@@ -544,6 +546,7 @@ public class FleetPresetManagementListener extends ActionListener {
                         TEXT_HIGHLIGHT_COLOR, 
                         rowName
                     );
+                    selectedRow = row;
                 } else {
                     row = (UIPanelAPI) tableTipMaker.addRowWithGlow(
                         c1, 
@@ -556,6 +559,12 @@ public class FleetPresetManagementListener extends ActionListener {
                 id++;
             }
             tableTipMaker.addTable(BLANK_TABLE_TEXT, 0, 5f);
+
+            if (selectedRow != null) {
+                ReflectionUtilis.invokeMethodDirectly(ReflectionUtilis.getMethod("setItemsSelectable", tablePanel, 1), tablePanel, true);
+                ReflectionUtilis.invokeMethodDirectly(ReflectionUtilis.getMethod("select", tablePanel, 2), tablePanel, selectedRow, null);
+            }
+
             panel.addUIElement(tableTipMaker);
 
             if (selectedPresetName != EMPTY_STRING) {
@@ -644,7 +653,6 @@ public class FleetPresetManagementListener extends ActionListener {
         public PositionAPI rowPos;
         public TooltipMakerAPI tooltipMaker;
         public List<PresetUtils.FleetMemberWrapper> fleetMembers;
-        // public boolean isActive;
 
         public TableRowListener(Object row, PositionAPI rowPos, String rowPresetName, int id, List<PresetUtils.FleetMemberWrapper> fleetMembers) {
             this.row = row;
@@ -652,7 +660,6 @@ public class FleetPresetManagementListener extends ActionListener {
             this.rowName = rowPresetName;
             this.rowPos = rowPos;
             this.fleetMembers = fleetMembers;
-            // this.isActive = isActive;
         }
     
         public void init(CustomPanelAPI panel, TooltipMakerAPI tooltipMaker, PositionAPI rowPos) {

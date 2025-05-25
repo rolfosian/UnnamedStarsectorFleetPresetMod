@@ -18,6 +18,9 @@ import java.lang.reflect.Field;
 import org.apache.log4j.Logger;
 
 public class ReflectionUtilis {
+    public static void print(Object... args) {
+        PresetMiscUtils.print(args);
+    }
     private static final Logger logger = Logger.getLogger(ReflectionUtilis.class);
 
     // Code taken and modified from Grand Colonies
@@ -165,6 +168,18 @@ public class ReflectionUtilis {
         }
     }
 
+    public static Object getMethod(String methodName, Object instance, int paramCount) {
+        for (Object method : instance.getClass().getMethods()) {
+            try {
+                if (((String)getMethodNameHandle.invoke(method)).equals(methodName) && 
+                    ((Object[])getParameterTypesHandle.invoke(method)).length == paramCount) {
+                    return method;
+                }
+            } catch (Throwable ignored) {}
+        }
+        return null;
+    }
+
     public static Object invokeMethod(String methodName, Object instance, Object... arguments) {
         try {
             Object method = instance.getClass().getMethod(methodName);
@@ -175,12 +190,13 @@ public class ReflectionUtilis {
     }
     public static Object invokeMethodDirectly(Object method,Object instance, Object... arguments) {
         try {
-
-            return invokeMethodHandle.invoke(method, null, arguments);
+            return invokeMethodHandle.invoke(method, instance, arguments);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
     }
+
+    @SuppressWarnings("unchecked")
     public static List<UIComponentAPI> getChildrenCopy(UIPanelAPI panel) {
         try {
             return (List<UIComponentAPI>) invokeMethod("getChildrenCopy", panel);
@@ -382,6 +398,8 @@ public class ReflectionUtilis {
             throw new RuntimeException(e);
         }
     }
+    
+    @SuppressWarnings("unused")
     public static Object findFieldByType(Object targetObject, Class<?> fieldType) {
         try {
             Class<?> currentClass = targetObject.getClass();
