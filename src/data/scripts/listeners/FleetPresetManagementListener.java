@@ -3,23 +3,16 @@ package data.scripts.listeners;
 
 import com.fs.starfarer.api.Global;
 
-import com.fs.starfarer.api.campaign.CampaignUIAPI;
-import com.fs.starfarer.api.campaign.CargoAPI;
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
-import com.fs.starfarer.api.campaign.InteractionDialogAPI;
-import com.fs.starfarer.api.campaign.LocationAPI;
-import com.fs.starfarer.api.campaign.PlanetAPI;
-import com.fs.starfarer.api.campaign.SectorEntityToken;
-import com.fs.starfarer.api.campaign.econ.MarketAPI;
-import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
-import com.fs.starfarer.api.campaign.CampaignFleetAPI;
-
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
+import com.fs.starfarer.api.fleet.FleetMemberAPI;
 
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipLocation;
 import com.fs.starfarer.api.ui.Alignment;
+import com.fs.starfarer.api.ui.BaseTooltipCreator;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 import com.fs.starfarer.api.ui.UIComponentAPI;
@@ -27,8 +20,10 @@ import com.fs.starfarer.api.ui.ScrollPanelAPI;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.Alignment;
 import com.fs.starfarer.api.ui.CutStyle;
+import com.fs.starfarer.api.ui.Fonts;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
+
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.input.InputEventType;
 
@@ -139,7 +134,6 @@ public class FleetPresetManagementListener extends ActionListener {
     CustomPanelAPI buttonsPanel;
     private Map<String, ButtonAPI> theButtons = new HashMap<>();
     private ButtonAPI MasterCancelButton;
-    private final HashMap<String, String> buttonToolTipParas = new HashMap<>();
     private FenaglePanele fenaglePanele;
 
     private List<TableRowListener> tableRowListeners = new ArrayList<>();
@@ -153,29 +147,12 @@ public class FleetPresetManagementListener extends ActionListener {
 
     public FleetPresetManagementListener() {
         super();
-
         this.selectedPresetName = "";
         this.tablePlugin = new TablePlugin();
-
-        buttonToolTipParas.put(SAVE_DIALOG_BUTTON_ID, SAVE_DIALOG_BUTTON_TOOLTIP_PARA_TEXT);
-        buttonToolTipParas.put(RESTORE_BUTTON_ID, RESTORE_BUTTON_TOOLTIP_PARA_TEXT);
-        buttonToolTipParas.put(STORE_BUTTON_ID, STORE_BUTTON_TOOLTIP_PARA_TEXT);
-        buttonToolTipParas.put(DELETE_BUTTON_ID, DELETE_BUTTON_TOOLTIP_PARA_TEXT);
-        buttonToolTipParas.put(OVERWRITE_PRESET_BUTTON_ID, OVERWRITE_PRESET_BUTTON_TOOLTIP_PARA_TEXT);
-        buttonToolTipParas.put(AUTO_UPDATE_BUTTON_ID, AUTO_UPDATE_BUTTON_TOOLTIP_PARA_TEXT);
     }
 
     @Override
     public void trigger(Object... args) {
-
-        List<String> buttonIds = new ArrayList<>();
-        buttonIds.add(SAVE_DIALOG_BUTTON_ID);
-        buttonIds.add(RESTORE_BUTTON_ID);
-        buttonIds.add(STORE_BUTTON_ID);
-        buttonIds.add(DELETE_BUTTON_ID);
-        buttonIds.add(OVERWRITE_PRESET_BUTTON_ID);
-        buttonIds.add(AUTO_UPDATE_BUTTON_ID);
-
         CustomPanelAPI tableMasterPanel = Global.getSettings().createCustom(PANEL_WIDTH - CANCEL_CONFIRM_BUTTON_WIDTH - 5f, PANEL_HEIGHT, new BaseCustomUIPanelPlugin() );
         DialogDismissedListener dummyListener = new DummyDialogListener();
         UtilReflection.ConfirmDialogData master = UtilReflection.showConfirmationDialog(
@@ -195,7 +172,7 @@ public class FleetPresetManagementListener extends ActionListener {
         PositionAPI cancelButtonPosition = cancelButton.getPosition();
         CANCEL_CONFIRM_BUTTON_WIDTH = cancelButtonPosition.getWidth();
 
-        ButtonPlugin buttonPlugin = new ButtonPlugin(buttonIds);
+        ButtonPlugin buttonPlugin = new ButtonPlugin();
         buttonsPanel = Global.getSettings().createCustom(CANCEL_CONFIRM_BUTTON_WIDTH, PANEL_HEIGHT, buttonPlugin);
         TooltipMakerAPI tooltipMaker = buttonsPanel.createUIElement(CANCEL_CONFIRM_BUTTON_WIDTH, PANEL_HEIGHT, true);
         buttonPlugin.init(buttonsPanel, tooltipMaker);
@@ -212,7 +189,6 @@ public class FleetPresetManagementListener extends ActionListener {
             storageAvailableColor = Misc.getNegativeHighlightColor();
         }
         tooltipMaker.addPara(storageAvailableText, storageAvailableColor, 5f);
-        // selectedPresetNamePara = tooltipMaker.addParaWithMarkup(String.format(selectedPresetNameParaFormat, selectedPresetName), c1, 5f);
 
         isSelectedPresetAvailablePara = tooltipMaker.addParaWithMarkup("", c1, 5f);
         isSelectedPresetFleetPara = tooltipMaker.addParaWithMarkup("", c1, 5f);
@@ -239,27 +215,33 @@ public class FleetPresetManagementListener extends ActionListener {
         ButtonAPI saveDialogButton = tooltipMaker.addButton(SAVE_DIALOG_BUTTON_TEXT, SAVE_DIALOG_BUTTON_ID, c1, c2,
         Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
         saveDialogButton.setShortcut(Keyboard.KEY_1, false);
+        tooltipMaker.addTooltipTo(tc(SAVE_DIALOG_BUTTON_TOOLTIP_PARA_TEXT), saveDialogButton, TooltipLocation.RIGHT, false);
 
         ButtonAPI restorePresetButton = tooltipMaker.addButton(RESTORE_BUTTON_TEXT, RESTORE_BUTTON_ID, c1, c2,
         Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
         restorePresetButton.setShortcut(Keyboard.KEY_2, false);
+        tooltipMaker.addTooltipTo(tc(RESTORE_BUTTON_TOOLTIP_PARA_TEXT), restorePresetButton, TooltipLocation.RIGHT, false);
 
         ButtonAPI storeAllButton = tooltipMaker.addButton(STORE_BUTTON_TEXT, STORE_BUTTON_ID, c1, c2,
         Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
         storeAllButton.setShortcut(Keyboard.KEY_3, false);
+        tooltipMaker.addTooltipTo(tc(STORE_BUTTON_TOOLTIP_PARA_TEXT), storeAllButton, TooltipLocation.RIGHT, false);
 
         ButtonAPI deleteButton = tooltipMaker.addButton(DELETE_BUTTON_TEXT, DELETE_BUTTON_ID, c1, c2,
         Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
         deleteButton.setShortcut(Keyboard.KEY_4, false);
+        tooltipMaker.addTooltipTo(tc(DELETE_BUTTON_TOOLTIP_PARA_TEXT), deleteButton, TooltipLocation.RIGHT, false);
 
         ButtonAPI overwriteToPresetButton = tooltipMaker.addButton(OVERWRITE_PRESET_BUTTON_TEXT, OVERWRITE_PRESET_BUTTON_ID, c1, c2,
         Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
         overwriteToPresetButton.setShortcut(Keyboard.KEY_5, false);
+        tooltipMaker.addTooltipTo(tc(OVERWRITE_PRESET_BUTTON_TOOLTIP_PARA_TEXT), overwriteToPresetButton, TooltipLocation.RIGHT, false);
 
-        ButtonAPI autoUpdateButton = tooltipMaker.addCheckbox(buttonWidth, buttonHeight, AUTO_UPDATE_BUTTON_TEXT, AUTO_UPDATE_BUTTON_ID, "graphics/fonts/arial10.fnt", c1,
+        ButtonAPI autoUpdateButton = tooltipMaker.addCheckbox(buttonWidth, buttonHeight, AUTO_UPDATE_BUTTON_TEXT, AUTO_UPDATE_BUTTON_ID, Fonts.ORBITRON_12, c1,
         ButtonAPI.UICheckboxSize.SMALL, 5f);
         // autoUpdateButton.setShortcut(Keyboard.KEY_6, false);
         autoUpdateButton.setChecked((boolean)Global.getSector().getPersistentData().get(PresetUtils.IS_AUTO_UPDATE_KEY));
+        tooltipMaker.addTooltipTo(tc(AUTO_UPDATE_BUTTON_TOOLTIP_PARA_TEXT), autoUpdateButton, TooltipLocation.RIGHT, false);
 
         theButtons.put(SAVE_DIALOG_BUTTON_ID, saveDialogButton);
         theButtons.put(RESTORE_BUTTON_ID, restorePresetButton);
@@ -346,58 +328,11 @@ public class FleetPresetManagementListener extends ActionListener {
         CustomPanelAPI masterPanel;
         TooltipMakerAPI masterTooltip;
 
-        HashMap<String, CustomPanelAPI> tooltipMap;
-        List<String> buttonIds;
-
-        boolean isTooltip;
-        String currentTooltipId;
-
-        public ButtonPlugin(List<String> buttonIds) {
-            this.tooltipMap = new HashMap<>();
-            this.isTooltip = false;
-            this.buttonIds = buttonIds;
-
-            for (String buttonId : buttonIds) {
-                CustomPanelAPI tooltipPanel = Global.getSettings().createCustom(250f, 60f, null);
-                TooltipMakerAPI tooltip = tooltipPanel.createUIElement(250f, 60f, false);
-                tooltip.setParaFont("graphics/fonts/orbitron20aa.fnt");
-                tooltip.addPara(buttonToolTipParas.get(buttonId), 0f);
-                tooltipPanel.wrapTooltipWithBox(tooltip, Misc.getBasePlayerColor());
-            
-                tooltipPanel.addUIElement(tooltip).inTL(0f, 0f);
-                tooltipMap.put(buttonId, tooltipPanel);
-            }
-
-
-        }
+        public ButtonPlugin() {}
         
         public void init(CustomPanelAPI panel, TooltipMakerAPI tooltip) {
             this.masterPanel = panel;
             this.masterTooltip = tooltip;
-        }
-
-        private void showButtonToolTipAtLocation(String buttonId) {
-            CustomPanelAPI toolTipPanel = tooltipMap.get(buttonId);
-            toolTipPanel.setOpacity(100f);
-            // PositionAPI buttonPos = theButtons.get(buttonId).getPosition();
-
-            if (buttonId.equals(AUTO_UPDATE_BUTTON_ID)) {
-                buttonsPanel.addComponent(toolTipPanel).setYAlignOffset(40f);
-            } else {
-                buttonsPanel.addComponent(toolTipPanel);
-            }
-        }
-
-        private void destroyButtonToolTip(String buttonId) {
-            CustomPanelAPI toolTipPanel = tooltipMap.get(buttonId);
-            toolTipPanel.setOpacity(0f);
-            this.masterPanel.removeComponent(toolTipPanel);
-            // toolTipPanel = null;
-        }
-
-        @Override
-        public void advance(float amount) {
-    
         }
     
         @Override
@@ -430,40 +365,10 @@ public class FleetPresetManagementListener extends ActionListener {
                     break;
             }
         }
-    
-        @Override
-        public void positionChanged(PositionAPI arg0) {
-    
-        }
 
         @Override
         public void processInput(List<InputEventAPI> arg0) {
-            for (InputEventAPI event : arg0) {
-                if (event.isMouseMoveEvent()) {
-                    int mouseX = event.getX();
-                    int mouseY = event.getY();
-
-                    ButtonAPI button = getButton(theButtons, mouseX, mouseY);
-                    if (button != null) {
-                        String buttonId = (String) button.getCustomData();
-                        this.isTooltip = true;
-                        this.currentTooltipId = new String(buttonId);
-                        showButtonToolTipAtLocation(buttonId);
-                        return;
-                    }
-                    if (this.isTooltip && this.currentTooltipId != null) {
-                        destroyButtonToolTip(this.currentTooltipId);
-                        this.isTooltip = false;
-                        this.currentTooltipId = null;
-                        return;
-                        // i dont know why we have to do this, probably because concurrency ticks take too long
-                    } else {
-                        for (String buttonId : this.buttonIds) {
-                            tooltipMap.get(buttonId).setOpacity(0f);
-                        }
-                    }
-                }
-                
+            for (InputEventAPI event : arg0) {                
                 if (event.isKeyDownEvent()) {
                     if (Keyboard.isKeyDown(Keyboard.KEY_RETURN) || Keyboard.isKeyDown(Keyboard.KEY_NUMPADENTER)) {
                         event.consume();
@@ -510,33 +415,18 @@ public class FleetPresetManagementListener extends ActionListener {
                 }
             }
         }
-
-        private ButtonAPI getButton (Map<String, ButtonAPI> buttons, int mouseX, int mouseY) {
-            for (Map.Entry<String, ButtonAPI> entry: theButtons.entrySet()) {
-                ButtonAPI button = entry.getValue();
-                PositionAPI pos = button.getPosition();
-                float x = pos.getX();
-                float y = pos.getY();
-                float width = pos.getWidth();
-                float height = pos.getHeight();
-
-                if (mouseX >= x && mouseX <= x + width - 5f &&
-                mouseY >= y && mouseY <= y + height - 5f) {
-                return button;
-                }
-            }
-            return null;
-        }   
+        
+        @Override
+        public void render(float arg0) {}
     
         @Override
-        public void render(float arg0) {
-    
-        }
-    
+        public void renderBelow(float arg0) {}
+
         @Override
-        public void renderBelow(float arg0) {
-    
-        }
+        public void positionChanged(PositionAPI arg0) {}
+
+        @Override
+        public void advance(float amount) {}
         
     }
 
@@ -601,24 +491,14 @@ public class FleetPresetManagementListener extends ActionListener {
             super.rebuild();
         }
 
-        // public void setRoot(CustomPanelAPI root, CustomPanelAPI panel) {
-        //     this.root = root;
-        //     this.panel = panel;
-        //     super.rebuild();
-        // }
-
         @Override
-        public void positionChanged(PositionAPI position) {
-        }
+        public void positionChanged(PositionAPI position) {}
     
         @Override
-        public void renderBelow(float alphaMult) {
-    
-        }
+        public void renderBelow(float alphaMult) {}
     
         @Override
-        public void render(float alphaMult) {
-        }
+        public void render(float alphaMult) {}
 
         private void processRow(UIPanelAPI row, String rowName, int id, PresetUtils.FleetPreset fleetpreset) {
             PositionAPI rowPos = row.getPosition();
@@ -779,25 +659,15 @@ public class FleetPresetManagementListener extends ActionListener {
             this.panel = panel;
             this.rowPos = rowPos;
         }
-
-        public void clearHighlight() {
-
-        }
     
         @Override
-        public void buttonPressed(Object arg0) {
-
-        }
+        public void buttonPressed(Object arg0) {}
     
         @Override
-        public void positionChanged(PositionAPI arg0) {
-
-        }
+        public void positionChanged(PositionAPI arg0) {}
 
         @Override
-        public void advance(float arg0) {
-
-        }
+        public void advance(float arg0) {}
 
         private String trimName(String name, String prefix) {
             String trimmed = prefix;
@@ -1023,5 +893,26 @@ public class FleetPresetManagementListener extends ActionListener {
             this.panel = panel;
             this.parent = parent;
         }
+    }
+
+    public static TooltipMakerAPI.TooltipCreator tc(final String text){
+        final LabelAPI l1 = Global.getSettings().createLabel(text, Fonts.ORBITRON_12);
+        //create simple tooltip with text inside it
+        return new TooltipMakerAPI.TooltipCreator() {
+            @Override
+            public boolean isTooltipExpandable(Object tooltipParam) {
+                return false;
+            }
+
+            @Override
+            public float getTooltipWidth(Object tooltipParam) {
+                return l1.getPosition().getWidth();
+            }
+
+            @Override
+            public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
+                tooltip.addCustom((UIComponentAPI) l1, 0);
+            }
+        };
     }
 }
