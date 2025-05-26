@@ -12,6 +12,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.InvocationTargetException;
+import java.util.HashMap;
 import java.util.List;
 import java.lang.reflect.Field;
 
@@ -168,6 +169,17 @@ public class ReflectionUtilis {
         }
     }
 
+    public static HashMap<String, Object> getMethods(Object instance) {
+        HashMap<String, Object> methods = new HashMap<>();
+        try {
+            for (Object method : instance.getClass().getMethods()) {
+                String methodName = (String) getMethodNameHandle.invoke(method);
+                methods.put(methodName, method);
+            }
+        } catch (Throwable ignored) {}
+        return methods;
+    }
+
     public static Object getMethod(String methodName, Object instance, int paramCount) {
         for (Object method : instance.getClass().getMethods()) {
             try {
@@ -188,7 +200,14 @@ public class ReflectionUtilis {
             throw new RuntimeException(e);
         }
     }
-    public static Object invokeMethodDirectly(Object method,Object instance, Object... arguments) {
+
+    public static Object getMethodAndInvokeDirectly(String methodName, Object instance, int argumentsNum, Object... arguments) {
+        Object method = getMethod(methodName, instance, argumentsNum);
+        if (method == null) return null;
+        return invokeMethodDirectly(method, instance, arguments);
+    }
+
+    public static Object invokeMethodDirectly(Object method, Object instance, Object... arguments) {
         try {
             return invokeMethodHandle.invoke(method, instance, arguments);
         } catch (Throwable e) {
@@ -500,7 +519,7 @@ public class ReflectionUtilis {
 
     public static void logFields(Object instance) {
         try {
-            for (Object field : instance.getClass().getFields()) {
+            for (Object field : instance.getClass().getDeclaredFields()) {
                 logger.info("---------------------------------------------");
                 String fieldName = (String) getFieldNameHandle.invoke(field);
                 Class<?> fieldType = (Class<?>) getFieldTypeHandle.invoke(field);

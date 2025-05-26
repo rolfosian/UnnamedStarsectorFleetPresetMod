@@ -23,15 +23,8 @@ import data.scripts.FleetPanelInjector;
 
 import java.util.*;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.awt.*;
-import java.util.List;
-import org.apache.log4j.Logger;
 
 public class FleetPresetManagerCoreScript implements EveryFrameScript {
-
-    private final Logger log = Logger.getLogger(this.getClass());
-
     private static PresetUtils.FleetPreset currentFleetPreset;
 
     private boolean isFirstFrame = true;
@@ -80,7 +73,7 @@ public class FleetPresetManagerCoreScript implements EveryFrameScript {
         if (!ClassRefs.foundAllClasses()) {
             ClassRefs.findAllClasses();
         }
-        
+
         fleetPanelInjector.advance();
     }
 

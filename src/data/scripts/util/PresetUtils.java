@@ -685,7 +685,39 @@ public class PresetUtils {
         return null;
     }
 
-    public static void storeFleetInStorage(String name) {
+    public static List<FleetMemberAPI> getMothBalledShips(MarketAPI market) {
+        SubmarketAPI storage = market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
+        SubmarketPlugin storagePlugin = storage.getPlugin();
+        if (!isPlayerPaidForStorage(storagePlugin)) return null;
+
+        CargoAPI storageCargo = storage.getCargo();
+        initMothballedShips(storageCargo);
+
+        return storageCargo.getMothballedShips().getMembersInPriorityOrder();
+    }
+
+    public static void takeAllShipsFromStorage() {
+        CampaignFleetAPI playerFleet = Global.getSector().getPlayerFleet();
+        MarketAPI market = getPlayerCurrentMarket();
+        if (market == null) return;
+
+        SubmarketAPI storage = market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
+        SubmarketPlugin storagePlugin = storage.getPlugin();
+        if (!isPlayerPaidForStorage(storagePlugin)) return;
+
+        CargoAPI storageCargo = storage.getCargo();
+        initMothballedShips(storageCargo);
+
+        FleetDataAPI mothballedShipsFleetData = storageCargo.getMothballedShips();
+
+        for (FleetMemberAPI member : mothballedShipsFleetData.getMembersInPriorityOrder()) {
+            mothballedShipsFleetData.removeFleetMember(member);
+            playerFleet.getFleetData().addFleetMember(member);
+        }
+        refreshFleetUI();
+    }
+
+    public static void storeFleetInStorage() {
         CampaignFleetAPI playerFleet = Global.getSector().getPlayerFleet();
         MarketAPI market = getPlayerCurrentMarket();
         if (market == null) return;

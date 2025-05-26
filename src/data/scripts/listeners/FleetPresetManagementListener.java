@@ -347,7 +347,8 @@ public class FleetPresetManagementListener extends ActionListener {
                     enableButtonsRequiringSelection();
                     return;
                 case STORE_BUTTON_ID:
-                    PresetUtils.storeFleetInStorage(selectedPresetName);
+                    PresetUtils.storeFleetInStorage();
+                    enableButtonsRequiringSelection();
                     return;
                 case DELETE_BUTTON_ID:
                     openDeleteDialog();
@@ -514,7 +515,7 @@ public class FleetPresetManagementListener extends ActionListener {
             tableRowListeners.add(rowListener);
         }
 
-        @Override @SuppressWarnings("unchecked")
+        @Override
         public void buildTooltip(CustomPanelAPI panel) {
             refreshTableMap();
             tableTipMaker = panel.createUIElement(NAME_COLUMN_WIDTH, PANEL_HEIGHT, true);
@@ -561,8 +562,8 @@ public class FleetPresetManagementListener extends ActionListener {
             tableTipMaker.addTable(BLANK_TABLE_TEXT, 0, 5f);
 
             if (selectedRow != null) {
-                ReflectionUtilis.invokeMethodDirectly(ReflectionUtilis.getMethod("setItemsSelectable", tablePanel, 1), tablePanel, true);
-                ReflectionUtilis.invokeMethodDirectly(ReflectionUtilis.getMethod("select", tablePanel, 2), tablePanel, selectedRow, null);
+                ReflectionUtilis.getMethodAndInvokeDirectly("setItemsSelectable", tablePanel, 1, true);
+                ReflectionUtilis.getMethodAndInvokeDirectly("select", tablePanel, 2, selectedRow, null);
             }
 
             panel.addUIElement(tableTipMaker);

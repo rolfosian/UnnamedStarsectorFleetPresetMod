@@ -33,7 +33,7 @@ public class UtilReflection {
     public static Button makeButton(String text, ActionListener handler, Color base, Color bg, Alignment align, CutStyle style, float width, float height, Object shortcutKey) {
         CustomPanelAPI dummyPanel = Global.getSettings().createCustom(0f, 0f, null);
         TooltipMakerAPI dummyTooltipMaker = dummyPanel.createUIElement(0f, 0f, false);
-        Button button = new Button(dummyTooltipMaker.addButton(text, null, base, bg, align, style, width, height, 0f));
+        Button button = new Button(dummyTooltipMaker.addButton(text, null, base, bg, align, style, width, height, 0f), dummyTooltipMaker, dummyPanel);
         button.setListener(handler);
 
         if (shortcutKey instanceof Integer) {
@@ -70,8 +70,8 @@ public class UtilReflection {
             Method show = confirmDialog.getClass().getMethod("show", float.class, float.class);
             show.invoke(confirmDialog, 0.25f, 0.25f);
             LabelAPI label = (LabelAPI) invokeGetter(confirmDialog, "getLabel");
-            Button yes = new Button((ButtonAPI) invokeGetter(confirmDialog, "getButton", 0));
-            Button no = new Button((ButtonAPI) invokeGetter(confirmDialog, "getButton", 1));
+            Button yes = new Button((ButtonAPI) invokeGetter(confirmDialog, "getButton", 0), null, null);
+            Button no = new Button((ButtonAPI) invokeGetter(confirmDialog, "getButton", 1), null, null);
             return new ConfirmDialogData(
                     label,
                     yes,
