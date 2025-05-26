@@ -7,6 +7,7 @@ import com.fs.starfarer.api.campaign.*;
 import com.fs.starfarer.api.campaign.SubmarketPlugin.OnClickAction;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.campaign.econ.SubmarketAPI;
+import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 import com.fs.starfarer.api.input.InputEventAPI;
@@ -130,6 +131,7 @@ public class FleetPanelInjector {
                         new ActionListener() {
                             @Override
                             public void trigger(Object... args) {
+                                Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
                                 PresetUtils.storeFleetInStorage();
                             }
 
@@ -153,6 +155,7 @@ public class FleetPanelInjector {
                         new ActionListener() {
                             @Override
                             public void trigger(Object... args) {
+                                Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
                                 PresetUtils.takeAllShipsFromStorage();
                             }
                         },
