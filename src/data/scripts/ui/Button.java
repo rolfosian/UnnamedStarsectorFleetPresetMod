@@ -3,6 +3,8 @@
 package data.scripts.ui;
 
 import com.fs.starfarer.api.ui.ButtonAPI;
+import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.ClassRefs;
 import data.scripts.util.UtilReflection;
 import data.scripts.listeners.ActionListener;
@@ -11,11 +13,25 @@ import data.scripts.ui.UIComponent;
 
 import java.lang.reflect.Method;
 
+@SuppressWarnings("unused")
 public class Button extends UIComponent implements Renderable {
 
+    private TooltipMakerAPI tooltip;
+    private CustomPanelAPI panel;
+
     /** [o] should be an instance of the underlying Button object */
-    public Button(ButtonAPI o) {
+    public Button(ButtonAPI o, TooltipMakerAPI tooltip, CustomPanelAPI panel) {
         super(o);
+        this.tooltip = tooltip;
+        this.panel = panel;
+    }
+
+    public TooltipMakerAPI getTooltip() {
+        return tooltip;
+    }
+
+    public CustomPanelAPI getPanel() {
+        return panel;
     }
 
     @Override
