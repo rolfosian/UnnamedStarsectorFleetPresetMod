@@ -171,8 +171,6 @@ public class FleetPanelInjector {
                     pos.set(storageButtonPosition);
                     pos.getInstance().setSize(storageButtonPosition.getWidth(), officerAutoAssignButtonPosition.getHeight()+2f);
                     pos.getInstance().setYAlignOffset(-7f).setXAlignOffset(-storageButtonPosition.getWidth()-10f);
-                    
-    
 
                     if (!PresetUtils.isPlayerPaidForStorage(market.getSubmarket(Submarkets.SUBMARKET_STORAGE).getPlugin())) {
                         storeFleetButton.setEnabled(false);
