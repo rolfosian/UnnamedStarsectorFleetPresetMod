@@ -39,7 +39,7 @@ import java.lang.reflect.Constructor;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
-public class FleetPanelInjector {
+public class FleetPresetsFleetPanelInjector {
     public static void print(Object... args) {
         PresetMiscUtils.print(args);
     }

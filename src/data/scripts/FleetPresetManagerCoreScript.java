@@ -19,7 +19,7 @@ import com.fs.starfarer.api.ui.ButtonAPI;
 import data.scripts.ui.*;
 import data.scripts.util.*;
 import data.scripts.listeners.*;
-import data.scripts.FleetPanelInjector;
+import data.scripts.FleetPresetsFleetPanelInjector;
 
 import java.util.*;
 import java.lang.reflect.Field;
@@ -28,7 +28,7 @@ public class FleetPresetManagerCoreScript implements EveryFrameScript {
     private static PresetUtils.FleetPreset currentFleetPreset;
 
     private boolean isFirstFrame = true;
-    private final FleetPanelInjector fleetPanelInjector;
+    private final FleetPresetsFleetPanelInjector fleetPanelInjector;
 
     @Override
     public boolean isDone() {
@@ -41,7 +41,7 @@ public class FleetPresetManagerCoreScript implements EveryFrameScript {
     }
 
     public FleetPresetManagerCoreScript() {
-        fleetPanelInjector = new FleetPanelInjector();
+        fleetPanelInjector = new FleetPresetsFleetPanelInjector();
     }
 
     private boolean isCurrentFleetPreset(PresetUtils.FleetPreset preset) {

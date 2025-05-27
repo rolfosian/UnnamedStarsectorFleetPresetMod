@@ -33,9 +33,9 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
             "data.scripts.ClassRefs",
             "data.scripts.util.UtilReflection",
             "data.scripts.ui",
-            "data.scripts.FleetPanelInjector",
+            "data.scripts.FleetPresetsFleetPanelInjector",
             "data.scripts.listeners",
-            "data.scripts.util.UtilReflection",
+            "data.scripts.util.ReflectionUtilis",
             "data.scripts.util.ReflectionBetterUtilis"
     };
 
