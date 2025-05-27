@@ -446,7 +446,12 @@ public class FleetPresetManagementListener extends ActionListener {
                 } else {
                     theButtons.get(STORE_BUTTON_ID).setEnabled(false);
                 }
-                theButtons.get(RESTORE_BUTTON_ID).setEnabled(true);
+                
+                if (!PresetUtils.isPresetPlayerFleet(selectedPresetName)) {
+                    theButtons.get(RESTORE_BUTTON_ID).setEnabled(true);
+                } else {
+                    theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
+                }
             }
             theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(true);
             theButtons.get(DELETE_BUTTON_ID).setEnabled(true);
@@ -834,7 +839,7 @@ public class FleetPresetManagementListener extends ActionListener {
                             if (Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY) == null) {
                                 Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, PresetUtils.getFleetPresets().get(selectedPresetName));
                             }
-                            
+
                             refreshTableMap();
                             selectPreset(text, getTableMapIndex(text));
                             enableButtonsRequiringSelection();

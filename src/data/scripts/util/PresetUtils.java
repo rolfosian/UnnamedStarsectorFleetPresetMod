@@ -20,6 +20,7 @@ import com.fs.starfarer.api.combat.ShipHullSpecAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 import com.fs.starfarer.api.loading.WeaponGroupSpec;
+import com.fs.starfarer.api.characters.OfficerDataAPI;
 import com.fs.starfarer.api.characters.PersonAPI;
 
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
@@ -714,6 +715,16 @@ public class PresetUtils {
             mothballedShipsFleetData.removeFleetMember(member);
             playerFleet.getFleetData().addFleetMember(member);
         }
+
+        for (OfficerDataAPI officer : Global.getSector().getPlayerFleet().getFleetData().getOfficersCopy()) {
+            if (officer.getPerson().isPlayer()) continue;
+            for (FleetMemberAPI member : playerFleet.getFleetData().getMembersInPriorityOrder()) {
+                if (member.getCaptain().isPlayer() || !member.getCaptain().getName().getFullName().equals("")) continue;
+
+                member.setCaptain(officer.getPerson());
+                break;
+            }
+        }
         refreshFleetUI();
     }
 
@@ -983,10 +994,13 @@ public class PresetUtils {
         messageQueue.clear();
     }
 
+    @SuppressWarnings("unchecked")
     public static void refreshFleetUI() {
-        // Object fleetInfoPanel = Global.getSector().getMemoryWithoutUpdate().get(FLEETINFOPANEL_KEY);
-        // Object infoPanelParent = ReflectionUtilis.invokeMethod("getParent", fleetInfoPanel);
-        ReflectionUtilis.invokeMethod("recreateUI", ReflectionUtilis.invokeMethod("getParent", Global.getSector().getMemoryWithoutUpdate().get(FLEETINFOPANEL_KEY)));
+        Object fleetInfoPanel = Global.getSector().getMemoryWithoutUpdate().get(FLEETINFOPANEL_KEY);
+        Object infoPanelParent = ReflectionUtilis.invokeMethod("getParent", fleetInfoPanel);
+
+        Object sibling = ((List<Object>) ReflectionUtilis.invokeMethod("getChildrenNonCopy", infoPanelParent)).get(3);
+        ReflectionUtilis.getMethodAndInvokeDirectly("recreateUI", sibling, 1, true);
     }
 
     public static void deleteFleetPreset(String name) {
