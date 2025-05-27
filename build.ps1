@@ -1,11 +1,15 @@
-# Set Java Home to your specific JDK 17 installation
 $env:JAVA_HOME = "$env:USERPROFILE\Downloads\jdk-17.0.12_windows-x64_bin\jdk-17.0.12"
-echo "Killing Starsector"
-Get-Process java -ErrorAction SilentlyContinue | Where-Object {
-    ($_ | Get-Process).Path -like 'C:\Starsector\jre\bin\java.exe'
-} | Stop-Process -Force
 
-# Verify Java Home is set correctly
+Write-Host "Killing Starsector"
+$cwd = Get-Location
+$targetRelativePath = '..\..\jre\bin\java.exe'
+$targetFullPath = Resolve-Path -Path (Join-Path $cwd $targetRelativePath)
+Get-CimInstance Win32_Process | Where-Object {
+    $_.Name -eq 'java.exe' -and $_.ExecutablePath -ieq $targetFullPath
+} | ForEach-Object {
+    Stop-Process -Id $_.ProcessId -Force
+}
+
 if (-not (Test-Path "$env:JAVA_HOME\bin\java.exe")) {
     Write-Error "Java not found at $env:JAVA_HOME\bin\java.exe"
     Write-Host "Please install Java 17 and set the correct path in the script."
@@ -20,15 +24,15 @@ if (-not (Test-Path $buildDir)) {
 }
 
 $dependencies = @(
-    "C:\Starsector\starsector-core\starfarer.api.jar",
-    "C:\Starsector\starsector-core\starfarer_obf.jar",
-    "C:\Starsector\starsector-core\fs.common_obf.jar",
-    "C:\Starsector\starsector-core\fs.sound_obf.jar",
+    "../../starsector-core/starfarer.api.jar",
+    "../../starsector-core/starfarer_obf.jar",
+    "../../starsector-core/fs.common_obf.jar",
+    "../../starsector-core/fs.sound_obf.jar",
     
-    "C:\Starsector\starsector-core\jinput.jar",
-    "C:\Starsector\starsector-core\log4j-1.2.9.jar",
-    "C:\Starsector\starsector-core\lwjgl.jar",
-    "C:\Starsector\starsector-core\lwjgl_util.jar"
+    "../../starsector-core/jinput.jar",
+    "../../starsector-core/log4j-1.2.9.jar",
+    "../../starsector-core/lwjgl.jar",
+    "../../starsector-core/lwjgl_util.jar"
 
 )
 
@@ -59,6 +63,11 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "Compilation successful. Creating JAR..."
     
     $jarFile = ".\jars\FleetPresetManagerJAR.jar"
+    $jarDir = Split-Path $jarFile
+    if (!(Test-Path $jarDir)) {
+        New-Item -ItemType Directory -Path $jarDir | Out-Null
+    }
+
     Push-Location $buildDir
     & "$env:JAVA_HOME\bin\jar" -cf "..\..\$jarFile" .
     Pop-Location
@@ -66,10 +75,9 @@ if ($LASTEXITCODE -eq 0) {
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Build completed successfully!" -ForegroundColor Green
         Write-Host "JAR file created at: $jarFile"
-        $cwd = Get-Location; 
         if ($LASTEXITCODE -eq 0) {
-            echo "Starting starsector.exe"
-            Set-Location C:\Starsector; .\starsector.exe; Set-Location $cwd; rm -r build
+            Write-Host "Starting starsector.exe"
+            Set-Location ../../; ./starsector.exe; Set-Location $cwd; rm -r build
         }
     } else {
         Write-Host "JAR creation failed!" -ForegroundColor Red; rm -r build
