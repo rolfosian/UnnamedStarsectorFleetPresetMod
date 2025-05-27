@@ -172,6 +172,7 @@ public class FleetPresetManagementListener extends ActionListener {
         ButtonAPI cancelButton = master.cancelButton.getInstance();
         PositionAPI cancelButtonPosition = cancelButton.getPosition();
         CANCEL_CONFIRM_BUTTON_WIDTH = cancelButtonPosition.getWidth();
+        cancelButton.setShortcut(Keyboard.KEY_G, false);
 
         ButtonPlugin buttonPlugin = new ButtonPlugin();
         buttonsPanel = Global.getSettings().createCustom(CANCEL_CONFIRM_BUTTON_WIDTH, PANEL_HEIGHT, buttonPlugin);
@@ -271,6 +272,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
         // PositionAPI subPos = subData.panel.getPosition();
         subData.panel.addComponent(textFieldPanel).inTL(0f, 0f);
+        subData.confirmButton.getInstance().setShortcut(Keyboard.KEY_G, false);
     }
 
     private void openSaveDialog() {
@@ -300,6 +302,7 @@ public class FleetPresetManagementListener extends ActionListener {
             CONFIRM_DIALOG_WIDTH / 1.5f,
             CONFIRM_DIALOG_HEIGHT / 2,
             saveListener);
+        subData.confirmButton.getInstance().setShortcut(Keyboard.KEY_G, false);
 
         // PositionAPI subPos = subData.panel.getPosition();
         subData.panel.addComponent(textFieldPanel).inTL(0f, 0f).setXAlignOffset(CONFIRM_DIALOG_WIDTH / 2 / 2 / 2).setYAlignOffset(-CONFIRM_DIALOG_HEIGHT / 2 / 2 / 2);
