@@ -422,14 +422,14 @@ public class FleetPresetManagementListener extends ActionListener {
                             }
                         }
                     }
-                } else if (event.isLMBEvent()) {
-                    if (event.getX() < overlordPanelPos.getX() || 
-                        event.getX() > overlordPanelPos.getX() + overlordPanelPos.getWidth() ||
-                        event.getY() < overlordPanelPos.getY() || 
-                        event.getY() > overlordPanelPos.getY() + overlordPanelPos.getHeight()) {
-                        ReflectionUtilis.getMethodAndInvokeDirectly("setEventValue", event, 1, 1);
-                    }
-                }
+                } // else if (event.isLMBEvent()) {
+                //     if (event.getX() < overlordPanelPos.getX() || 
+                //         event.getX() > overlordPanelPos.getX() + overlordPanelPos.getWidth() ||
+                //         event.getY() < overlordPanelPos.getY() || 
+                //         event.getY() > overlordPanelPos.getY() + overlordPanelPos.getHeight()) {
+                //         ReflectionUtilis.getMethodAndInvokeDirectly("setEventValue", event, 1, 1);
+                //     }
+                // }
             }
         }
         
