@@ -56,6 +56,7 @@ public class PresetUtils {
     public static final String RESTOREMESSAGE_SUCCESS_PREFIX = "Successfully restored fleet preset: ";
     public static final String RESTOREMESSAGE_FAIL_PREFIX = "Could not find one or more of ";
     public static final String RESTOREMESSAGE_FAIL_SUFFIX = " in storage to load for preset: ";
+    public static final String OFFICER_NULL_PORTRAIT_PATH = "graphics/portraits/portrait_generic_grayscale.png";
 
     private static final HullSize[] SIZE_ORDER_DESCENDING = {
         HullSize.CAPITAL_SHIP,
@@ -231,10 +232,10 @@ public class PresetUtils {
             return true;
         }
 
-        for (PresetUtils.FleetMemberWrapper member : preset.fleetMembers) {
+        for (FleetMemberWrapper member : preset.fleetMembers) {
             FleetMemberAPI playerFleetMember = playerFleetMembers.get(member.index);
 
-            if (!PresetUtils.areSameVariant(playerFleetMember.getVariant(), member.member.getVariant()) 
+            if (!areSameVariant(playerFleetMember.getVariant(), member.member.getVariant()) 
                 || !isOfficerSameAsPresetMember(playerFleetMember, member)) {
                 return true;
             }
@@ -267,7 +268,7 @@ public class PresetUtils {
                     currentFleetByHull.get(hullId).add(member);
                 }
 
-                for (PresetUtils.FleetMemberWrapper wrapper : preset.fleetMembers) {
+                for (FleetMemberWrapper wrapper : preset.fleetMembers) {
                     String hullId = wrapper.member.getHullId();
                     if (!presetFleetByHull.containsKey(hullId)) {
                         presetFleetByHull.put(hullId, new ArrayList<>());
@@ -300,10 +301,10 @@ public class PresetUtils {
                 Global.getSector().getCampaignUI().addMessage("The fleet composition has changed and the fleet preset has been updated.", Misc.getBasePlayerColor());
 
             } else {
-                for (PresetUtils.FleetMemberWrapper member : preset.fleetMembers) {
+                for (FleetMemberWrapper member : preset.fleetMembers) {
                     FleetMemberAPI playerFleetMember = playerFleetMembers.get(member.index);
 
-                    if (!PresetUtils.areSameVariant(playerFleetMember.getVariant(), member.member.getVariant())) {
+                    if (!areSameVariant(playerFleetMember.getVariant(), member.member.getVariant())) {
                         preset.updateVariant(member.index, playerFleetMember.getVariant());
                         updated = true; 
                     }
@@ -316,18 +317,29 @@ public class PresetUtils {
             }
 
             if (updated) {
-                Global.getSector().getCampaignUI().addMessage("The fleet composition has changed and the fleet preset has been updated.", Misc.getBasePlayerColor());
+                Global.getSector().getCampaignUI().addMessage("The fleet composition has changed and the " + preset.name + " fleet preset has been updated.", Misc.getBasePlayerColor());
             }
 
         } else {
             if (isPlayerFleetChanged(preset, playerFleetMembers)) {
-                Global.getSector().getCampaignUI().addMessage("The fleet composition has changed. Consider updating the fleet preset you undocked with to match the current fleet.", Misc.getBasePlayerColor());
-                mem.unset(PresetUtils.UNDOCKED_PRESET_KEY);
+                Global.getSector().getCampaignUI().addMessage("The fleet composition has changed. Consider updating the " + preset.name + " fleet preset to match the current fleet.", Misc.getBasePlayerColor());
+                mem.unset(UNDOCKED_PRESET_KEY);
             }
         }
     }
 
+    public static boolean isOfficerNought(PersonAPI officer) {
+        if (officer == null) return true;
+        return officer.getPortraitSprite().equals(OFFICER_NULL_PORTRAIT_PATH);
+    }
+    
     public static boolean isOfficerSameAsPresetMember(FleetMemberAPI playerFleetMember, PresetUtils.FleetMemberWrapper presetMember) {
+        if (isOfficerNought(playerFleetMember.getCaptain()) && isOfficerNought(presetMember.captain)) {
+            return true;
+        }
+        if (isOfficerNought(playerFleetMember.getCaptain()) || isOfficerNought(presetMember.captain)) {
+            return false;
+        }
         return playerFleetMember.getCaptain().getId().equals(presetMember.captainId);
     }
 
@@ -643,7 +655,7 @@ public class PresetUtils {
     }
 
     public static boolean isPlayerPaidForStorage(SubmarketPlugin storagePlugin) {
-        CoreUIAPI coreUI = (CoreUIAPI) Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.COREUI_KEY);
+        CoreUIAPI coreUI = (CoreUIAPI) Global.getSector().getMemoryWithoutUpdate().get(COREUI_KEY);
         return storagePlugin.getOnClickAction(coreUI).equals(SubmarketPlugin.OnClickAction.OPEN_SUBMARKET);
     }
 
@@ -947,7 +959,7 @@ public class PresetUtils {
         // CargoPresetUtils.equalizeCargo(playerFleetData.getMembersInPriorityOrder(), playerCargo, storageCargo, cargoRatios);
 
         if (allFound) {
-            CampaignUIMessage msg = new CampaignUIMessage(PresetUtils.RESTOREMESSAGE_SUCCESS_PREFIX + name, Misc.getPositiveHighlightColor());
+            CampaignUIMessage msg = new CampaignUIMessage(RESTOREMESSAGE_SUCCESS_PREFIX + name, Misc.getPositiveHighlightColor());
             if (messageQueue.contains(msg)) messageQueue.remove(msg);
             messageQueue.add(msg);
         }
@@ -975,8 +987,8 @@ public class PresetUtils {
 
     @SuppressWarnings("unchecked")
     public static void addMessagesToCampaignUI() {
-        List<PresetUtils.CampaignUIMessage> messageQueue = (List<PresetUtils.CampaignUIMessage>) Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.MESSAGEQUEUE_KEY);
-        for (PresetUtils.CampaignUIMessage message : messageQueue) {
+        List<CampaignUIMessage> messageQueue = (List<CampaignUIMessage>) Global.getSector().getMemoryWithoutUpdate().get(MESSAGEQUEUE_KEY);
+        for (CampaignUIMessage message : messageQueue) {
             Global.getSector().getCampaignUI().addMessage(message.message, message.color);
         }
         messageQueue.clear();
