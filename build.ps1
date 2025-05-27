@@ -1,5 +1,11 @@
 $env:JAVA_HOME = "$env:USERPROFILE\Downloads\jdk-17.0.12_windows-x64_bin\jdk-17.0.12"
 
+if (-not (Test-Path "$env:JAVA_HOME\bin\java.exe")) {
+    Write-Error "Java not found at $env:JAVA_HOME\bin\java.exe"
+    Write-Host "Please install Java 17 and set the correct path in the script."
+    exit 1
+}
+
 Write-Host "Killing Starsector"
 $cwd = Get-Location
 $targetRelativePath = '..\..\jre\bin\java.exe'
@@ -10,14 +16,7 @@ Get-CimInstance Win32_Process | Where-Object {
     Stop-Process -Id $_.ProcessId -Force
 }
 
-if (-not (Test-Path "$env:JAVA_HOME\bin\java.exe")) {
-    Write-Error "Java not found at $env:JAVA_HOME\bin\java.exe"
-    Write-Host "Please install Java 17 and set the correct path in the script."
-    exit 1
-}
-
 Write-Host "Using Java from: $env:JAVA_HOME"
-
 $buildDir = ".\build\classes"
 if (-not (Test-Path $buildDir)) {
     New-Item -ItemType Directory -Path $buildDir -Force | Out-Null
