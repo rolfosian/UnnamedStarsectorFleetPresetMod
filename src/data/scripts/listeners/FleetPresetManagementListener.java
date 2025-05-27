@@ -342,20 +342,25 @@ public class FleetPresetManagementListener extends ActionListener {
                 case SAVE_DIALOG_BUTTON_ID:
                     openSaveDialog();
                     return;
+
                 case RESTORE_BUTTON_ID:
                     PresetUtils.restoreFleetFromPreset(selectedPresetName);
                     enableButtonsRequiringSelection();
                     return;
+
                 case STORE_BUTTON_ID:
                     PresetUtils.storeFleetInStorage();
                     enableButtonsRequiringSelection();
                     return;
+                    
                 case DELETE_BUTTON_ID:
                     openDeleteDialog();
                     return;
+                    
                 case OVERWRITE_PRESET_BUTTON_ID:
                     openOverwriteDialog(false);
                     return;
+
                 case AUTO_UPDATE_BUTTON_ID:
                     if (theButtons.get(AUTO_UPDATE_BUTTON_ID).isChecked()) {
                         Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, true);
@@ -363,6 +368,7 @@ public class FleetPresetManagementListener extends ActionListener {
                         Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, false);
                     }
                     return;
+
                 default:
                     break;
             }
@@ -812,9 +818,9 @@ public class FleetPresetManagementListener extends ActionListener {
                 if (overwrite && !cancel) {
                     PresetUtils.saveFleetPreset(selectedPresetName);
                     currentTableMap = PresetUtils.getFleetPresetsMapForTable(tableUp, tableRight);
-                    // if (Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY) == null) {
+                    if (Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY) == null) {
                         Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, PresetUtils.getFleetPresets().get(selectedPresetName));
-                    // }
+                    }
                 } else {
                     String text = saveNameField.getText();
                     if (!isEmptyOrWhitespace(text)) {
@@ -824,9 +830,11 @@ public class FleetPresetManagementListener extends ActionListener {
 
                         } else {
                             PresetUtils.saveFleetPreset(text);
-                            // if (Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY) == null) {
+
+                            if (Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY) == null) {
                                 Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, PresetUtils.getFleetPresets().get(selectedPresetName));
-                            // }
+                            }
+                            
                             refreshTableMap();
                             selectPreset(text, getTableMapIndex(text));
                             enableButtonsRequiringSelection();
