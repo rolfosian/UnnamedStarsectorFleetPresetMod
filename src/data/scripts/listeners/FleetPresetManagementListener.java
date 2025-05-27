@@ -130,10 +130,10 @@ public class FleetPresetManagementListener extends ActionListener {
         this.selectedRowIndex = rowIndex;
     }
 
-
-    CustomPanelAPI buttonsPanel;
+    private PositionAPI overlordPanelPos;
+    private CustomPanelAPI buttonsPanel;
     private Map<String, ButtonAPI> theButtons = new HashMap<>();
-    private ButtonAPI MasterCancelButton;
+    private ButtonAPI masterCancelButton;
     private FenaglePanele fenaglePanele;
 
     private Object tablePanel;
@@ -196,7 +196,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
         master.panel.removeComponent(confirmButton);
         // data.panel.removeComponent(cancelButton);
-        this.MasterCancelButton = cancelButton;
+        this.masterCancelButton = cancelButton;
         tablePlugin = new TablePlugin();
         CustomPanelAPI canvasPanel = Global.getSettings().createCustom(PANEL_WIDTH - CANCEL_CONFIRM_BUTTON_WIDTH - SHIP_COLUMN_WIDTH - 10f, PANEL_HEIGHT, tablePlugin);
         canvasPanel.addComponent(tableMasterPanel).inTL(FLOAT_ZERO, FLOAT_ZERO);
@@ -207,6 +207,7 @@ public class FleetPresetManagementListener extends ActionListener {
         master.panel.addComponent(canvasPanel).rightOfTop(buttonsPanel, 10f);
 
         tablePlugin.setRoot(tableMasterPanel);
+        overlordPanelPos = master.panel.getPosition();
     }
     
     private void addTheButtons(TooltipMakerAPI tooltipMaker, PositionAPI confirmPosition, PositionAPI cancelPosition) {
@@ -417,8 +418,16 @@ public class FleetPresetManagementListener extends ActionListener {
 
                                 tablePlugin.rebuild();
                                 event.consume();
+                            
                             }
                         }
+                    }
+                } else if (event.isLMBEvent()) {
+                    if (event.getX() < overlordPanelPos.getX() || 
+                        event.getX() > overlordPanelPos.getX() + overlordPanelPos.getWidth() ||
+                        event.getY() < overlordPanelPos.getY() || 
+                        event.getY() > overlordPanelPos.getY() + overlordPanelPos.getHeight()) {
+                        ReflectionUtilis.getMethodAndInvokeDirectly("setEventValue", event, 1, 1);
                     }
                 }
             }
@@ -595,7 +604,7 @@ public class FleetPresetManagementListener extends ActionListener {
                         isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet"));
                         isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
                     } else {
-                        isSelectedPresetAvailablePara.setText(String.format(isSelectedPresetAvailableParaFormat, "unavailable"));
+                        isSelectedPresetAvailablePara.setText(String.format(isSelectedPresetAvailableParaFormat, "only partially available, or unavailable"));
                         isSelectedPresetAvailablePara.setColor(Misc.getNegativeHighlightColor());
                     }
                 }
@@ -623,7 +632,7 @@ public class FleetPresetManagementListener extends ActionListener {
                 }
 
                 shipListPanel = Global.getSettings().createCustom(SHIP_COLUMN_WIDTH, PANEL_HEIGHT - UiConfig.SHIPLIST_PANEL_HEIGHT_SUBTRACTOR, null);
-                TooltipMakerAPI shipListTooltip = shipListPanel.createUIElement(SHIP_COLUMN_WIDTH, PANEL_HEIGHT - MasterCancelButton.getPosition().getHeight() + UiConfig.SHIPLIST_PANEL_HEIGHT_SUBTRACTOR, true);
+                TooltipMakerAPI shipListTooltip = shipListPanel.createUIElement(SHIP_COLUMN_WIDTH, PANEL_HEIGHT - masterCancelButton.getPosition().getHeight() + UiConfig.SHIPLIST_PANEL_HEIGHT_SUBTRACTOR, true);
                 shipListTooltip.addShipList(4, 8, UiConfig.SHIPLIST_SIZE, Misc.getBasePlayerColor(), members, 5f);
                 shipListPanel.addUIElement(shipListTooltip);
 
