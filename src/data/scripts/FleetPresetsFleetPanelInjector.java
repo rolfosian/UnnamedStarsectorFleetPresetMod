@@ -57,24 +57,12 @@ public class FleetPresetsFleetPanelInjector {
     private Button pullAllShipsButton;
 
     @SuppressWarnings("unchecked")
-    // PROBLEM: Potential compatibility issues with different versions or mods due to hard coded indices
-    public static ButtonAPI getStorageButton(UIPanelAPI core) { // This will definitely crash the game if you call it without the player docked at a market
-        try {
-            Field field = core.getClass().getDeclaredFields()[39]; // lol
-            field.setAccessible(true);
+    public ButtonAPI getStorageButton(UIPanelAPI core) { // This will probably crash the game if you call it without the player docked at a market
+        Object infoPanelParent = ReflectionUtilis.invokeMethod("getParent", fleetInfoPanelRef);
+        UIPanelAPI marketPicker = (UIPanelAPI) ReflectionUtilis.getMethodAndInvokeDirectly("getMarketPicker", infoPanelParent, 0);
+        List<ButtonAPI> marketButtons = ((List<ButtonAPI>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", marketPicker, 0));
 
-            UIPanelAPI panel = (UIPanelAPI) field.get(core);
-            UIPanelAPI child = ((List<UIPanelAPI>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", panel, 0)).get(0); // lmao
-            field.setAccessible(false); // WE ARE SAFE
-
-            UIPanelAPI marketPicker = (UIPanelAPI) ReflectionUtilis.getMethodAndInvokeDirectly("getMarketPicker", child, 0);
-            List<ButtonAPI> marketButtons = ((List<ButtonAPI>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", marketPicker, 0));
-
-            return marketButtons.get(marketButtons.size() - 1); // haha
-        }
-        catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        return marketButtons.get(marketButtons.size() - 1);
     }
 
     public void advance() {

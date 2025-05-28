@@ -578,7 +578,7 @@ public class PresetUtils {
     public static boolean isOfficerInFleet(String officerId, List<FleetMemberAPI> fleetMembers) {
         for (FleetMemberAPI fleetMember : fleetMembers) {
             PersonAPI captain = fleetMember.getCaptain();
-            if (captain != null && captain.getId() == officerId) return true;
+            if (captain.getId().equals(officerId)) return true;
         }
         return false;
     }
@@ -999,8 +999,11 @@ public class PresetUtils {
         Object fleetInfoPanel = Global.getSector().getMemoryWithoutUpdate().get(FLEETINFOPANEL_KEY);
         Object infoPanelParent = ReflectionUtilis.invokeMethod("getParent", fleetInfoPanel);
 
-        Object sibling = ((List<Object>) ReflectionUtilis.invokeMethod("getChildrenNonCopy", infoPanelParent)).get(3);
-        ReflectionUtilis.getMethodAndInvokeDirectly("recreateUI", sibling, 1, true);
+        List<Object> siblings = (List<Object>) ReflectionUtilis.invokeMethod("getChildrenNonCopy", infoPanelParent);
+        for (Object sibling : siblings) {
+            ReflectionUtilis.getMethodAndInvokeDirectly("recreateUI", sibling, 1, true);
+        }
+        
     }
 
     public static void deleteFleetPreset(String name) {
