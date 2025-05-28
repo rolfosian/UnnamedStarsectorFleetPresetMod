@@ -298,7 +298,7 @@ public class PresetUtils {
                         preset.officersMap.get(hullId).add(pair);
                     }
                 }
-                Global.getSector().getCampaignUI().addMessage("The fleet composition has changed and the fleet preset has been updated.", Misc.getBasePlayerColor());
+                Global.getSector().getCampaignUI().addMessage("The fleet composition has changed and the " + preset.name + " fleet preset has been updated.", Misc.getBasePlayerColor());
 
             } else {
                 for (FleetMemberWrapper member : preset.fleetMembers) {
@@ -994,16 +994,11 @@ public class PresetUtils {
         messageQueue.clear();
     }
 
-    @SuppressWarnings("unchecked")
     public static void refreshFleetUI() {
         Object fleetInfoPanel = Global.getSector().getMemoryWithoutUpdate().get(FLEETINFOPANEL_KEY);
         Object infoPanelParent = ReflectionUtilis.invokeMethod("getParent", fleetInfoPanel);
 
-        List<Object> siblings = (List<Object>) ReflectionUtilis.invokeMethod("getChildrenNonCopy", infoPanelParent);
-        for (Object sibling : siblings) {
-            ReflectionUtilis.getMethodAndInvokeDirectly("recreateUI", sibling, 1, true);
-        }
-        
+        ReflectionUtilis.getMethodAndInvokeDirectly("recreateUI", ReflectionUtilis.invokeMethod("getFleetPanel", infoPanelParent), 1, true);
     }
 
     public static void deleteFleetPreset(String name) {

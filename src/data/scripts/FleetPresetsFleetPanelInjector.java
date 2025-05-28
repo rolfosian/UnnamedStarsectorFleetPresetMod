@@ -59,7 +59,7 @@ public class FleetPresetsFleetPanelInjector {
     @SuppressWarnings("unchecked")
     public ButtonAPI getStorageButton(UIPanelAPI core) { // This will probably crash the game if you call it without the player docked at a market
         Object infoPanelParent = ReflectionUtilis.invokeMethod("getParent", fleetInfoPanelRef);
-        UIPanelAPI marketPicker = (UIPanelAPI) ReflectionUtilis.getMethodAndInvokeDirectly("getMarketPicker", infoPanelParent, 0);
+        Object marketPicker = ReflectionUtilis.getMethodAndInvokeDirectly("getMarketPicker", infoPanelParent, 0);
         List<ButtonAPI> marketButtons = ((List<ButtonAPI>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", marketPicker, 0));
 
         return marketButtons.get(marketButtons.size() - 1);
