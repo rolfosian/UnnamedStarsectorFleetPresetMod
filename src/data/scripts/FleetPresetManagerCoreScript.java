@@ -25,6 +25,9 @@ import java.util.*;
 import java.lang.reflect.Field;
 
 public class FleetPresetManagerCoreScript implements EveryFrameScript {
+    private static void print(Object... args) {
+        PresetMiscUtils.print(args);
+    }
     private static PresetUtils.FleetPreset currentFleetPreset;
 
     private boolean isFirstFrame = true;

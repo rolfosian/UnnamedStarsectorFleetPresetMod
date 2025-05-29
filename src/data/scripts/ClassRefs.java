@@ -2,18 +2,39 @@ package data.scripts;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CampaignUIAPI;
+import com.fs.starfarer.api.campaign.FleetEncounterContextPlugin;
+import com.fs.starfarer.api.campaign.InteractionDialogAPI;
+import com.fs.starfarer.api.campaign.InteractionDialogPlugin;
+import com.fs.starfarer.api.campaign.VisualPanelAPI;
+import com.fs.starfarer.api.campaign.rules.MemoryAPI;
+import com.fs.starfarer.api.impl.campaign.rulecmd.ShowDefaultVisual;
+import com.fs.starfarer.api.input.InputEventClass;
+import com.fs.starfarer.api.input.InputEventType;
+import com.fs.starfarer.api.combat.EngagementResultAPI;
+import com.fs.starfarer.api.ui.ButtonAPI;
+import com.fs.starfarer.api.ui.UIPanelAPI;
+import com.fs.starfarer.campaign.fleet.CampaignFleet;
+import com.fs.starfarer.api.impl.campaign.JumpPointInteractionDialogPluginImpl;
+import com.fs.starfarer.api.impl.campaign.RuleBasedInteractionDialogPluginImpl;
 
+import data.scripts.util.PresetMiscUtils;
+import data.scripts.util.PresetUtils;
+import data.scripts.util.ReflectionUtilis;
 import data.scripts.util.UtilReflection;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.List;
+import java.util.*;
 
 import org.apache.log4j.Logger;
 
 /** Stores references to class objects in the obfuscated game files */
 public class ClassRefs {
     private static final Logger logger = Logger.getLogger(ClassRefs.class);
+    public static void print(Object... args) {
+        PresetMiscUtils.print(args);
+    }
 
     /** The class that CampaignUIAPI.showConfirmDialog instantiates. We need this because showConfirmDialog doesn't work
      *  if any core UI is open. */
@@ -26,8 +47,76 @@ public class ClassRefs {
     public static Class<?> renderableUIElementInterface;
     /** Obfuscated UI panel class */
     public static Class<?> uiPanelClass;
+    /** Obfuscated fleet info panel class from the VisualPanelAPI */
+    public static Class<?> visualPanelfleetInfoClass; 
+    /** Obfuscated ButtonAPI class */
+    public static Class<?> buttonClass;
+    /** Obfuscated InputEvent class */
+    public static Class<?> inputEventClass;
 
     private static boolean foundAllClasses = false;
+
+    public static void beginFindFleetInfoClass() {
+        if (visualPanelfleetInfoClass != null) return;
+
+        Global.getSector().getCampaignUI().showInteractionDialogFromCargo(new InteractionDialogPlugin() {
+            @Override public void advance(float arg0) { return; }
+            @Override public void backFromEngagement(EngagementResultAPI arg0) { return; }
+            @Override public Object getContext() { return ""; }
+            @Override public Map<String, MemoryAPI> getMemoryMap() { return new HashMap<>(); }
+            @Override public void init(InteractionDialogAPI arg0) { return; }
+            @Override public void optionMousedOver(String arg0, Object arg1) { return; }
+            @Override public void optionSelected(String arg0, Object arg1) { return; }
+        }, null, new CampaignUIAPI.DismissDialogDelegate() {
+            @Override public void dialogDismissed() {} 
+        });
+    }
+
+    public static void setFleetInfoClass(Class<?> fleetInfoClazz) {
+        visualPanelfleetInfoClass = fleetInfoClazz;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static void findInputEventClass() {
+        Class<?>[] inputEventInstantiationParamTypes = new Class<?>[] {
+            InputEventClass.class, 
+            InputEventType.class, 
+            int.class, 
+            int.class, 
+            int.class, 
+            char.class
+        };
+
+        UIPanelAPI coreUI = UtilReflection.getCoreUI();
+        if (coreUI == null) return;
+        for (Object child : (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", coreUI, 0)) {
+            if (ButtonAPI.class.isAssignableFrom(child.getClass()) && !child.getClass().getSimpleName().equals("ButtonAPI")) {
+
+                for (Method method : child.getClass().getDeclaredMethods()) {
+                    if (method.getName().equals("buttonPressed")) {
+                        for (Class<?> paramType : ReflectionUtilis.getMethodParamTypes(method)) {
+                            if (ReflectionUtilis.doInstantiationParamsMatch(paramType.getCanonicalName(), inputEventInstantiationParamTypes)) {
+                                inputEventClass = paramType;
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public static void findButtonClass() {
+        UIPanelAPI coreUI = UtilReflection.getCoreUI();
+        if (coreUI == null) return;
+        for (Object child : (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", coreUI, 0)) {
+            if (ButtonAPI.class.isAssignableFrom(child.getClass()) && !child.getClass().getSimpleName().equals("ButtonAPI")) {
+                buttonClass = child.getClass();
+                return;
+            }
+        }
+    }
 
     public static void findConfirmDialogClass() {
         CampaignUIAPI campaignUI = Global.getSector().getCampaignUI();
@@ -108,11 +197,26 @@ public class ClassRefs {
             findRenderableUIElementInterface(UtilReflection.getField(campaignUI, "screenPanel"));
         }
 
+        if (visualPanelfleetInfoClass == null) {
+            beginFindFleetInfoClass();
+            setFleetInfoClass((Class<?>) Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.VISUALFLEETINFOPANEL_KEY));
+        }
+        if (buttonClass == null) {
+            findButtonClass();
+        }
+        if (inputEventClass == null) {
+            findInputEventClass();
+        }
+
+
         if (confirmDialogClass != null
                 && dialogDismissedInterface != null
                 && actionListenerInterface != null
                 && uiPanelClass != null
-                && renderableUIElementInterface != null) {
+                && renderableUIElementInterface != null
+                && visualPanelfleetInfoClass != null
+                && buttonClass != null
+                && inputEventClass != null) {
             foundAllClasses = true;
         }
     }

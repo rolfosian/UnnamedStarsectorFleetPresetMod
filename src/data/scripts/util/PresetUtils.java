@@ -6,11 +6,13 @@ import java.awt.Color;
 
 import com.fs.starfarer.api.Global;
 
+import com.fs.starfarer.campaign.fleet.CampaignFleet;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.campaign.CargoAPI;
 import com.fs.starfarer.api.campaign.CoreUIAPI;
 import com.fs.starfarer.api.campaign.FactionAPI;
 import com.fs.starfarer.api.campaign.FleetDataAPI;
+import com.fs.starfarer.api.campaign.FleetEncounterContextPlugin;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.campaign.econ.SubmarketAPI;
 import com.fs.starfarer.api.campaign.SubmarketPlugin;
@@ -28,12 +30,12 @@ import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 
 import com.fs.starfarer.api.loading.WeaponGroupSpec;
-
-import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
-
 import com.fs.starfarer.api.util.Misc;
 
+
+import data.scripts.ClassRefs;
+import data.scripts.plugins.DummyFleetEncounterContextPlugin;
 import data.scripts.util.CargoPresetUtils.CargoResourceRatios;
 
 public class PresetUtils {
@@ -52,6 +54,7 @@ public class PresetUtils {
     public static final String COREUI_KEY = "$coreUI";
     public static final String ISPLAYERPAIDFORSTORAGE_KEY = "$isPlayerPaidForStorage";
     public static final String MESSAGEQUEUE_KEY = "$presetsMessageQueue";
+    public static final String VISUALFLEETINFOPANEL_KEY = "$visualFleetInfoPanelClass";
 
     public static final String RESTOREMESSAGE_SUCCESS_PREFIX = "Successfully restored fleet preset: ";
     public static final String RESTOREMESSAGE_FAIL_PREFIX = "Could not find one or more of ";
@@ -130,6 +133,7 @@ public class PresetUtils {
 
         public FleetMemberWrapper(FleetMemberAPI member, PersonAPI captain, int index) {
             this.member = Global.getFactory().createFleetMember(FleetMemberType.SHIP, member.getVariant());
+            this.member.getRepairTracker().setCR(member.getRepairTracker().getCR());
 
             if (captain != null) {
                 this.captain = captain;
@@ -172,6 +176,8 @@ public class PresetUtils {
         public Map<Integer, ShipVariantAPI> variantsMap = new HashMap<>();
         public Map<String, List<OfficerVariantPair>> officersMap = new HashMap<>(); // this can probably be refactored to use integer index keys like variantsMap but im not going to fix what isnt broken for now
         public List<FleetMemberWrapper> fleetMembers = new ArrayList<>();
+        public final CampaignFleetAPI campaignFleet;
+
 
         public FleetPreset(String name, List<FleetMemberAPI> fleetMembers) {
             this.name = name;
@@ -200,6 +206,16 @@ public class PresetUtils {
 
                 this.fleetMembers.add(new FleetMemberWrapper(member, captain, i));
             }
+
+            this.campaignFleet = Global.getFactory().createEmptyFleet(Global.getSector().getPlayerFaction(), true);
+            for (FleetMemberWrapper member : this.fleetMembers) {
+                this.campaignFleet.getFleetData().addFleetMember(member.member);
+            }
+            this.campaignFleet.setHidden(true);
+            this.campaignFleet.setNoAutoDespawn(true);
+            this.campaignFleet.setDoNotAdvanceAI(true);
+            this.campaignFleet.setInflated(true);
+            this.campaignFleet.setNoFactionInName(true);
         }
 
         public void updateVariant(int index, ShipVariantAPI variant) {
@@ -1009,6 +1025,25 @@ public class PresetUtils {
         Object infoPanelParent = ReflectionUtilis.invokeMethod("getParent", fleetInfoPanel);
 
         ReflectionUtilis.getMethodAndInvokeDirectly("recreateUI", ReflectionUtilis.invokeMethod("getFleetPanel", infoPanelParent), 1, true);
+    }
+
+    public static UIPanelAPI getObfFleetInfoPanel(String name, CampaignFleetAPI fleet) {
+        return (UIPanelAPI) ReflectionUtilis.getClassInstance(ClassRefs.visualPanelfleetInfoClass.getCanonicalName(),
+        new Class<?>[] {
+            String.class, 
+            CampaignFleet.class,
+            String.class,
+            CampaignFleet.class,
+            FleetEncounterContextPlugin.class,
+            boolean.class
+        },
+        name,
+        fleet,
+        null,
+        null,
+        new DummyFleetEncounterContextPlugin(),
+        true
+        );
     }
 
     public static void deleteFleetPreset(String name) {

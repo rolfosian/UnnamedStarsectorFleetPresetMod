@@ -5,6 +5,7 @@ import com.fs.starfarer.api.Global;
 
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 
@@ -28,9 +29,10 @@ import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.input.InputEventType;
 
 import com.fs.starfarer.api.util.Misc;
+import com.fs.starfarer.campaign.fleet.CampaignFleet;
 
+import data.scripts.ClassRefs;
 import data.scripts.listeners.DialogDismissedListener;
-import data.scripts.listeners.DummyDialogListener;
 import data.scripts.listeners.DockingListener;
 
 import data.scripts.ui.BaseSelfRefreshingPanel;
@@ -110,37 +112,70 @@ public class FleetPresetManagementListener extends ActionListener {
     private static final Color c2 = Global.getSettings().getDarkPlayerColor();
     private static final Color TEXT_HIGHLIGHT_COLOR = Misc.getHighlightColor();
 
-    private TextFieldAPI saveNameField;
-
-    private String selectedPresetName = EMPTY_STRING;
-    
-    private LabelAPI selectedPresetNamePara;
-    private String selectedPresetNameParaFormat = "Selected Preset: %s";
-
-    private LabelAPI isSelectedPresetAvailablePara;
-    private String isSelectedPresetAvailableParaFormat = "Selected Preset is %s at this location";
-
-    private LabelAPI isSelectedPresetFleetPara;
-
-    private int selectedRowIndex = -1;
-    private int currentPresetsNum = 0;
-
     private void selectPreset(String presetName, int rowIndex) {
         this.selectedPresetName = presetName;
         this.selectedRowIndex = rowIndex;
     }
 
-    private PositionAPI overlordPanelPos;
-    private CustomPanelAPI buttonsPanel;
-    private Map<String, ButtonAPI> theButtons = new HashMap<>();
-    private ButtonAPI masterCancelButton;
-    private FenaglePanele fenaglePanele;
+    private void resetTopLevelVars() {
+        this.saveNameField = null;
 
-    private Object tablePanel;
+        this.selectedPresetName = EMPTY_STRING;
+        this.selectedPresetNamePara = null;
+        this.selectedPresetNameParaFormat = "Selected Preset: %s";
+
+        this.isSelectedPresetAvailablePara = null;
+        this.isSelectedPresetAvailableParaFormat = "Selected Preset is %s at this location";
+
+        this.isSelectedPresetFleetPara = null;
+
+        this.selectedRowIndex = -1;
+        this.currentPresetsNum = 0;
+
+        this.overlordPanelPos = null;
+        this.buttonsPanel = null;
+
+        this.theButtons = new HashMap<>();
+        this.masterCancelButton = null;
+        
+        this.fenaglePanele = null;
+        this.tablePanel = null;
+        this.tableRowListeners = new ArrayList<>();
+        this.tablePlugin = new TablePlugin();
+        this.tableCanvasPos = null;
+        this.currentTableMap = null;
+        this.tableUp = true;
+        this.tableRight = false;
+        this.tablePresetNamesColumnHeader = "Presets <Ascending>";
+        // this.tableShipsColumnHeader = "Ships <Descending>";
+    }
+
+    private TextFieldAPI saveNameField = null;
+
+    private String selectedPresetName = EMPTY_STRING;
+    
+    private LabelAPI selectedPresetNamePara = null;
+    private String selectedPresetNameParaFormat = "Selected Preset: %s";
+
+    private LabelAPI isSelectedPresetAvailablePara = null;
+    private String isSelectedPresetAvailableParaFormat = "Selected Preset is %s at this location";
+
+    private LabelAPI isSelectedPresetFleetPara = null;
+
+    private int selectedRowIndex = -1;
+    private int currentPresetsNum = 0;
+
+    private PositionAPI overlordPanelPos = null;
+    private CustomPanelAPI buttonsPanel = null;
+    private Map<String, ButtonAPI> theButtons = new HashMap<>();
+    private ButtonAPI masterCancelButton = null;
+    private FenaglePanele fenaglePanele = null;
+
+    private Object tablePanel = null;
     private List<TableRowListener> tableRowListeners = new ArrayList<>();
-    private TablePlugin tablePlugin;
-    private PositionAPI tableCanvasPos;
-    private LinkedHashMap<String, PresetUtils.FleetPreset> currentTableMap;
+    private TablePlugin tablePlugin = new TablePlugin();
+    private PositionAPI tableCanvasPos = null;
+    private LinkedHashMap<String, PresetUtils.FleetPreset> currentTableMap = null;
     private boolean tableUp = true;
     private boolean tableRight = false;
     private String tablePresetNamesColumnHeader = "Presets <Ascending>";
@@ -148,21 +183,23 @@ public class FleetPresetManagementListener extends ActionListener {
 
     public FleetPresetManagementListener() {
         super();
-        this.selectedPresetName = "";
-        this.tablePlugin = new TablePlugin();
     }
 
     @Override
     public void trigger(Object... args) {
         CustomPanelAPI tableMasterPanel = Global.getSettings().createCustom(PANEL_WIDTH - CANCEL_CONFIRM_BUTTON_WIDTH - 5f, PANEL_HEIGHT, new BaseCustomUIPanelPlugin() );
-        DialogDismissedListener dummyListener = new DummyDialogListener();
         UtilReflection.ConfirmDialogData master = UtilReflection.showConfirmationDialog(
             EMPTY_STRING,
             EMPTY_STRING,
             CLOSE_TEXT,
             CONFIRM_DIALOG_WIDTH,
             CONFIRM_DIALOG_HEIGHT,
-            dummyListener);
+            new DialogDismissedListener() {
+                @Override
+                public void trigger(Object... args) {
+                    resetTopLevelVars();
+                }
+            });
         if (master == null) {
             return;
         }
@@ -204,8 +241,11 @@ public class FleetPresetManagementListener extends ActionListener {
         fenaglePanele = new FenaglePanele(master.panel, canvasPanel);
 
         buttonsPanel.addUIElement(tooltipMaker);
+        
         master.panel.addComponent(buttonsPanel).inTL(FLOAT_ZERO, FLOAT_ZERO);
         master.panel.addComponent(canvasPanel).rightOfTop(buttonsPanel, 10f);
+        // ClassRefs.findFleetInfoClass();
+        // master.panel.addComponent(ReflectionUtilis.getObfFleetInfoPanel("poggers", Global.getSector().getPlayerFleet())).rightOfTop(canvasPanel, 10f);
 
         tablePlugin.setRoot(tableMasterPanel);
         overlordPanelPos = master.panel.getPosition();
@@ -498,11 +538,11 @@ public class FleetPresetManagementListener extends ActionListener {
     public class TablePlugin extends BaseSelfRefreshingPanel {
         public LabelAPI label;
         public boolean rebuild;
-        // public UIPanelAPI root;
         public CustomPanelAPI panel;
         
         private TooltipMakerAPI tableTipMaker;
         private CustomPanelAPI shipListPanel;
+        private UIPanelAPI fleetInfoPanel;
         public float yScrollOffset;
 
         public TablePlugin() {
@@ -544,7 +584,7 @@ public class FleetPresetManagementListener extends ActionListener {
             tableTipMaker = panel.createUIElement(NAME_COLUMN_WIDTH, PANEL_HEIGHT, true);
             
             tablePanel = tableTipMaker.beginTable(c1, c2, Misc.getHighlightedOptionColor(), 30f, false, false, 
-            new Object[]{tablePresetNamesColumnHeader, NAME_COLUMN_WIDTH - 1f});
+            new Object[]{tablePresetNamesColumnHeader, (NAME_COLUMN_WIDTH - 1f) / 1.5f});
             // tablePanel = tableTipMaker.beginTable2(Global.getSector().getPlayerFaction(), 30f, true, true, 
             // new Object[]{tablePresetNamesColumnHeader, NAME_COLUMN_WIDTH - 1f});
             
@@ -613,7 +653,8 @@ public class FleetPresetManagementListener extends ActionListener {
                 }
 
                 // selectedPresetNamePara.setText(String.format(selectedPresetNameParaFormat, selectedPresetName));
-                addShipList(currentTableMap.get(selectedPresetName).fleetMembers);
+                // addShipList(currentTableMap.get(selectedPresetName).fleetMembers);
+                addShipList(currentTableMap.get(selectedPresetName).campaignFleet);
 
             } else {
                 // selectedPresetNamePara.setText(EMPTY_STRING);
@@ -624,26 +665,36 @@ public class FleetPresetManagementListener extends ActionListener {
             tableTipMaker.getExternalScroller().setYOffset(yScrollOffset);
         }
 
-        public void addShipList(List<PresetUtils.FleetMemberWrapper> fleetMembers) {
-            fenaglePanele.parent.removeComponent(shipListPanel);
-            shipListPanel = null;
+        // public void addShipList(List<PresetUtils.FleetMemberWrapper> fleetMembers) {
+        public void addShipList(CampaignFleetAPI fleet) {
+            if (fleetInfoPanel != null && shipListPanel != null) {
+                shipListPanel.removeComponent(fleetInfoPanel);
+                fleetInfoPanel = null;
+            }
+            if (shipListPanel != null) {
+                fenaglePanele.parent.removeComponent(shipListPanel);
+                shipListPanel = null;
+            }
+            if (fleet == null) return;
 
-            if (fleetMembers != null) {
-                List<FleetMemberAPI> members = new ArrayList<>();
-                for (PresetUtils.FleetMemberWrapper member : fleetMembers) {
-                    members.add(member.member);
-                }
+            // if (fleetMembers != null) {
+                // List<FleetMemberAPI> members = new ArrayList<>();
+                // for (PresetUtils.FleetMemberWrapper member : fleetMembers) {
+                    // members.add(member.member);
+                // }
 
                 shipListPanel = Global.getSettings().createCustom(SHIP_COLUMN_WIDTH, PANEL_HEIGHT - UiConfig.SHIPLIST_PANEL_HEIGHT_SUBTRACTOR, null);
                 TooltipMakerAPI shipListTooltip = shipListPanel.createUIElement(SHIP_COLUMN_WIDTH, PANEL_HEIGHT - masterCancelButton.getPosition().getHeight() + UiConfig.SHIPLIST_PANEL_HEIGHT_SUBTRACTOR, true);
-                shipListTooltip.addShipList(4, 8, UiConfig.SHIPLIST_SIZE, Misc.getBasePlayerColor(), members, 5f);
+                fleetInfoPanel = PresetUtils.getObfFleetInfoPanel(selectedPresetName, fleet);
+                shipListTooltip.addComponent(fleetInfoPanel).inTL(0f, 0f);
+                // shipListTooltip.addShipList(4, 8, UiConfig.SHIPLIST_SIZE, Misc.getBasePlayerColor(), members, 5f);
                 shipListPanel.addUIElement(shipListTooltip);
 
                 // have to do this because if directly added to the refreshing panel then the game crashes when the master panel is closed
-                fenaglePanele.parent.addComponent(shipListPanel).rightOfTop(fenaglePanele.panel, NAME_COLUMN_WIDTH / UiConfig.SHIPLIST_PANEL_PADDING_DIVISOR)
+                fenaglePanele.parent.addComponent(shipListPanel).rightOfTop(fenaglePanele.panel, 10f)
                 // .setXAlignOffset(-PANEL_WIDTH - NAME_COLUMN_WIDTH)
                 .setYAlignOffset(-1f * UiConfig.SHIPLIST_Y_OFFSET_MULTIPLIER);
-            }
+            // }
         }
 
         @Override

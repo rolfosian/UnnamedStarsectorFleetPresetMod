@@ -2,19 +2,18 @@
 
 package data.scripts.util;
 
-import com.fs.starfarer.api.ui.UIComponentAPI;
-import com.fs.starfarer.api.ui.UIPanelAPI;
 import com.fs.starfarer.api.util.Pair;
-import com.fs.starfarer.campaign.CampaignEngine;
-import com.fs.starfarer.ui.impl.CargoTooltipFactory;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.MethodHandle;
+
 import java.lang.reflect.InvocationTargetException;
-import java.util.HashMap;
-import java.util.List;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+
+import java.awt.Color;
+import java.util.*;
 
 import org.apache.log4j.Logger;
 
@@ -151,6 +150,14 @@ public class ReflectionUtilis {
         }
     }
 
+    public static Class<?>[] getMethodParamTypes(Object method) {
+        try {
+            return (Class<?>[]) getParameterTypesHandle.invoke(method);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+    
     public static void logMethods(Object instance) {
         try {
             for (Object method : instance.getClass().getMethods()) {
@@ -160,7 +167,25 @@ public class ReflectionUtilis {
                 StringBuilder paramString = new StringBuilder();
                 for (Class<?> paramType : paramTypes) {
                     if (paramString.length() > 0) paramString.append(", ");
-                    paramString.append(paramType.getSimpleName());
+                    paramString.append(paramType.getCanonicalName());
+                }
+                logger.info(methodName + "(" + paramString.toString() + ")");
+            }
+        } catch (Throwable e) {
+            logger.info("Error logging methods: ", e);
+        }
+    }
+
+    public static void logMethods(Class<?> cls) {
+        try {
+            for (Object method : cls.getMethods()) {
+                logger.info("---------------------------------------------");
+                String methodName = (String) getMethodNameHandle.invoke(method);
+                Class<?>[] paramTypes = (Class<?>[]) getParameterTypesHandle.invoke(method);
+                StringBuilder paramString = new StringBuilder();
+                for (Class<?> paramType : paramTypes) {
+                    if (paramString.length() > 0) paramString.append(", ");
+                    paramString.append(paramType.getCanonicalName());
                 }
                 logger.info(methodName + "(" + paramString.toString() + ")");
             }
@@ -192,6 +217,31 @@ public class ReflectionUtilis {
         return null;
     }
 
+    public static Object getMethodExplicit(String methodName, Object instance, Class<?>[] parameterTypes) {
+        for (Object method : instance.getClass().getMethods()) {
+            try {
+                if (((String) getMethodNameHandle.invoke(method)).equals(methodName)) {
+                    Object[] targetParameterTypes = (Object[]) getParameterTypesHandle.invoke(method);
+                    if (targetParameterTypes.length != parameterTypes.length)
+                        continue;
+    
+                    boolean match = true;
+                    for (int i = 0; i < targetParameterTypes.length; i++) {
+                        Class<?> targetType = (Class<?>) targetParameterTypes[i];
+                        Class<?> inputType = parameterTypes[i];
+                        if (!inputType.isAssignableFrom(targetType)) {
+                            match = false;
+                            break;
+                        }
+                    }
+    
+                    if (match) return method;
+                }
+            } catch (Throwable ignored) {}
+        }
+        return null;
+    }
+
     public static Object invokeMethod(String methodName, Object instance, Object... arguments) {
         try {
             Object method = instance.getClass().getMethod(methodName);
@@ -207,6 +257,13 @@ public class ReflectionUtilis {
         return invokeMethodDirectly(method, instance, arguments);
     }
 
+    public static Object getMethodExplicitAndInvokeDirectly(String methodName, Object instance, Class<?>[] parameterTypes, Object... arguments) {
+        Object method = getMethodExplicit(methodName, instance, parameterTypes);
+        if (method == null) return null;
+
+        return invokeMethodDirectly(method, instance, arguments);
+    }
+
     public static Object invokeMethodDirectly(Object method, Object instance, Object... arguments) {
         try {
             return invokeMethodHandle.invoke(method, instance, arguments);
@@ -215,13 +272,88 @@ public class ReflectionUtilis {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    public static List<UIComponentAPI> getChildrenCopy(UIPanelAPI panel) {
+    public static Object getClassInstance(String canonicalName, Class<?>[] paramTypes, Object... params) {
         try {
-            return (List<UIComponentAPI>) invokeMethod("getChildrenCopy", panel);
+            Class<?> clazz = Class.forName(canonicalName);
+            Constructor<?> ctor = clazz.getDeclaredConstructor(paramTypes);
+            ctor.setAccessible(true);
+            return ctor.newInstance(params);
         } catch (Throwable e) {
-            return null;
+            throw new RuntimeException(e);
         }
+    }
+
+    public static Class<?> getClazz(String canonicalName) {
+        try {
+            return Class.forName(canonicalName);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void logEnumConstantNames(String canonicalName) {
+        try {
+            Class<?> clazz = Class.forName(canonicalName);
+            if (!clazz.isEnum()) throw new IllegalArgumentException("Not an enum");
+    
+            Object[] constants = clazz.getEnumConstants();
+
+            for (Object constant : constants) {
+                print(constant);
+            }
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    public static Object getEnumConstantByName(String canonicalName, String constantName) {
+        try {
+            Class<?> clazz = Class.forName(canonicalName);
+            if (!clazz.isEnum()) throw new IllegalArgumentException("Not an enum");
+            return Enum.valueOf((Class<? extends Enum>) clazz, constantName);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Constructor<?>[] getConstructorParams(String canonicalName) {
+        try {
+            Class<?> clazz = Class.forName(canonicalName);
+            return clazz.getDeclaredConstructors();
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void logConstructorParams(String canonicalName) {
+        Constructor<?>[] ctors = getConstructorParams(canonicalName);
+        for (Constructor<?> ctor : ctors) {
+            print(ctor);
+        }
+    }
+
+    public static boolean doInstantiationParamsMatch(String canonicalName, Class<?>[] targetParams) {
+        Constructor<?>[] ctors = getConstructorParams(canonicalName);
+        for (Constructor<?> ctor : ctors) {
+            // Class<?>[] ctorParams = ctor.getParameterTypes(); - raises security exception
+
+            List<String> ctorParamNames = new ArrayList<>();
+            for (String part : String.valueOf(ctor).split("\\(")[1].split("\\)")[0].split(",")) {
+                ctorParamNames.add(part.trim());
+            }
+
+            if (ctorParamNames.size() != targetParams.length) continue;
+            boolean match = true;
+            for (int i = 0; i < ctorParamNames.size(); i++) {
+                if (!ctorParamNames.get(i).equals(targetParams[i].getCanonicalName())) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) return true;
+        }
+        return false;
     }
 
     public static Pair<Object, Class<?>[]> getMethodFromSuperclass(String methodName, Object instance) {
@@ -512,18 +644,19 @@ public class ReflectionUtilis {
         return true;
     }
 
-
-    public static List<UIComponentAPI> getChildren(UIPanelAPI panelAPI) {
-        return ReflectionUtilis.getChildrenCopy(panelAPI);
-    }
-
     public static void logFields(Object instance) {
         try {
             for (Object field : instance.getClass().getDeclaredFields()) {
                 logger.info("---------------------------------------------");
                 String fieldName = (String) getFieldNameHandle.invoke(field);
                 Class<?> fieldType = (Class<?>) getFieldTypeHandle.invoke(field);
-                logger.info(fieldType.getSimpleName() + " " + fieldName);
+                logger.info(fieldType.getCanonicalName() + " " + fieldName);
+                if (fieldType.isPrimitive()) continue;
+                try {
+                    ReflectionUtilis.logConstructorParams(fieldType.getCanonicalName());
+                } catch (Exception e) {
+                    print(e);
+                }
             }
         } catch (Throwable e) {
             logger.info("Error logging fields: ", e);

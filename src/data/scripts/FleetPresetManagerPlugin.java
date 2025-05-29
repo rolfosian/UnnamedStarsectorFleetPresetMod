@@ -31,6 +31,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
     private static final String[] reflectionWhitelist = new String[] {
             "data.scripts.FleetPresetManagerCoreScript",
             "data.scripts.ClassRefs",
+            "data.scripts.util.PresetUtils",
             "data.scripts.util.UtilReflection",
             "data.scripts.ui",
             "data.scripts.FleetPresetsFleetPanelInjector",
