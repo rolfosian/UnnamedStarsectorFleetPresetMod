@@ -10,18 +10,13 @@ import com.fs.starfarer.api.combat.EngagementResultAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 import com.fs.starfarer.api.ui.UIPanelAPI;
-import com.fs.starfarer.campaign.fleet.CampaignFleet;
 
 import data.scripts.ClassRefs;
-import data.scripts.plugins.DummyFleetEncounterContextPlugin;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.PresetUtils.FleetPreset;
 import data.scripts.util.ReflectionUtilis;
 
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.ArrayList;
+import java.util.*;
 
 public class DockingListener implements CampaignEventListener {
     public static final String PLAYERCURRENTMARKET_KEY = PresetUtils.PLAYERCURRENTMARKET_KEY;
@@ -62,37 +57,7 @@ public class DockingListener implements CampaignEventListener {
         }
     }
 
-    @Override @SuppressWarnings("unchecked") // for VisualPanel fleet info panel class for ClassRefs
-    public void reportShownInteractionDialog(InteractionDialogAPI dialog) {
-        if (ClassRefs.foundAllClasses() || !String.valueOf(dialog.getPlugin().getContext()).equals("") || 
-            Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.VISUALFLEETINFOPANEL_KEY) != null) return;
-
-        Class<?>[] targetConstructorParams = new Class<?>[] {
-            String.class,
-            CampaignFleet.class,
-            String.class,
-            CampaignFleet.class,
-            FleetEncounterContextPlugin.class,
-            boolean.class
-        };
-
-        VisualPanelAPI visualPanel = dialog.getVisualPanel();
-        visualPanel.showFleetInfo("", Global.getSector().getPlayerFleet(), null, null);
-
-        for (Object child : (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", visualPanel, 0)) {
-            if (UIPanelAPI.class.isAssignableFrom(child.getClass())) {
-                try {
-                    if (ReflectionUtilis.doInstantiationParamsMatch(child.getClass().getCanonicalName(), targetConstructorParams)) {
-                        Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.VISUALFLEETINFOPANEL_KEY, child.getClass());
-                        dialog.dismiss();
-                        return;
-                    }
-                } catch (Exception ignore) {}
-            }
-        }
-        dialog.dismiss();
-    }
-
+    public void reportShownInteractionDialog(InteractionDialogAPI dialog) {}
     public void reportBattleFinished(CampaignFleetAPI primaryWinner, BattleAPI battle) {}
     public void reportBattleOccurred(CampaignFleetAPI primaryWinner, BattleAPI battle) {}
     public void reportEconomyMonthEnd() {}

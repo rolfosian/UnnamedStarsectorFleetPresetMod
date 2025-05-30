@@ -79,5 +79,4 @@ public class FleetPresetManagerCoreScript implements EveryFrameScript {
 
         fleetPanelInjector.advance();
     }
-
 }

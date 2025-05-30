@@ -685,7 +685,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
                 shipListPanel = Global.getSettings().createCustom(SHIP_COLUMN_WIDTH, PANEL_HEIGHT - UiConfig.SHIPLIST_PANEL_HEIGHT_SUBTRACTOR, null);
                 TooltipMakerAPI shipListTooltip = shipListPanel.createUIElement(SHIP_COLUMN_WIDTH, PANEL_HEIGHT - masterCancelButton.getPosition().getHeight() + UiConfig.SHIPLIST_PANEL_HEIGHT_SUBTRACTOR, true);
-                fleetInfoPanel = PresetUtils.getObfFleetInfoPanel(selectedPresetName, fleet);
+                fleetInfoPanel = UtilReflection.getObfFleetInfoPanel(selectedPresetName, fleet);
                 shipListTooltip.addComponent(fleetInfoPanel).inTL(0f, 0f);
                 // shipListTooltip.addShipList(4, 8, UiConfig.SHIPLIST_SIZE, Misc.getBasePlayerColor(), members, 5f);
                 shipListPanel.addUIElement(shipListTooltip);

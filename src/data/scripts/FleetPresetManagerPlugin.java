@@ -29,15 +29,16 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
     public static final Logger logger = Logger.getLogger(FleetPresetManagerPlugin.class);
 
     private static final String[] reflectionWhitelist = new String[] {
-            "data.scripts.FleetPresetManagerCoreScript",
-            "data.scripts.ClassRefs",
-            "data.scripts.util.PresetUtils",
-            "data.scripts.util.UtilReflection",
-            "data.scripts.ui",
-            "data.scripts.FleetPresetsFleetPanelInjector",
-            "data.scripts.listeners",
-            "data.scripts.util.ReflectionUtilis",
-            "data.scripts.util.ReflectionBetterUtilis"
+        "data.scripts.FleetPresetManagerCoreScript",
+        "data.scripts.FleetPresetsFleetPanelInjector",
+
+        "data.scripts.ClassRefs",
+        "data.scripts.util.UtilReflection",
+        "data.scripts.util.ReflectionUtilis",
+        "data.scripts.util.ReflectionBetterUtilis",
+
+        "data.scripts.ui",
+        "data.scripts.listeners",
     };
 
     @Override

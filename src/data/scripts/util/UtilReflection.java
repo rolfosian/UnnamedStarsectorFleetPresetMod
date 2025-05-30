@@ -3,10 +3,15 @@
 package data.scripts.util;
 
 import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.campaign.BattleAPI;
+import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.campaign.CampaignUIAPI;
 import com.fs.starfarer.api.campaign.CoreUIAPI;
+import com.fs.starfarer.api.campaign.FleetEncounterContextPlugin;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;
+import com.fs.starfarer.api.combat.EngagementResultAPI;
 import com.fs.starfarer.api.ui.*;
+import com.fs.starfarer.campaign.fleet.CampaignFleet;
 
 import data.scripts.ClassRefs;
 import data.scripts.listeners.ActionListener;
@@ -184,5 +189,40 @@ public class UtilReflection {
         catch (Throwable e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static UIPanelAPI getObfFleetInfoPanel(String name, CampaignFleetAPI fleet) {
+        return (UIPanelAPI) ReflectionUtilis.getClassInstance(ClassRefs.visualPanelfleetInfoClass.getCanonicalName(),
+        new Class<?>[] {
+            String.class, 
+            CampaignFleet.class,
+            String.class,
+            CampaignFleet.class,
+            FleetEncounterContextPlugin.class,
+            boolean.class
+        },
+        name,
+        fleet,
+        null,
+        null,
+        new FleetEncounterContextPlugin () {
+            @Override public boolean adjustPlayerReputation(InteractionDialogAPI arg0, String arg1) { return false; }
+            @Override public float computePlayerContribFraction() { return 0.0f; }
+            @Override public BattleAPI getBattle() { return null; }
+            @Override public DataForEncounterSide getDataFor(CampaignFleetAPI arg0) { return null; }
+            @Override public DisengageHarryAvailability getDisengageHarryAvailability(CampaignFleetAPI arg0, CampaignFleetAPI arg1) { return DisengageHarryAvailability.NO_READY_SHIPS; }
+            @Override public EngagementOutcome getLastEngagementOutcome() { return EngagementOutcome.BATTLE_PLAYER_WIN; }
+            @Override public CampaignFleetAPI getLoser() { return null; }
+            @Override public DataForEncounterSide getLoserData() { return null; }
+            @Override public PursueAvailability getPursuitAvailability(CampaignFleetAPI arg0, CampaignFleetAPI arg1) { return PursueAvailability.NO_READY_SHIPS; }
+            @Override public CampaignFleetAPI getWinner() { return null; }
+            @Override public DataForEncounterSide getWinnerData() { return null; }
+            @Override public boolean isEngagedInHostilities() { return false; }
+            @Override public boolean isOtherFleetHarriedPlayer() { return false; }
+            @Override public float performPostVictoryRecovery(EngagementResultAPI arg0) { return 0.0f; }
+            @Override public void setOtherFleetHarriedPlayer(boolean arg0) { }
+        },
+        true
+        );
     }
 }

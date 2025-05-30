@@ -33,9 +33,6 @@ import com.fs.starfarer.api.loading.WeaponGroupSpec;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 import com.fs.starfarer.api.util.Misc;
 
-
-import data.scripts.ClassRefs;
-import data.scripts.plugins.DummyFleetEncounterContextPlugin;
 import data.scripts.util.CargoPresetUtils.CargoResourceRatios;
 
 public class PresetUtils {
@@ -210,12 +207,22 @@ public class PresetUtils {
             this.campaignFleet = Global.getFactory().createEmptyFleet(Global.getSector().getPlayerFaction(), true);
             for (FleetMemberWrapper member : this.fleetMembers) {
                 this.campaignFleet.getFleetData().addFleetMember(member.member);
+                if (member.captainId.equals(Global.getSector().getPlayerPerson().getId())) {
+                    this.campaignFleet.setCommander(member.captain);
+                }
             }
             this.campaignFleet.setHidden(true);
             this.campaignFleet.setNoAutoDespawn(true);
             this.campaignFleet.setDoNotAdvanceAI(true);
             this.campaignFleet.setInflated(true);
             this.campaignFleet.setNoFactionInName(true);
+        }
+
+        public void updateCampaignFleet(List<FleetMemberAPI> fleetMembers) {
+            for (FleetMemberAPI member : fleetMembers) {
+                
+            }
+            return;
         }
 
         public void updateVariant(int index, ShipVariantAPI variant) {
@@ -1025,25 +1032,6 @@ public class PresetUtils {
         Object infoPanelParent = ReflectionUtilis.invokeMethod("getParent", fleetInfoPanel);
 
         ReflectionUtilis.getMethodAndInvokeDirectly("recreateUI", ReflectionUtilis.invokeMethod("getFleetPanel", infoPanelParent), 1, true);
-    }
-
-    public static UIPanelAPI getObfFleetInfoPanel(String name, CampaignFleetAPI fleet) {
-        return (UIPanelAPI) ReflectionUtilis.getClassInstance(ClassRefs.visualPanelfleetInfoClass.getCanonicalName(),
-        new Class<?>[] {
-            String.class, 
-            CampaignFleet.class,
-            String.class,
-            CampaignFleet.class,
-            FleetEncounterContextPlugin.class,
-            boolean.class
-        },
-        name,
-        fleet,
-        null,
-        null,
-        new DummyFleetEncounterContextPlugin(),
-        true
-        );
     }
 
     public static void deleteFleetPreset(String name) {

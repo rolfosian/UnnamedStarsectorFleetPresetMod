@@ -9,8 +9,7 @@ import java.lang.invoke.MethodType;
 import java.lang.invoke.MethodHandle;
 
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
+import java.lang.reflect.Type;
 
 import java.awt.Color;
 import java.util.*;
@@ -18,41 +17,74 @@ import java.util.*;
 import org.apache.log4j.Logger;
 
 public class ReflectionUtilis {
-    public static void print(Object... args) {
-        PresetMiscUtils.print(args);
-    }
     private static final Logger logger = Logger.getLogger(ReflectionUtilis.class);
+    public static void print(Object... args) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < args.length; i++) {
+            sb.append(args[i] instanceof String ? (String) args[i] : String.valueOf(args[i]));
+            if (i < args.length - 1) sb.append(' ');
+        }
+        logger.info(sb.toString());
+    }
 
     // Code taken and modified from Grand Colonies
-    private static final Class<?> fieldClass;
     private static final MethodHandles.Lookup lookup = MethodHandles.lookup();
+
+    private static final Class<?> fieldClass;
+    private static final Class<?> typeClass;
+    private static final Class<?> parameterizedTypeClass;
+    private static final Class<?> constructorClass;
+
+    private static final MethodHandle  getFieldTypeHandle;
+    
     private static final MethodHandle setFieldHandle;
     private static final MethodHandle getFieldHandle;
     private static final MethodHandle getFieldNameHandle;
     private static final MethodHandle setFieldAccessibleHandle;
+    
     private static final Class<?> methodClass;
     private static final MethodHandle getMethodNameHandle;
     private static final MethodHandle invokeMethodHandle;
     private static final MethodHandle setMethodAccessable;
     private static final MethodHandle getModifiersHandle;
     private static final MethodHandle  getParameterTypesHandle;
-    private static final MethodHandle  getFieldTypeHandle;
+        
+    private static final MethodHandle getGenericTypeHandle;
+    private static final MethodHandle getTypeNameHandle;
+    private static final MethodHandle getActualTypeArgumentsHandle;
+    
+    private static final MethodHandle setConstructorAccessibleHandle;
+    private static final MethodHandle getConstructorParameterTypesHandle;
+    private static final MethodHandle constructorNewInstanceHandle;
 
     static {
         try {
             fieldClass = Class.forName("java.lang.reflect.Field", false, Class.class.getClassLoader());
+            methodClass = Class.forName("java.lang.reflect.Method", false, Class.class.getClassLoader());
+            typeClass = Class.forName("java.lang.reflect.Type", false, Class.class.getClassLoader());
+            parameterizedTypeClass = Class.forName("java.lang.reflect.ParameterizedType", false, Class.class.getClassLoader());
+            constructorClass = Class.forName("java.lang.reflect.Constructor", false, Class.class.getClassLoader());
+
             setFieldHandle = lookup.findVirtual(fieldClass, "set", MethodType.methodType(Void.TYPE, Object.class, Object.class));
             getFieldHandle = lookup.findVirtual(fieldClass, "get", MethodType.methodType(Object.class, Object.class));
             getFieldNameHandle = lookup.findVirtual(fieldClass, "getName", MethodType.methodType(String.class));
             getFieldTypeHandle = lookup.findVirtual(fieldClass, "getType", MethodType.methodType(Class.class));
             setFieldAccessibleHandle = lookup.findVirtual(fieldClass, "setAccessible", MethodType.methodType(Void.TYPE, boolean.class));
 
-            methodClass = Class.forName("java.lang.reflect.Method", false, Class.class.getClassLoader());
             getMethodNameHandle = lookup.findVirtual(methodClass, "getName", MethodType.methodType(String.class));
             invokeMethodHandle = lookup.findVirtual(methodClass, "invoke", MethodType.methodType(Object.class, Object.class, Object[].class));
             setMethodAccessable = lookup.findVirtual(methodClass, "setAccessible", MethodType.methodType(Void.TYPE, boolean.class));
             getModifiersHandle = lookup.findVirtual(methodClass, "getModifiers", MethodType.methodType(int.class));
             getParameterTypesHandle = lookup.findVirtual(methodClass, "getParameterTypes", MethodType.methodType(Class[].class));
+
+            getGenericTypeHandle = lookup.findVirtual(fieldClass, "getGenericType", MethodType.methodType(Type.class));
+            getTypeNameHandle = lookup.findVirtual(typeClass, "getTypeName", MethodType.methodType(String.class));
+            getActualTypeArgumentsHandle = lookup.findVirtual(parameterizedTypeClass, "getActualTypeArguments", MethodType.methodType(Type[].class));
+
+            setConstructorAccessibleHandle = lookup.findVirtual(constructorClass, "setAccessible", MethodType.methodType(Void.TYPE, boolean.class));
+            getConstructorParameterTypesHandle = lookup.findVirtual(constructorClass, "getParameterTypes", MethodType.methodType(Class[].class));
+            constructorNewInstanceHandle = lookup.findVirtual(constructorClass, "newInstance", MethodType.methodType(Object.class, Object[].class));
+
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -275,9 +307,11 @@ public class ReflectionUtilis {
     public static Object getClassInstance(String canonicalName, Class<?>[] paramTypes, Object... params) {
         try {
             Class<?> clazz = Class.forName(canonicalName);
-            Constructor<?> ctor = clazz.getDeclaredConstructor(paramTypes);
-            ctor.setAccessible(true);
-            return ctor.newInstance(params);
+            Object ctor = clazz.getDeclaredConstructor(paramTypes);
+            // ctor.setAccessible(true);
+            setConstructorAccessibleHandle.invoke(ctor, true);
+            return constructorNewInstanceHandle.invoke(ctor, params);
+            // return ctor.newInstance(params);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
@@ -317,7 +351,7 @@ public class ReflectionUtilis {
         }
     }
 
-    public static Constructor<?>[] getConstructorParams(String canonicalName) {
+    public static Object[] getConstructorParams(String canonicalName) {
         try {
             Class<?> clazz = Class.forName(canonicalName);
             return clazz.getDeclaredConstructors();
@@ -327,31 +361,29 @@ public class ReflectionUtilis {
     }
 
     public static void logConstructorParams(String canonicalName) {
-        Constructor<?>[] ctors = getConstructorParams(canonicalName);
-        for (Constructor<?> ctor : ctors) {
+        Object[] ctors = getConstructorParams(canonicalName);
+        for (Object ctor : ctors) {
             print(ctor);
         }
     }
 
     public static boolean doInstantiationParamsMatch(String canonicalName, Class<?>[] targetParams) {
-        Constructor<?>[] ctors = getConstructorParams(canonicalName);
-        for (Constructor<?> ctor : ctors) {
-            // Class<?>[] ctorParams = ctor.getParameterTypes(); - raises security exception
+        Object[] ctors = getConstructorParams(canonicalName);
+        for (Object ctor : ctors) {
+            try {
+                Class<?>[] ctorParams = (Class<?>[]) getConstructorParameterTypesHandle.invoke(ctor);
+                if (ctorParams.length != targetParams.length) continue;
 
-            List<String> ctorParamNames = new ArrayList<>();
-            for (String part : String.valueOf(ctor).split("\\(")[1].split("\\)")[0].split(",")) {
-                ctorParamNames.add(part.trim());
-            }
-
-            if (ctorParamNames.size() != targetParams.length) continue;
-            boolean match = true;
-            for (int i = 0; i < ctorParamNames.size(); i++) {
-                if (!ctorParamNames.get(i).equals(targetParams[i].getCanonicalName())) {
-                    match = false;
-                    break;
+                boolean match = true;
+                for (int i = 0; i < ctorParams.length; i++) {
+                    if (!ctorParams[0].equals(targetParams[0])) {
+                        match = false;
+                        break;
+                    }
                 }
-            }
-            if (match) return true;
+                if (match) return true;
+
+            } catch (Throwable e) {}
         }
         return false;
     }
@@ -644,20 +676,108 @@ public class ReflectionUtilis {
         return true;
     }
 
+    public static void logField(String fieldName, Class<?> fieldType, Object field, int i) throws Throwable {
+        // Object genericType = getGenericTypeHandle.invoke(field, fieldName);
+        if (List.class.isAssignableFrom(fieldType)) {
+            print((getGenericTypeHandle.invoke(field, fieldName)), i);
+
+        } else if (Map.class.isAssignableFrom(fieldType)) {
+            print((getGenericTypeHandle.invoke(field)), fieldName, i);
+
+        } else if (Set.class.isAssignableFrom(fieldType)) {
+            print(getGenericTypeHandle.invoke(field), fieldName, i);
+
+        } else if (Collection.class.isAssignableFrom(fieldType)) {
+            print(getGenericTypeHandle.invoke(field), fieldName, i);
+
+        } else {
+            print(fieldType.getCanonicalName(), fieldName, i);
+        }
+    }
+
+    public static boolean isNativeJavaClass(Class<?> clazz) {
+        if (clazz == null || clazz.getPackage() == null) return false;
+        String pkg = clazz.getPackage().getName();
+        return "java.lang".equals(pkg) || "java.util".equals(pkg);
+    }
+
+    public static Class<?> iterateFieldRecursivelyUntilParamsMatch(Class<?> baseFieldType, Class<?>[] targetParams, int maxDepth) throws Throwable {
+        return iterateFieldRecursivelyUntilParamsMatch(baseFieldType, targetParams, 0, maxDepth);
+    }
+    
+    private static Class<?> iterateFieldRecursivelyUntilParamsMatch(Class<?> baseFieldType, Class<?>[] targetParams, int currentDepth, int maxDepth) throws Throwable {
+        if (currentDepth > maxDepth) return null;
+    
+        for (Object field : baseFieldType.getDeclaredFields()) {
+            String fieldName = (String) getFieldNameHandle.invoke(field);
+            Class<?> fieldType = (Class<?>) getFieldTypeHandle.invoke(field);
+    
+            if (fieldType.isPrimitive() || isNativeJavaClass(baseFieldType)) continue;
+            if (doInstantiationParamsMatch(fieldType.getCanonicalName(), targetParams)) {
+                return fieldType;
+            } else {
+                Class<?> result = iterateFieldRecursivelyUntilParamsMatch(fieldType, targetParams, currentDepth + 1, maxDepth);
+                if (result != null) return result;
+            }
+        }
+        return null;
+    }
+
     public static void logFields(Object instance) {
         try {
+            int i = 0;
             for (Object field : instance.getClass().getDeclaredFields()) {
-                logger.info("---------------------------------------------");
+                print("---------------------------------------------");
                 String fieldName = (String) getFieldNameHandle.invoke(field);
                 Class<?> fieldType = (Class<?>) getFieldTypeHandle.invoke(field);
-                logger.info(fieldType.getCanonicalName() + " " + fieldName);
-                if (fieldType.isPrimitive()) continue;
+                
+                if (fieldType.isPrimitive()) {
+                    print(fieldType.getCanonicalName() + " " + fieldName + " " + i);
+                    i++;
+                    continue;
+                } else {
+                    logField(fieldName, fieldType, field, i);
+                }
                 try {
                     ReflectionUtilis.logConstructorParams(fieldType.getCanonicalName());
                 } catch (Exception e) {
                     print(e);
                 }
+                i++;
             }
+        } catch (Throwable e) {
+            logger.info("Error logging fields: ", e);
+        }
+    }
+
+    public static void logFieldsOfFieldIndex(Object instance, int index) {
+        try {
+            int i = 0;
+            for (Object field : instance.getClass().getDeclaredFields()) {
+                if (i != index) {
+                    i++;
+                    continue;
+                }
+                logger.info("---------------------------------------------");
+                Class<?> fieldType = (Class<?>) getFieldTypeHandle.invoke(field);
+                if (fieldType.isPrimitive()) continue;
+                int j = 0;
+                for (Object childField : fieldType.getDeclaredFields()) {
+                    String childFieldName = (String) getFieldNameHandle.invoke(childField);
+                    Class<?> childFieldType = (Class<?>) getFieldTypeHandle.invoke(childField);
+
+                    logField(childFieldName, childFieldType, childField, j);
+                    j++;
+                }
+    
+                try {
+                    ReflectionUtilis.logConstructorParams(fieldType.getCanonicalName());
+                } catch (Exception e) {
+                    print(e);
+                }
+                i++;
+            }
+    
         } catch (Throwable e) {
             logger.info("Error logging fields: ", e);
         }

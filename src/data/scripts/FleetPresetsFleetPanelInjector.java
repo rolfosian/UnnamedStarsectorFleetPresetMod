@@ -104,7 +104,7 @@ public class FleetPresetsFleetPanelInjector {
                     storeFleetButton.setEnabled(true);
                 }
             }
-            if (Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder().size() == 1) {
+            if (Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder().size() == 1 && storeFleetButton != null) {
                 storeFleetButton.setEnabled(false);
             }
         }

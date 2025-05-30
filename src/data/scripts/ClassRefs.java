@@ -1,12 +1,22 @@
 package data.scripts;
 
 import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.campaign.BattleAPI;
+import com.fs.starfarer.api.campaign.CampaignEventListener;
+import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.campaign.CampaignUIAPI;
+import com.fs.starfarer.api.campaign.CargoAPI;
 import com.fs.starfarer.api.campaign.FleetEncounterContextPlugin;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;
 import com.fs.starfarer.api.campaign.InteractionDialogPlugin;
+import com.fs.starfarer.api.campaign.JumpPointAPI;
+import com.fs.starfarer.api.campaign.PlayerMarketTransaction;
+import com.fs.starfarer.api.campaign.SectorEntityToken;
 import com.fs.starfarer.api.campaign.VisualPanelAPI;
+import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.campaign.rules.MemoryAPI;
+import com.fs.starfarer.api.characters.AbilityPlugin;
+import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.impl.campaign.rulecmd.ShowDefaultVisual;
 import com.fs.starfarer.api.input.InputEventClass;
 import com.fs.starfarer.api.input.InputEventType;
@@ -56,29 +66,78 @@ public class ClassRefs {
 
     private static boolean foundAllClasses = false;
 
-    public static void beginFindFleetInfoClass() {
+    public static void findFleetInfoClass() {
         if (visualPanelfleetInfoClass != null) return;
 
-        Global.getSector().getCampaignUI().showInteractionDialogFromCargo(new InteractionDialogPlugin() {
-            @Override public void advance(float arg0) { return; }
-            @Override public void backFromEngagement(EngagementResultAPI arg0) { return; }
-            @Override public Object getContext() { return ""; }
-            @Override public Map<String, MemoryAPI> getMemoryMap() { return new HashMap<>(); }
-            @Override public void init(InteractionDialogAPI arg0) { return; }
-            @Override public void optionMousedOver(String arg0, Object arg1) { return; }
-            @Override public void optionSelected(String arg0, Object arg1) { return; }
-        }, null, new CampaignUIAPI.DismissDialogDelegate() {
-            @Override public void dialogDismissed() {} 
-        });
-    }
+        Global.getSector().addListener(new CampaignEventListener() {
+            @Override @SuppressWarnings("unchecked")
+            public void reportShownInteractionDialog(InteractionDialogAPI dialog) {
+                if (foundAllClasses) return;
+        
+                Class<?>[] targetConstructorParams = new Class<?>[] {
+                    String.class,
+                    CampaignFleet.class,
+                    String.class,
+                    CampaignFleet.class,
+                    FleetEncounterContextPlugin.class,
+                    boolean.class
+                };
+        
+                VisualPanelAPI visualPanel = dialog.getVisualPanel();
+                visualPanel.showFleetInfo("", Global.getSector().getPlayerFleet(), null, null);
+        
+                for (Object child : (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", visualPanel, 0)) {
+                    if (UIPanelAPI.class.isAssignableFrom(child.getClass()) && ReflectionUtilis.doInstantiationParamsMatch(child.getClass().getCanonicalName(), targetConstructorParams)) {
+                        visualPanelfleetInfoClass = child.getClass(); // found it
+                        dialog.dismiss();
+                        Global.getSector().removeListener(this);
+                        return;
+                    }
+                }
+                dialog.dismiss();
+            }
+            public void reportBattleFinished(CampaignFleetAPI primaryWinner, BattleAPI battle) {}
+            public void reportBattleOccurred(CampaignFleetAPI primaryWinner, BattleAPI battle) {}
+            public void reportEconomyMonthEnd() {}
+            public void reportEconomyTick(int iterIndex) {}
+            public void reportEncounterLootGenerated(FleetEncounterContextPlugin plugin, CargoAPI loot) {}
+            public void reportFleetDespawned(CampaignFleetAPI fleet, CampaignEventListener.FleetDespawnReason reason, Object param) {}
+            public void reportFleetJumped(CampaignFleetAPI fleet, SectorEntityToken from, JumpPointAPI.JumpDestination to) {}
+            public void reportFleetReachedEntity(CampaignFleetAPI fleet, SectorEntityToken entity) {}
+            public void reportFleetSpawned(CampaignFleetAPI fleet) {}
+            public void reportPlayerActivatedAbility(AbilityPlugin ability, Object param) {}
+            public void reportPlayerDeactivatedAbility(AbilityPlugin ability, Object param) {}
+            public void reportPlayerDidNotTakeCargo(CargoAPI cargo) {}
+            public void reportPlayerDumpedCargo(CargoAPI cargo) {}
+            public void reportPlayerEngagement(EngagementResultAPI result) {}
+            public void reportPlayerMarketTransaction(PlayerMarketTransaction transaction) {}
+            public void reportPlayerOpenedMarketAndCargoUpdated(MarketAPI market) {}
+            public void reportPlayerReputationChange(PersonAPI person, float delta) {}
+            public void reportPlayerReputationChange(String faction, float delta) {}
+            public void reportPlayerClosedMarket(MarketAPI arg0) {}
+            public void reportPlayerOpenedMarket(MarketAPI arg0) {}
+        }
+        );
 
-    public static void setFleetInfoClass(Class<?> fleetInfoClazz) {
-        visualPanelfleetInfoClass = fleetInfoClazz;
+        Global.getSector().getCampaignUI().showInteractionDialogFromCargo(new InteractionDialogPlugin() {
+            public void advance(float arg0) { return; }
+            public void backFromEngagement(EngagementResultAPI arg0) { return; }
+            public Object getContext() { return ""; }
+            public Map<String, MemoryAPI> getMemoryMap() { return new HashMap<>(); }
+            public void init(InteractionDialogAPI arg0) { return; }
+            public void optionMousedOver(String arg0, Object arg1) { return; }
+            public void optionSelected(String arg0, Object arg1) { return; }
+        }, null, new CampaignUIAPI.DismissDialogDelegate() {
+            public void dialogDismissed() {} 
+        });
     }
 
     @SuppressWarnings("unchecked")
     public static void findInputEventClass() {
-        Class<?>[] inputEventInstantiationParamTypes = new Class<?>[] {
+        UIPanelAPI coreUI = UtilReflection.getCoreUI();
+        if (coreUI == null) return;
+
+        Class<?>[] targetConstructornParams = new Class<?>[] {
             InputEventClass.class, 
             InputEventType.class, 
             int.class, 
@@ -86,16 +145,13 @@ public class ClassRefs {
             int.class, 
             char.class
         };
-
-        UIPanelAPI coreUI = UtilReflection.getCoreUI();
-        if (coreUI == null) return;
         for (Object child : (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", coreUI, 0)) {
             if (ButtonAPI.class.isAssignableFrom(child.getClass()) && !child.getClass().getSimpleName().equals("ButtonAPI")) {
 
                 for (Method method : child.getClass().getDeclaredMethods()) {
                     if (method.getName().equals("buttonPressed")) {
                         for (Class<?> paramType : ReflectionUtilis.getMethodParamTypes(method)) {
-                            if (ReflectionUtilis.doInstantiationParamsMatch(paramType.getCanonicalName(), inputEventInstantiationParamTypes)) {
+                            if (ReflectionUtilis.doInstantiationParamsMatch(paramType.getCanonicalName(), targetConstructornParams)) {
                                 inputEventClass = paramType;
                                 return;
                             }
@@ -198,8 +254,7 @@ public class ClassRefs {
         }
 
         if (visualPanelfleetInfoClass == null) {
-            beginFindFleetInfoClass();
-            setFleetInfoClass((Class<?>) Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.VISUALFLEETINFOPANEL_KEY));
+            findFleetInfoClass();
         }
         if (buttonClass == null) {
             findButtonClass();
