@@ -308,10 +308,8 @@ public class ReflectionUtilis {
         try {
             Class<?> clazz = Class.forName(canonicalName);
             Object ctor = clazz.getDeclaredConstructor(paramTypes);
-            // ctor.setAccessible(true);
             setConstructorAccessibleHandle.invoke(ctor, true);
             return constructorNewInstanceHandle.invoke(ctor, params);
-            // return ctor.newInstance(params);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
@@ -699,28 +697,6 @@ public class ReflectionUtilis {
         if (clazz == null || clazz.getPackage() == null) return false;
         String pkg = clazz.getPackage().getName();
         return "java.lang".equals(pkg) || "java.util".equals(pkg);
-    }
-
-    public static Class<?> iterateFieldRecursivelyUntilParamsMatch(Class<?> baseFieldType, Class<?>[] targetParams, int maxDepth) throws Throwable {
-        return iterateFieldRecursivelyUntilParamsMatch(baseFieldType, targetParams, 0, maxDepth);
-    }
-    
-    private static Class<?> iterateFieldRecursivelyUntilParamsMatch(Class<?> baseFieldType, Class<?>[] targetParams, int currentDepth, int maxDepth) throws Throwable {
-        if (currentDepth > maxDepth) return null;
-    
-        for (Object field : baseFieldType.getDeclaredFields()) {
-            String fieldName = (String) getFieldNameHandle.invoke(field);
-            Class<?> fieldType = (Class<?>) getFieldTypeHandle.invoke(field);
-    
-            if (fieldType.isPrimitive() || isNativeJavaClass(baseFieldType)) continue;
-            if (doInstantiationParamsMatch(fieldType.getCanonicalName(), targetParams)) {
-                return fieldType;
-            } else {
-                Class<?> result = iterateFieldRecursivelyUntilParamsMatch(fieldType, targetParams, currentDepth + 1, maxDepth);
-                if (result != null) return result;
-            }
-        }
-        return null;
     }
 
     public static void logFields(Object instance) {
