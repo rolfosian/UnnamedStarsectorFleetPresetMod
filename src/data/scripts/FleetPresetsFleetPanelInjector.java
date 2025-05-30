@@ -58,16 +58,24 @@ public class FleetPresetsFleetPanelInjector {
 
     private Object getStorageButtonInputEventInstance(ButtonAPI storageButton) {
         PositionAPI storageButtonPosition = storageButton.getPosition();
-        try {
-            Class<?> inputEventClass = Class.forName(ClassRefs.inputEventClass.getCanonicalName());
-            Constructor<?> ctor = inputEventClass.getDeclaredConstructor(InputEventClass.class, InputEventType.class, int.class, int.class, int.class, char.class);
-            ctor.setAccessible(true);
-
-            return ctor.newInstance(InputEventClass.MOUSE_EVENT, InputEventType.MOUSE_DOWN, (int)storageButtonPosition.getCenterX(), (int)storageButtonPosition.getCenterY(), 0, '\0');
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            return ReflectionUtilis.getClassInstance(ClassRefs.inputEventClass.getCanonicalName(),
+            new Class<?>[] {
+                InputEventClass.class, 
+                InputEventType.class, 
+                int.class, // x
+                int.class, // y
+                int.class, // keyboard key/mouse button id
+                char.class
+            },
+            new Object[] {
+                InputEventClass.MOUSE_EVENT,
+                InputEventType.MOUSE_DOWN,
+                (int)storageButtonPosition.getCenterX(),
+                (int)storageButtonPosition.getCenterY(),
+                0, // LMB
+                '\0'
+            }); // unused?
         }
-    }
 
     @SuppressWarnings("unchecked")
     private ButtonAPI getStorageButton(UIPanelAPI core) { // This will probably crash the game if you call it without the player docked at a market
@@ -112,6 +120,7 @@ public class FleetPresetsFleetPanelInjector {
         if (!injected) {
             injected = true;
             Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.FLEETINFOPANEL_KEY, fleetInfoPanel);
+            PresetUtils.checkFleetAgainstPreset();
 
             autoAssignButton = new Button(getAutoAssignButton(fleetInfoPanel), null, null);
             PositionAPI officerAutoAssignButtonPosition = autoAssignButton.getPosition();

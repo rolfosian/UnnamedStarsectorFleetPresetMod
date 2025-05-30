@@ -15,7 +15,7 @@ import data.scripts.util.UtilReflection;
 import data.scripts.FleetPresetManagerCoreScript;
 import data.scripts.listeners.DockingListener;
 import data.scripts.listeners.FleetMonitor;
-import data.scripts.listeners.OfficerDismissalTracker;
+import data.scripts.listeners.OfficerTracker;
 
 import java.util.*;
 
@@ -71,7 +71,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         try {
             Global.getSector().addTransientScript((EveryFrameScript) UtilReflection.instantiateClassNoParams(cl.loadClass("data.scripts.FleetPresetManagerCoreScript")));
 
-            Global.getSector().addTransientScript(new OfficerDismissalTracker());
+            Global.getSector().addTransientScript(new OfficerTracker());
             Global.getSector().addTransientScript(new FleetMonitor());
             Global.getSector().addListener(new DockingListener());
         } catch (Exception e) {

@@ -4,6 +4,7 @@ package data.scripts.listeners;
 import com.fs.starfarer.api.Global;
 
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
+import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
@@ -677,24 +678,17 @@ public class FleetPresetManagementListener extends ActionListener {
             }
             if (fleet == null) return;
 
-            // if (fleetMembers != null) {
-                // List<FleetMemberAPI> members = new ArrayList<>();
-                // for (PresetUtils.FleetMemberWrapper member : fleetMembers) {
-                    // members.add(member.member);
-                // }
+            shipListPanel = Global.getSettings().createCustom(SHIP_COLUMN_WIDTH, PANEL_HEIGHT - UiConfig.SHIPLIST_PANEL_HEIGHT_SUBTRACTOR, null);
+            TooltipMakerAPI shipListTooltip = shipListPanel.createUIElement(SHIP_COLUMN_WIDTH, PANEL_HEIGHT - masterCancelButton.getPosition().getHeight() + UiConfig.SHIPLIST_PANEL_HEIGHT_SUBTRACTOR, true);
+            fleetInfoPanel = UtilReflection.getObfFleetInfoPanel(selectedPresetName, fleet);
 
-                shipListPanel = Global.getSettings().createCustom(SHIP_COLUMN_WIDTH, PANEL_HEIGHT - UiConfig.SHIPLIST_PANEL_HEIGHT_SUBTRACTOR, null);
-                TooltipMakerAPI shipListTooltip = shipListPanel.createUIElement(SHIP_COLUMN_WIDTH, PANEL_HEIGHT - masterCancelButton.getPosition().getHeight() + UiConfig.SHIPLIST_PANEL_HEIGHT_SUBTRACTOR, true);
-                fleetInfoPanel = UtilReflection.getObfFleetInfoPanel(selectedPresetName, fleet);
-                shipListTooltip.addComponent(fleetInfoPanel).inTL(0f, 0f);
-                // shipListTooltip.addShipList(4, 8, UiConfig.SHIPLIST_SIZE, Misc.getBasePlayerColor(), members, 5f);
-                shipListPanel.addUIElement(shipListTooltip);
+            shipListTooltip.addComponent(fleetInfoPanel).inTL(0f, 0f);
+            shipListPanel.addUIElement(shipListTooltip);
 
-                // have to do this because if directly added to the refreshing panel then the game crashes when the master panel is closed
-                fenaglePanele.parent.addComponent(shipListPanel).rightOfTop(fenaglePanele.panel, 10f)
-                // .setXAlignOffset(-PANEL_WIDTH - NAME_COLUMN_WIDTH)
-                .setYAlignOffset(-1f * UiConfig.SHIPLIST_Y_OFFSET_MULTIPLIER);
-            // }
+            // have to do this because if directly added to the refreshing panel then the game crashes when the master panel is closed
+            fenaglePanele.parent.addComponent(shipListPanel).rightOfTop(fenaglePanele.panel, 10f)
+            // .setXAlignOffset(-PANEL_WIDTH - NAME_COLUMN_WIDTH)
+            .setYAlignOffset(-1f * UiConfig.SHIPLIST_Y_OFFSET_MULTIPLIER);
         }
 
         @Override
