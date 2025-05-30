@@ -7,7 +7,7 @@ import com.fs.starfarer.api.util.Pair;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.MethodHandle;
-
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Type;
 
@@ -337,7 +337,6 @@ public class ReflectionUtilis {
             throw new RuntimeException(e);
         }
     }
-
 
     public static Object getEnumConstantByName(String canonicalName, String constantName) {
         try {
@@ -675,12 +674,11 @@ public class ReflectionUtilis {
     }
 
     public static void logField(String fieldName, Class<?> fieldType, Object field, int i) throws Throwable {
-        // Object genericType = getGenericTypeHandle.invoke(field, fieldName);
         if (List.class.isAssignableFrom(fieldType)) {
-            print((getGenericTypeHandle.invoke(field, fieldName)), i);
+            print(getGenericTypeHandle.invoke(field), fieldName, i);
 
         } else if (Map.class.isAssignableFrom(fieldType)) {
-            print((getGenericTypeHandle.invoke(field)), fieldName, i);
+            print(getGenericTypeHandle.invoke(field), fieldName, i);
 
         } else if (Set.class.isAssignableFrom(fieldType)) {
             print(getGenericTypeHandle.invoke(field), fieldName, i);
@@ -697,6 +695,18 @@ public class ReflectionUtilis {
         if (clazz == null || clazz.getPackage() == null) return false;
         String pkg = clazz.getPackage().getName();
         return "java.lang".equals(pkg) || "java.util".equals(pkg);
+    }
+
+    public static Object getFieldAtIndex(Object instance, int index) {
+        try {
+            Object[] fields = instance.getClass().getDeclaredFields();
+            setFieldAccessibleHandle.invoke(fields[index], true);
+            // return getPrivateVariable((String)getFieldNameHandle.invoke(fields[index]), instance);
+            return getFieldHandle.invoke(fields[index], instance);
+        } catch (Throwable e) {
+            print(e);
+            return null;
+        }
     }
 
     public static void logFields(Object instance) {

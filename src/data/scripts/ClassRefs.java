@@ -72,8 +72,12 @@ public class ClassRefs {
         Global.getSector().addListener(new CampaignEventListener() {
             @Override @SuppressWarnings("unchecked")
             public void reportShownInteractionDialog(InteractionDialogAPI dialog) {
-                if (foundAllClasses) return;
-        
+                if (foundAllClasses) {
+                    Global.getSector().removeListener(this);
+                    dialog.dismiss();
+                    return;
+                }
+
                 Class<?>[] targetConstructorParams = new Class<?>[] {
                     String.class,
                     CampaignFleet.class,
