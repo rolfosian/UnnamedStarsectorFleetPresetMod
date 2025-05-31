@@ -49,7 +49,7 @@ public class DockingListener implements CampaignEventListener {
         mem.unset(PresetUtils.ISPLAYERPAIDFORSTORAGE_KEY);
         PresetUtils.addMessagesToCampaignUI();
 
-        FleetPreset preset = PresetUtils.getPresetOfPlayerFleet();
+        FleetPreset preset = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
         if (preset != null) {
             mem.set(PresetUtils.UNDOCKED_PRESET_KEY, preset);
         } else {

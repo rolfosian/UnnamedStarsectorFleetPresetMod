@@ -1,4 +1,4 @@
-// credit for this goes to the author of the code in the officer extension mod
+// Code taken and modified from Officer Extension mod
 package data.scripts;
 
 import com.fs.starfarer.api.EveryFrameScript;

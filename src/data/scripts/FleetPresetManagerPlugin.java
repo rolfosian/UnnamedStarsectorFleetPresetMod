@@ -1,4 +1,4 @@
-// credit for a lot of this goes to the author of the code in the officer extension mod
+// Code taken and modified from Officer Extension mod
 
 package data.scripts;
 
@@ -9,8 +9,10 @@ import com.fs.starfarer.api.campaign.CampaignEventListener;
 import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 
+import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.PresetUtils.FleetPreset;
+import data.scripts.util.PresetUtils.FleetMemberWrapper;
 import data.scripts.util.UtilReflection;
 import data.scripts.FleetPresetManagerCoreScript;
 import data.scripts.listeners.DockingListener;
@@ -26,7 +28,11 @@ import java.nio.file.Paths;
 import org.apache.log4j.Logger;
 
 public class FleetPresetManagerPlugin extends BaseModPlugin {
-    public static final Logger logger = Logger.getLogger(FleetPresetManagerPlugin.class);
+    public static void print(Object... args) {
+        PresetMiscUtils.print(args);
+    }
+
+    private static final String ver = "0.0.4";
 
     private static final String[] reflectionWhitelist = new String[] {
         "data.scripts.FleetPresetManagerCoreScript",
@@ -51,17 +57,30 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
             throw new RuntimeException("Failed to get URL of this class", e);
         }
 
+        String modVer = (String) Global.getSector().getPersistentData().get("$fleetPresetsManagerVer");
+        if (modVer == null || !modVer.equals(ver)) {
+            Global.getSector().getPersistentData().put(PresetUtils.PRESETS_MEMORY_KEY, new HashMap<String, FleetPreset>());
+            Global.getSector().getPersistentData().put(PresetUtils.PRESET_MEMBERS_KEY, new HashMap<String, List<FleetMemberWrapper>>());
+            Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, false);
+            Global.getSector().getPersistentData().put("$fleetPresetsManagerVer", ver);
+        }
+
         Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.MESSAGEQUEUE_KEY, new ArrayList<>());
 
-        if (Global.getSector().getPersistentData().get(PresetUtils.PRESETS_MEMORY_KEY) == null) {
-            Global.getSector().getPersistentData().put(PresetUtils.PRESETS_MEMORY_KEY, new HashMap<String, PresetUtils.FleetPreset>());
-        }
+        // for (FleetMemberAPI member : Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder()) {
+        //     print(member.getId());
+        // }
+        // print("-----");
+        // Map<String, PresetUtils.FleetPreset> presets = (Map<String, FleetPreset>) Global.getSector().getPersistentData().get(PresetUtils.PRESETS_MEMORY_KEY);
+        // for (String key : presets.keySet()) {
+        //     PresetUtils.FleetPreset preset = presets.get(key);
+        //     for (FleetMemberWrapper wrappedMember : preset.fleetMembers) {
+        //         print(wrappedMember.member.getId());
+        //     }
 
-        if (Global.getSector().getPersistentData().get(PresetUtils.IS_AUTO_UPDATE_KEY) == null) {
-            Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, false);
-        }
+        // }
 
-        FleetPreset activePreset = PresetUtils.getPresetOfPlayerFleet();
+        FleetPreset activePreset = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
         if (activePreset != null &&(boolean)Global.getSector().getPersistentData().get(PresetUtils.IS_AUTO_UPDATE_KEY)) {
             Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, activePreset);
         }
@@ -75,7 +94,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
             Global.getSector().addTransientScript(new FleetMonitor());
             Global.getSector().addListener(new DockingListener());
         } catch (Exception e) {
-            logger.error("Failure to load core script class; exiting", e);
+            print("Failure to load core script class; exiting", e);
             return;
         }
     }
@@ -83,6 +102,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
     @Override
     public void onNewGame() {
         Global.getSector().getPersistentData().put(PresetUtils.PRESETS_MEMORY_KEY, new HashMap<String, PresetUtils.FleetPreset>());
+        Global.getSector().getPersistentData().put(PresetUtils.PRESET_MEMBERS_KEY, new HashMap<String, List<FleetMemberWrapper>>());
         Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, false);
     }
 

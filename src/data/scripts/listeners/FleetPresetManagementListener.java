@@ -1,4 +1,3 @@
-// THIS UI CODE IS A RAGING DUMPSTER FIRE SPAGHETTI ABOMINATION READ AT YOUR OWN RISK
 package data.scripts.listeners;
 
 import com.fs.starfarer.api.Global;
@@ -14,7 +13,6 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipLocation;
 import com.fs.starfarer.api.ui.Alignment;
-import com.fs.starfarer.api.ui.BaseTooltipCreator;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 import com.fs.starfarer.api.ui.UIComponentAPI;
@@ -44,6 +42,8 @@ import data.scripts.ui.UiConfig;
 import data.scripts.util.ReflectionUtilis;
 import data.scripts.util.UtilReflection;
 import data.scripts.util.PresetUtils;
+import data.scripts.util.PresetUtils.FleetMemberWrapper;
+import data.scripts.util.PresetUtils.FleetPreset;
 import data.scripts.util.PresetMiscUtils;
 
 import java.awt.Color;
@@ -148,6 +148,9 @@ public class FleetPresetManagementListener extends ActionListener {
         this.tableUp = true;
         this.tableRight = false;
         this.tablePresetNamesColumnHeader = "Presets <Ascending>";
+
+        if (this.mangledFleet != null) this.mangledFleet.despawn();
+        this.mangledFleet = null;
         // this.tableShipsColumnHeader = "Ships <Descending>";
     }
 
@@ -180,6 +183,8 @@ public class FleetPresetManagementListener extends ActionListener {
     private boolean tableUp = true;
     private boolean tableRight = false;
     private String tablePresetNamesColumnHeader = "Presets <Ascending>";
+
+    private CampaignFleetAPI mangledFleet = null;
     // private String tableShipsColumnHeader = "Ships <Descending>";
 
     public FleetPresetManagementListener() {
@@ -324,7 +329,7 @@ public class FleetPresetManagementListener extends ActionListener {
             public void processInput(List<InputEventAPI> events) {
                 for (InputEventAPI event : events) {
                     if (event.isKeyDownEvent() && (Keyboard.isKeyDown(Keyboard.KEY_RETURN) || Keyboard.isKeyDown(Keyboard.KEY_NUMPADENTER))) {
-                        PresetMiscUtils.pressKey(Keyboard.KEY_RETURN); // THIS DOESNT EVEN WORK - THE TEXTFIELD CONSUMES THE EVENT BEFORE IT GETS HERE...
+                        // PresetMiscUtils.pressKey(Keyboard.KEY_RETURN); // THIS DOESNT EVEN WORK - THE TEXTFIELD CONSUMES THE EVENT BEFORE IT GETS HERE...
                     }
                 }
             }
@@ -409,8 +414,16 @@ public class FleetPresetManagementListener extends ActionListener {
                 case AUTO_UPDATE_BUTTON_ID:
                     if (theButtons.get(AUTO_UPDATE_BUTTON_ID).isChecked()) {
                         Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, true);
+                        if (DockingListener.getPlayerCurrentMarket() == null) {
+                            FleetPreset preset = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
+
+                            if (preset != null) {
+                                Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, preset);
+                            }
+                        }
                     } else {
                         Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, false);
+                        Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
                     }
                     return;
 
@@ -633,13 +646,20 @@ public class FleetPresetManagementListener extends ActionListener {
             panel.addUIElement(tableTipMaker);
 
             if (selectedPresetName != EMPTY_STRING) {
+                // in case there is a matching member in storage with the same variant but not the exact same member the preset was saved with
+                Map<FleetMemberWrapper, FleetMemberAPI> neededMembers = PresetUtils.getIdAgnosticRequiredMembers(DockingListener.getPlayerCurrentMarket(), selectedPresetName);
+
                 if (PresetUtils.isPresetAvailableAtCurrentMarket(DockingListener.getPlayerCurrentMarket(), selectedPresetName, 
                     Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder())) {
 
                     isSelectedPresetAvailablePara.setText(String.format(isSelectedPresetAvailableParaFormat, "available"));
                     isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
 
-                    if (PresetUtils.isPresetPlayerFleet(selectedPresetName)) theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
+                    if (PresetUtils.isPresetPlayerFleet(selectedPresetName)) {
+                        theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
+                        isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet"));
+                        isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
+                    }
 
                 } else {
                     // theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
@@ -652,10 +672,15 @@ public class FleetPresetManagementListener extends ActionListener {
                         isSelectedPresetAvailablePara.setColor(Misc.getNegativeHighlightColor());
                     }
                 }
-
                 // selectedPresetNamePara.setText(String.format(selectedPresetNameParaFormat, selectedPresetName));
                 // addShipList(currentTableMap.get(selectedPresetName).fleetMembers);
-                addShipList(currentTableMap.get(selectedPresetName).campaignFleet);
+                if (neededMembers != null) {
+                    mangledFleet = PresetUtils.mangleFleet(neededMembers, currentTableMap.get(selectedPresetName).campaignFleet);
+                    addShipList(mangledFleet);
+                } else {
+                    addShipList(currentTableMap.get(selectedPresetName).campaignFleet);
+                    // Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.EXTRANEOUS_MEMBERS_KEY);
+                }
 
             } else {
                 // selectedPresetNamePara.setText(EMPTY_STRING);
@@ -884,11 +909,15 @@ public class FleetPresetManagementListener extends ActionListener {
                         Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, PresetUtils.getFleetPresets().get(selectedPresetName));
                     }
                 } else {
+                    // FleetPreset possibleDuplicate = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
                     String text = saveNameField.getText();
                     if (!isEmptyOrWhitespace(text)) {
                         if (currentTableMap.containsKey(text)) {
                             selectPreset(text, getTableMapIndex(text));
                             openOverwriteDialog(false);
+                        
+                        // } else if (possibleDuplicate != null) { // someone can implement this if they want to i cant be bothered refactoring rn
+                        //     openOverwriteDialo
 
                         } else {
                             PresetUtils.saveFleetPreset(text);
