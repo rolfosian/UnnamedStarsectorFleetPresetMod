@@ -1,3 +1,4 @@
+// Code taken and modified from Officer Extension mod
 package data.scripts;
 
 import com.fs.starfarer.api.Global;
@@ -132,7 +133,7 @@ public class ClassRefs {
             public void optionMousedOver(String arg0, Object arg1) { return; }
             public void optionSelected(String arg0, Object arg1) { return; }
         }, null, new CampaignUIAPI.DismissDialogDelegate() {
-            public void dialogDismissed() {} 
+            public void dialogDismissed() {}
         });
     }
 

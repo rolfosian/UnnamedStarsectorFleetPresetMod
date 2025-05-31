@@ -1,4 +1,4 @@
-// credit for most of this goes to the author of the code in the officer extension mod
+// Code taken and modified from Officer Extension mod
 
 package data.scripts;
 
@@ -97,14 +97,18 @@ public class FleetPresetsFleetPanelInjector {
             presetFleetsButton = null;
             pullAllShipsButton = null;
             storeFleetButton = null;
+            Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.FLEETINFOPANEL_KEY);
             return;
         }
 
+        List<FleetMemberAPI> playerFleetMembers = Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder();
         MarketAPI market = (MarketAPI) Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY);
+        List<FleetMemberAPI> mothballedShips = PresetUtils.getMothBalledShips(market);
+
         if (injected) {
             if (market != null) {
                 if (PresetUtils.isPlayerPaidForStorage(market.getSubmarket(Submarkets.SUBMARKET_STORAGE).getPlugin())) {
-                    if (PresetUtils.getMothBalledShips(market) != null && PresetUtils.getMothBalledShips(market).size() > 0) {
+                    if (mothballedShips != null && mothballedShips.size() > 0) {
                         pullAllShipsButton.setEnabled(true);
                     } else {
                         pullAllShipsButton.setEnabled(false);
@@ -112,7 +116,7 @@ public class FleetPresetsFleetPanelInjector {
                     storeFleetButton.setEnabled(true);
                 }
             }
-            if (Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder().size() == 1 && storeFleetButton != null) {
+            if (playerFleetMembers.size() == 1 && storeFleetButton != null) {
                 storeFleetButton.setEnabled(false);
             }
         }
@@ -120,7 +124,6 @@ public class FleetPresetsFleetPanelInjector {
         if (!injected) {
             injected = true;
             Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.FLEETINFOPANEL_KEY, fleetInfoPanel);
-            PresetUtils.checkFleetAgainstPreset();
 
             autoAssignButton = new Button(getAutoAssignButton(fleetInfoPanel), null, null);
             PositionAPI officerAutoAssignButtonPosition = autoAssignButton.getPosition();
@@ -194,9 +197,9 @@ public class FleetPresetsFleetPanelInjector {
                     pos.getInstance().setSize(storageButtonPosition.getWidth(), officerAutoAssignButtonPosition.getHeight()+2f);
                     pos.getInstance().setYAlignOffset(-7f).setXAlignOffset(-storageButtonPosition.getWidth()-10f);
 
-                    if (Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder().size() == 1) {
+                    if (playerFleetMembers.size() == 1) {
                         storeFleetButton.setEnabled(false);
-                    } else if (PresetUtils.getMothBalledShips(market) != null && PresetUtils.getMothBalledShips(market).size() == 0) {
+                    } else if (mothballedShips != null && mothballedShips.size() == 0) {
                         pullAllShipsButton.setEnabled(false);
                     }
 

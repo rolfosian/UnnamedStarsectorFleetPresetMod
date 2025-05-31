@@ -13,6 +13,7 @@ import data.scripts.ui.Position;
 import java.lang.reflect.Method;
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class UIPanel extends UIComponent implements Renderable {
 
     private static Method addMethod;

@@ -10,8 +10,6 @@ import java.util.*;
 import org.apache.log4j.Logger;
 
 public class CargoPresetUtils {
-    private static Logger logger = Logger.getLogger(CargoPresetUtils.class);
-
     public static void print(Object... args) {
         PresetMiscUtils.print(args);
     }

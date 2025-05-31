@@ -10,14 +10,6 @@ public class FleetMonitor implements EveryFrameScript {
     public void advance(float arg0) {
         PresetUtils.checkFleetAgainstPreset();
     }
-
-    @Override
-    public boolean isDone() {
-        return false;
-    }
-
-    @Override
-    public boolean runWhilePaused() {
-        return false;
-    }
+    @Override public boolean isDone() {return false;}
+    @Override public boolean runWhilePaused() {return true;}
 }

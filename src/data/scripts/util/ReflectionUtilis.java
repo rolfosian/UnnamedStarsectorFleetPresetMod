@@ -1,5 +1,3 @@
-// credit for this goes to the author of the code in the Ashes of the Domain mod
-
 package data.scripts.util;
 
 import com.fs.starfarer.api.util.Pair;
@@ -27,7 +25,7 @@ public class ReflectionUtilis {
         logger.info(sb.toString());
     }
 
-    // Code taken and modified from Grand Colonies
+    // Code taken and modified from Grand Colonies and Ashes of the Domain
     private static final MethodHandles.Lookup lookup = MethodHandles.lookup();
 
     private static final Class<?> fieldClass;
