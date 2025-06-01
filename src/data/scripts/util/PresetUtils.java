@@ -229,6 +229,14 @@ public class PresetUtils {
             }
         }
 
+        public void reorderCampaignFleet() {
+            List<FleetMemberAPI> order = new ArrayList<>();
+            for (FleetMemberWrapper member : this.fleetMembers) {
+                order.add(member.member);
+            }
+            this.campaignFleet.getFleetData().sortToMatchOrder(order);
+        }
+
         public void updateWrappedMember(int index, FleetMemberAPI newMember) {
             FleetMemberWrapper oldWrappedMember = this.fleetMembers.get(index);
             Map<String, List<FleetMemberWrapper>> presetsMembersMap = getFleetPresetsMembers();
@@ -242,12 +250,10 @@ public class PresetUtils {
             this.campaignFleet.getFleetData().removeFleetMember(this.fleetMembers.get(index).member);
             this.fleetMembers.set(index, newWrappedMember);
             this.campaignFleet.getFleetData().addFleetMember(this.fleetMembers.get(index).member);
-            
+
             presetsMembersMap.get(newMember.getId()).add(newWrappedMember);
 
-            this.campaignFleet.getFleetData().sortToMatchOrder(this.fleetMembers.stream()
-            .map(wrappedMember -> wrappedMember.member)
-            .collect(Collectors.toList()));
+            reorderCampaignFleet();
         }
 
         public void updateVariant(int index, ShipVariantAPI variant) {
