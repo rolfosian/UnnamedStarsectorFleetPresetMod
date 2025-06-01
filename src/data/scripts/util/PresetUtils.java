@@ -350,6 +350,7 @@ public class PresetUtils {
 
             if (playerFleetMembers.size() != preset.fleetMembers.size()) {
                 for (FleetMemberWrapper wrappedMember : preset.fleetMembers) {
+                    preset.campaignFleet.getFleetData().removeFleetMember(wrappedMember.member);
                     getFleetPresetsMembers().get(wrappedMember.id).remove(wrappedMember);
                 }
                 preset.fleetMembers.clear();
@@ -365,6 +366,7 @@ public class PresetUtils {
                     String hullId = member.getHullId();
                     
                     FleetMemberWrapper wrappedMember = new FleetMemberWrapper(preset, member, member.getCaptain(), i);
+                    preset.campaignFleet.getFleetData().addFleetMember(wrappedMember.member);
 
                     List<FleetMemberWrapper> presetMembers = getFleetPresetsMembers().get(member.getId());
                     if (presetMembers != null) {
@@ -387,10 +389,14 @@ public class PresetUtils {
                     preset.shipIds.add(hullId);
                     preset.variantsMap.put(i, member.getVariant());
                     
-                    if (!member.getCaptain().getName().getFullName().equals("")) {
+                    if (!isOfficerNought(member.getCaptain())) {
                         preset.officersMap.put(i, new OfficerVariantPair(member.getCaptain(), member.getVariant(), i));
+                        if (Global.getSector().getPlayerPerson().getId().equals(member.getCaptain().getId())) {
+                            preset.campaignFleet.setCommander(wrappedMember.captain);
+                            preset.campaignFleet.getFleetData().setFlagship(wrappedMember.member);
+                        }
                     }
-                }                
+                }
                 Global.getSector().getCampaignUI().addMessage("The fleet composition has changed and the " + preset.name + " fleet preset has been updated.", Misc.getBasePlayerColor());
 
             } else {
