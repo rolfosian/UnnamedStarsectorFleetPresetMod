@@ -9,7 +9,6 @@ import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.combat.EngagementResultAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
-import com.fs.starfarer.api.ui.UIPanelAPI;
 
 import data.scripts.ClassRefs;
 import data.scripts.util.PresetUtils;
@@ -56,7 +55,6 @@ public class DockingListener implements CampaignEventListener {
             mem.unset(PresetUtils.UNDOCKED_PRESET_KEY);
         }
     }
-
     public void reportShownInteractionDialog(InteractionDialogAPI dialog) {}
     public void reportBattleFinished(CampaignFleetAPI primaryWinner, BattleAPI battle) {}
     public void reportBattleOccurred(CampaignFleetAPI primaryWinner, BattleAPI battle) {}

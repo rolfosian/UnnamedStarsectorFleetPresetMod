@@ -30,6 +30,9 @@ import org.apache.log4j.Logger;
 
 public class UtilReflection {
     public static final Logger logger = Logger.getLogger(UtilReflection.class);
+    public static final void print(Object... args) {
+        PresetMiscUtils.print(args);
+    }
 
     public static Button makeButton(String text, ActionListener handler, Color base, Color bg, float width, float height, Object shortcutKey) {
         return makeButton(text, handler, base, bg, Alignment.MID, CutStyle.ALL, width, height, shortcutKey);
@@ -205,23 +208,7 @@ public class UtilReflection {
         fleet,
         null,
         null,
-        new FleetEncounterContextPlugin () {
-            @Override public boolean adjustPlayerReputation(InteractionDialogAPI arg0, String arg1) { return false; }
-            @Override public float computePlayerContribFraction() { return 0.0f; }
-            @Override public BattleAPI getBattle() { return null; }
-            @Override public DataForEncounterSide getDataFor(CampaignFleetAPI arg0) { return null; }
-            @Override public DisengageHarryAvailability getDisengageHarryAvailability(CampaignFleetAPI arg0, CampaignFleetAPI arg1) { return DisengageHarryAvailability.NO_READY_SHIPS; }
-            @Override public EngagementOutcome getLastEngagementOutcome() { return EngagementOutcome.BATTLE_PLAYER_WIN; }
-            @Override public CampaignFleetAPI getLoser() { return null; }
-            @Override public DataForEncounterSide getLoserData() { return null; }
-            @Override public PursueAvailability getPursuitAvailability(CampaignFleetAPI arg0, CampaignFleetAPI arg1) { return PursueAvailability.NO_READY_SHIPS; }
-            @Override public CampaignFleetAPI getWinner() { return null; }
-            @Override public DataForEncounterSide getWinnerData() { return null; }
-            @Override public boolean isEngagedInHostilities() { return false; }
-            @Override public boolean isOtherFleetHarriedPlayer() { return false; }
-            @Override public float performPostVictoryRecovery(EngagementResultAPI arg0) { return 0.0f; }
-            @Override public void setOtherFleetHarriedPlayer(boolean arg0) { }
-        },
+        null,
         true
         );
     }

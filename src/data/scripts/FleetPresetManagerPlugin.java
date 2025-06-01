@@ -61,24 +61,10 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         if (modVer == null || !modVer.equals(ver)) {
             Global.getSector().getPersistentData().put(PresetUtils.PRESETS_MEMORY_KEY, new HashMap<String, FleetPreset>());
             Global.getSector().getPersistentData().put(PresetUtils.PRESET_MEMBERS_KEY, new HashMap<String, List<FleetMemberWrapper>>());
-            Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, false);
+            Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, true);
             Global.getSector().getPersistentData().put("$fleetPresetsManagerVer", ver);
         }
-
         Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.MESSAGEQUEUE_KEY, new ArrayList<>());
-
-        // for (FleetMemberAPI member : Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder()) {
-        //     print(member.getId());
-        // }
-        // print("-----");
-        // Map<String, PresetUtils.FleetPreset> presets = (Map<String, FleetPreset>) Global.getSector().getPersistentData().get(PresetUtils.PRESETS_MEMORY_KEY);
-        // for (String key : presets.keySet()) {
-        //     PresetUtils.FleetPreset preset = presets.get(key);
-        //     for (FleetMemberWrapper wrappedMember : preset.fleetMembers) {
-        //         print(wrappedMember.member.getId());
-        //     }
-
-        // }
 
         FleetPreset activePreset = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
         if (activePreset != null &&(boolean)Global.getSector().getPersistentData().get(PresetUtils.IS_AUTO_UPDATE_KEY)) {
@@ -103,19 +89,18 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
     public void onNewGame() {
         Global.getSector().getPersistentData().put(PresetUtils.PRESETS_MEMORY_KEY, new HashMap<String, PresetUtils.FleetPreset>());
         Global.getSector().getPersistentData().put(PresetUtils.PRESET_MEMBERS_KEY, new HashMap<String, List<FleetMemberWrapper>>());
-        Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, false);
+        Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, true);
     }
 
     @Override
     public void beforeGameSave() {
         MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
-        // required or else game catches exception about reflection during load and kicks this stuff from the save
+        // required or else game catches exception about reflection during load and kicks this stuff from memory
         // its just smoother this way (its not actually a big deal i just dont like the look of the double loading info) 
         mem.unset(PresetUtils.FLEETINFOPANEL_KEY);
         mem.unset(PresetUtils.COREUI_KEY);
     }
 
-    // credit for this goes to the author of the code in the officer extension mod
     public static class ReflectionEnabledClassLoader extends URLClassLoader {
 
         public ReflectionEnabledClassLoader(URL url, ClassLoader parent) {

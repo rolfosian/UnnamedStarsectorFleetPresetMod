@@ -209,6 +209,7 @@ public class FleetPresetManagementListener extends ActionListener {
         if (master == null) {
             return;
         }
+        PresetUtils.updateFleetPresetStats(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
 
         ButtonAPI confirmButton = master.confirmButton.getInstance();
         PositionAPI confirmButtonPosition = confirmButton.getPosition();
@@ -666,6 +667,9 @@ public class FleetPresetManagementListener extends ActionListener {
 
                     if (PresetUtils.isPresetPlayerFleet(selectedPresetName)) {
                         isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet"));
+                        isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
+                    } else if (PresetUtils.isPresetPlayerFleetOfficerAgnostic(selectedPresetName)) {
+                        isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet but the officer assignments are different."));
                         isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
                     } else {
                         isSelectedPresetAvailablePara.setText(String.format(isSelectedPresetAvailableParaFormat, "only partially available, or unavailable"));

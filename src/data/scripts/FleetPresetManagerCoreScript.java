@@ -14,6 +14,7 @@ import com.fs.starfarer.api.campaign.econ.SubmarketAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.util.IntervalUtil;
 import com.fs.starfarer.api.ui.ButtonAPI;
 
 import data.scripts.ui.*;
@@ -28,6 +29,7 @@ public class FleetPresetManagerCoreScript implements EveryFrameScript {
     private static void print(Object... args) {
         PresetMiscUtils.print(args);
     }
+    IntervalUtil statsUpdateinterval = new IntervalUtil(0.7f, 0.8f);
     private static PresetUtils.FleetPreset currentFleetPreset;
 
     private boolean isFirstFrame = true;
@@ -53,6 +55,7 @@ public class FleetPresetManagerCoreScript implements EveryFrameScript {
 
     @Override
     public void advance(float amount) {
+        statsUpdateinterval.advance(amount);
         if (isFirstFrame) {
             try {
                 CampaignUIAPI campaignUI = Global.getSector().getCampaignUI();
@@ -78,5 +81,8 @@ public class FleetPresetManagerCoreScript implements EveryFrameScript {
         }
 
         fleetPanelInjector.advance();
+        if (statsUpdateinterval.intervalElapsed()) {
+            PresetUtils.updateFleetPresetStats(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
+        }
     }
 }
