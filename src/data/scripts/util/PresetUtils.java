@@ -229,7 +229,6 @@ public class PresetUtils {
             }
         }
 
-        // make sure to call updateCampaignFleet after calling this
         public void updateWrappedMember(int index, FleetMemberAPI newMember) {
             FleetMemberWrapper oldWrappedMember = this.fleetMembers.get(index);
             Map<String, List<FleetMemberWrapper>> presetsMembersMap = getFleetPresetsMembers();
@@ -240,9 +239,15 @@ public class PresetUtils {
             }
 
             FleetMemberWrapper newWrappedMember = new FleetMemberWrapper(this, newMember, newMember.getCaptain(), index);
+            this.campaignFleet.getFleetData().removeFleetMember(this.fleetMembers.get(index).member);
             this.fleetMembers.set(index, newWrappedMember);
+            this.campaignFleet.getFleetData().addFleetMember(this.fleetMembers.get(index).member);
             
             presetsMembersMap.get(newMember.getId()).add(newWrappedMember);
+
+            this.campaignFleet.getFleetData().sortToMatchOrder(this.fleetMembers.stream()
+            .map(wrappedMember -> wrappedMember.member)
+            .collect(Collectors.toList()));
         }
 
         public void updateVariant(int index, ShipVariantAPI variant) {
@@ -573,7 +578,6 @@ public class PresetUtils {
             FleetMemberAPI member = playerFleetMembers.get(i);
             String hullId = member.getHullId();
             ShipVariantAPI variant = member.getVariant();
-            PersonAPI captain = member.getCaptain();
 
             if (!preset.shipIds.contains(hullId)) {
                 allShipsMatched = false;
@@ -770,6 +774,11 @@ public class PresetUtils {
 
     public static CampaignFleetAPI mangleFleet(Map<FleetMemberWrapper, FleetMemberAPI> neededMembers, CampaignFleetAPI fleetToBeMangled) {
         CampaignFleetAPI mangledFleet = Global.getFactory().createEmptyFleet(Global.getSector().getPlayerFaction(), true);
+        mangledFleet.setHidden(true);
+        mangledFleet.setNoAutoDespawn(true);
+        mangledFleet.setDoNotAdvanceAI(true);
+        mangledFleet.setInflated(true);
+        mangledFleet.setNoFactionInName(true);
         
         List<FleetMemberAPI> members = fleetToBeMangled.getFleetData().getMembersInPriorityOrder();
         Map<Integer, FleetMemberAPI> indexedMembers = new HashMap<>();
@@ -788,6 +797,7 @@ public class PresetUtils {
                 mangledFleet.getFleetData().addFleetMember(indexedMembers.get(i));
 
                 if (indexedMembers.get(i).getCaptain().getId().equals(Global.getSector().getPlayerPerson().getId())) {
+                    mangledFleet.setCommander(indexedMembers.get(i).getCaptain());
                     mangledFleet.getFleetData().setFlagship(indexedMembers.get(i));
                 }
 
@@ -795,6 +805,7 @@ public class PresetUtils {
                 mangledFleet.getFleetData().addFleetMember(members.get(i));
 
                 if (members.get(i).getCaptain().getId().equals(Global.getSector().getPlayerPerson().getId())) {
+                    mangledFleet.setCommander(indexedMembers.get(i).getCaptain());
                     mangledFleet.getFleetData().setFlagship(members.get(i));
                 }
             }
