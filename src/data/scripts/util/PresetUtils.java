@@ -424,7 +424,7 @@ public class PresetUtils {
                         updated = true; 
                     }
 
-                    if (!playerFleetMember.getId().equals(member.id) && !getFleetPresetsMembers().containsKey(member.id)) {
+                    if (!playerFleetMember.getId().equals(member.id) || !getFleetPresetsMembers().containsKey(member.id)) {
                         preset.updateWrappedMember(member.index, playerFleetMember);
                         updated = true;
                     }

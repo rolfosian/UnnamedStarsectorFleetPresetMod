@@ -679,6 +679,10 @@ public class FleetPresetManagementListener extends ActionListener {
                 // selectedPresetNamePara.setText(String.format(selectedPresetNameParaFormat, selectedPresetName));
                 // addShipList(currentTableMap.get(selectedPresetName).fleetMembers);
                 if (neededMembers != null) {
+                    if (mangledFleet != null) {
+                        mangledFleet.despawn();
+                        mangledFleet = null;
+                    }
                     mangledFleet = PresetUtils.mangleFleet(neededMembers, currentTableMap.get(selectedPresetName).campaignFleet);
                     addShipList(mangledFleet);
                 } else {
@@ -925,13 +929,12 @@ public class FleetPresetManagementListener extends ActionListener {
 
                         } else {
                             PresetUtils.saveFleetPreset(text);
+                            refreshTableMap();
+                            selectPreset(text, getTableMapIndex(text));
 
                             if (Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY) == null) {
                                 Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, PresetUtils.getFleetPresets().get(selectedPresetName));
                             }
-
-                            refreshTableMap();
-                            selectPreset(text, getTableMapIndex(text));
                             enableButtonsRequiringSelection();
                         }
                     }
