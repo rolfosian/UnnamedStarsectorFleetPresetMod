@@ -332,15 +332,20 @@ public class PresetUtils {
                 float presetHullFraction = memberToUpdate.member.getStatus().getHullFraction();
                 
                 if (playerMemberCR != presetCR) {
+                    memberToUpdate.member.getRepairTracker().setCR(playerMemberCR);
                     memberToUpdate.preset.campaignFleet.getFleetData().getMembersInPriorityOrder().get(memberToUpdate.index).getRepairTracker().setCR(playerMemberCR);
                 }
                 if (playerMemberHullFraction != presetHullFraction) {
+                    memberToUpdate.member.getStatus().setHullFraction(playerMemberHullFraction);
                     memberToUpdate.preset.campaignFleet.getFleetData().getMembersInPriorityOrder().get(memberToUpdate.index).getStatus().setHullFraction(playerMemberHullFraction);
                 }
 
                 if (!isOfficerNought(memberToUpdate.captain)) {
                     PersonAPI fleetMemberCaptain = memberToUpdate.preset.campaignFleet.getFleetData().getMembersInPriorityOrder().get(memberToUpdate.index).getCaptain();
-                    if (fleetMemberCaptain.getStats().getLevel() != playerMember.getCaptain().getStats().getLevel()) fleetMemberCaptain.setStats(playerMember.getCaptain().getStats());
+                    if (fleetMemberCaptain.getStats().getLevel() != playerMember.getCaptain().getStats().getLevel()) {
+                        memberToUpdate.captain.setStats(playerMember.getCaptain().getStats());
+                        fleetMemberCaptain.setStats(playerMember.getCaptain().getStats());
+                    }
                 }
             }
         }
