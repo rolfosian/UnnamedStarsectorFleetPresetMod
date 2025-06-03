@@ -6,8 +6,13 @@ import com.fs.starfarer.api.BaseModPlugin;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.campaign.CampaignEventListener;
+import com.fs.starfarer.api.campaign.CargoAPI;
+import com.fs.starfarer.api.campaign.econ.MarketAPI;
+import com.fs.starfarer.api.campaign.econ.SubmarketAPI;
+import com.fs.starfarer.api.campaign.listeners.ColonyDecivListener;
 import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
+import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
@@ -32,7 +37,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         PresetMiscUtils.print(args);
     }
 
-    private static final String ver = "0.0.4";
+    private static final String ver = "0.0.5";
 
     private static final String[] reflectionWhitelist = new String[] {
         "data.scripts.FleetPresetManagerCoreScript",
@@ -62,6 +67,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
             Global.getSector().getPersistentData().put(PresetUtils.PRESETS_MEMORY_KEY, new HashMap<String, FleetPreset>());
             Global.getSector().getPersistentData().put(PresetUtils.PRESET_MEMBERS_KEY, new HashMap<String, List<FleetMemberWrapper>>());
             Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, true);
+            Global.getSector().getPersistentData().put(PresetUtils.STORED_PRESET_MEMBERIDS_KEY, new ArrayList<>());
             Global.getSector().getPersistentData().put("$fleetPresetsManagerVer", ver);
         }
         Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.MESSAGEQUEUE_KEY, new ArrayList<>());
@@ -75,10 +81,37 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         ClassLoader cl = new ReflectionEnabledClassLoader(url, getClass().getClassLoader());
         try {
             Global.getSector().addTransientScript((EveryFrameScript) UtilReflection.instantiateClassNoParams(cl.loadClass("data.scripts.FleetPresetManagerCoreScript")));
-
             Global.getSector().addTransientScript(new OfficerTracker());
             Global.getSector().addTransientScript(new FleetMonitor());
+
             Global.getSector().addListener(new DockingListener());
+            Global.getSector().getListenerManager().addListener(new ColonyDecivListener() {
+                @Override
+                public void reportColonyDecivilized(MarketAPI market, boolean fullyDestroyed) {
+                    if (fullyDestroyed) {
+                        SubmarketAPI storageSubmarket = market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
+
+                        if (storageSubmarket != null) {
+                            CargoAPI storageCargo = storageSubmarket.getCargo();
+                            PresetUtils.initMothballedShips(storageCargo);
+                            List<FleetMemberAPI> mothballedShips = storageCargo.getMothballedShips().getMembersInPriorityOrder();
+
+                            if (mothballedShips != null && !mothballedShips.isEmpty()) {
+                                boolean isRemoved = false;
+                                for (FleetMemberAPI member : storageCargo.getMothballedShips().getMembersInPriorityOrder()) {
+                                    if (PresetUtils.getStoredFleetPresetsMemberIds().remove(member.getId()) && !isRemoved) {
+                                        isRemoved = true;
+                                    }
+                                }
+                                if (isRemoved) PresetUtils.handlePerishedPresetMembers();
+                                
+                            }
+                        }
+                    }
+                }
+                @Override public void reportColonyAboutToBeDecivilized(MarketAPI arg0, boolean arg1) {}
+                
+            });
         } catch (Exception e) {
             print("Failure to load core script class; exiting", e);
             return;
@@ -87,8 +120,10 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
 
     @Override
     public void onNewGame() {
+        Global.getSector().getPersistentData().put("$fleetPresetsManagerVer", ver);
         Global.getSector().getPersistentData().put(PresetUtils.PRESETS_MEMORY_KEY, new HashMap<String, PresetUtils.FleetPreset>());
         Global.getSector().getPersistentData().put(PresetUtils.PRESET_MEMBERS_KEY, new HashMap<String, List<FleetMemberWrapper>>());
+        Global.getSector().getPersistentData().put(PresetUtils.STORED_PRESET_MEMBERIDS_KEY, new ArrayList<>());
         Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, true);
     }
 

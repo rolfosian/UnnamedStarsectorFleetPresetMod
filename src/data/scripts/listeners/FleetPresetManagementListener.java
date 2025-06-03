@@ -3,9 +3,11 @@ package data.scripts.listeners;
 import com.fs.starfarer.api.Global;
 
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
+import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
+import com.fs.starfarer.api.campaign.CargoAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 
@@ -660,6 +662,9 @@ public class FleetPresetManagementListener extends ActionListener {
                         theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
                         isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet"));
                         isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
+                        Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, PresetUtils.getFleetPresets().get(selectedPresetName));
+                    } else {
+                        Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
                     }
 
                 } else {

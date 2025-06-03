@@ -16,6 +16,7 @@ import com.fs.starfarer.api.input.InputEventClass;
 import com.fs.starfarer.api.input.InputEventMouseButton;
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.util.Misc;
+import com.fs.starfarer.campaign.fleet.FleetMember;
 import com.fs.starfarer.campaign.ui.marketinfo.f;
 
 import data.scripts.listeners.ActionListener;
@@ -26,6 +27,8 @@ import data.scripts.ui.Label;
 import data.scripts.ui.UIPanel;
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
+import data.scripts.util.PresetUtils.FleetMemberWrapper;
+import data.scripts.util.PresetUtils.RunningMembers;
 import data.scripts.util.ReflectionUtilis;
 import data.scripts.util.UtilReflection;
 import data.scripts.util.PresetUtils;
@@ -39,6 +42,7 @@ import java.lang.reflect.Constructor;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
+@SuppressWarnings("unchecked")
 public class FleetPresetsFleetPanelInjector {
     public static void print(Object... args) {
         PresetMiscUtils.print(args);
@@ -56,8 +60,17 @@ public class FleetPresetsFleetPanelInjector {
     private Button storeFleetButton;
     private Button pullAllShipsButton;
 
-    private Object getButtonInputEventInstance(ButtonAPI button) {
-        PositionAPI ButtonPosition = button.getPosition();
+    private RunningMembers runningMembers;
+    List<String> storedMemberIds;
+    private Map<String, List<FleetMemberWrapper>> presetMembers;
+
+    public FleetPresetsFleetPanelInjector() {
+        this.runningMembers = new RunningMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
+        this.storedMemberIds = PresetUtils.getStoredFleetPresetsMemberIds();
+        this.presetMembers = (Map<String, List<FleetMemberWrapper>>) Global.getSector().getPersistentData().get(PresetUtils.PRESET_MEMBERS_KEY);
+    }
+
+    private Object getButtonInputEventInstance(PositionAPI buttonPosition) {
             return ReflectionUtilis.getClassInstance(ClassRefs.inputEventClass.getCanonicalName(),
             new Class<?>[] {
                 InputEventClass.class, 
@@ -70,14 +83,13 @@ public class FleetPresetsFleetPanelInjector {
             new Object[] {
                 InputEventClass.MOUSE_EVENT,
                 InputEventType.MOUSE_DOWN,
-                (int)ButtonPosition.getCenterX(),
-                (int)ButtonPosition.getCenterY(),
+                (int)buttonPosition.getCenterX(),
+                (int)buttonPosition.getCenterY(),
                 0, // LMB
                 '\0' // unused?
             }); 
         }
 
-    @SuppressWarnings("unchecked")
     private ButtonAPI getStorageButton(UIPanelAPI core) { // This will probably crash the game if you call it without the player docked at a market
         Object infoPanelParent = ReflectionUtilis.invokeMethod("getParent", fleetInfoPanelRef);
         Object marketPicker = ReflectionUtilis.getMethodAndInvokeDirectly("getMarketPicker", infoPanelParent, 0);
@@ -102,6 +114,7 @@ public class FleetPresetsFleetPanelInjector {
         }
 
         List<FleetMemberAPI> playerFleetMembers = Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder();
+        // RunningMembers runningMembers = new RunningMembers(playerFleetMembers);
         MarketAPI market = (MarketAPI) Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY);
         List<FleetMemberAPI> mothballedShips = PresetUtils.getMothBalledShips(market);
 
@@ -115,11 +128,37 @@ public class FleetPresetsFleetPanelInjector {
                     }
                     storeFleetButton.setEnabled(true);
                 }
+                // checking if members are sold so there's no memory leak for wrappedMembers
+                if (runningMembers.size() > playerFleetMembers.size()) {
+                    if ((boolean)Global.getSector().getPersistentData().get(PresetUtils.IS_AUTO_UPDATE_KEY)) {
+                        for (FleetMemberAPI runningMember : runningMembers.keySet()) {
+                            if (!playerFleetMembers.contains(runningMember)) {
+                                
+                                if (mothballedShips != null && !mothballedShips.contains(runningMember)) {
+                                    // member was sold
+                                    PresetUtils.handlePerishedPresetMembers();
+                                } else if (mothballedShips != null && mothballedShips.contains(runningMember) && PresetUtils.getFleetPresetsMembers().get(runningMember.getId()) != null) {
+                                    // member was stored
+                                    storedMemberIds.add(runningMember.getId());
+                                }
+                            }
+                        }
+                        PresetUtils.checkFleetAgainstPreset(runningMembers);
+                    }
+                } else if (playerFleetMembers.size() > runningMembers.size()) {
+                    for (FleetMemberAPI member : playerFleetMembers) {
+                        if (storedMemberIds.contains(member.getId())) {
+                            // member was taken from storage
+                            storedMemberIds.remove(member.getId());
+                        }
+                    }
+                }
             }
             if (playerFleetMembers.size() == 1 && storeFleetButton != null) {
                 storeFleetButton.setEnabled(false);
             }
         }
+        runningMembers = new RunningMembers(playerFleetMembers);
 
         if (!injected) {
             injected = true;
@@ -147,7 +186,7 @@ public class FleetPresetsFleetPanelInjector {
                                     Object infoPanelParent = ReflectionUtilis.invokeMethod("getParent", fleetInfoPanelRef);
                                     Object marketPicker = ReflectionUtilis.getMethodAndInvokeDirectly("getMarketPicker", infoPanelParent, 0);
 
-                                    ReflectionUtilis.getMethodAndInvokeDirectly("actionPerformed", marketPicker, 2, getButtonInputEventInstance(storageButton), storageButtonObf);
+                                    ReflectionUtilis.getMethodAndInvokeDirectly("actionPerformed", marketPicker, 2, getButtonInputEventInstance(storageButton.getPosition()), storageButtonObf);
                                 } else {
                                     Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
                                     PresetUtils.storeFleetInStorage();
@@ -178,7 +217,7 @@ public class FleetPresetsFleetPanelInjector {
                                     Object infoPanelParent = ReflectionUtilis.invokeMethod("getParent", fleetInfoPanelRef);
                                     Object marketPicker = ReflectionUtilis.getMethodAndInvokeDirectly("getMarketPicker", infoPanelParent, 0);
 
-                                    ReflectionUtilis.getMethodAndInvokeDirectly("actionPerformed", marketPicker, 2, getButtonInputEventInstance(storageButton), storageButtonObf);
+                                    ReflectionUtilis.getMethodAndInvokeDirectly("actionPerformed", marketPicker, 2, getButtonInputEventInstance(storageButton.getPosition()), storageButtonObf);
                                 } else {
                                     Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
                                     PresetUtils.takeAllShipsFromStorage();
