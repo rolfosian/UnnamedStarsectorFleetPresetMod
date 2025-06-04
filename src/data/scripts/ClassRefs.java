@@ -58,42 +58,51 @@ public class ClassRefs {
     public static Class<?> renderableUIElementInterface;
     /** Obfuscated UI panel class */
     public static Class<?> uiPanelClass;
+    
     /** Obfuscated fleet info panel class from the VisualPanelAPI */
-    public static Class<?> visualPanelfleetInfoClass; 
+    public static Class<?> visualPanelFleetInfoClass; 
+    public static Class<?>[] visualPanelFleetInfoClassParams = new Class<?>[] {
+        String.class, // fleet 1 name
+        CampaignFleet.class, // fleet 1
+        String.class, // fleet 2 name
+        CampaignFleet.class, // fleet 2
+        FleetEncounterContextPlugin.class,
+        boolean.class // is before or after engagement? idk
+    };
     /** Obfuscated ButtonAPI class */
     public static Class<?> buttonClass;
+
     /** Obfuscated InputEvent class */
     public static Class<?> inputEventClass;
+    public static Class<?>[] inputEventClassParamTypes = new Class<?>[] {
+        InputEventClass.class, // mouse or keyboard
+        InputEventType.class, // type of input
+        int.class, // x
+        int.class, // y
+        int.class, // key/mouse button
+        char.class // unused for mouse afaik
+    };
 
     private static boolean foundAllClasses = false;
 
     public static void findFleetInfoClass() {
-        if (visualPanelfleetInfoClass != null) return;
+        if (visualPanelFleetInfoClass != null) return;
 
         Global.getSector().addListener(new CampaignEventListener() {
             @Override @SuppressWarnings("unchecked")
             public void reportShownInteractionDialog(InteractionDialogAPI dialog) {
-                if (foundAllClasses) {
+                if (visualPanelFleetInfoClass != null) {
                     Global.getSector().removeListener(this);
                     dialog.dismiss();
                     return;
                 }
 
-                Class<?>[] targetConstructorParams = new Class<?>[] {
-                    String.class,
-                    CampaignFleet.class,
-                    String.class,
-                    CampaignFleet.class,
-                    FleetEncounterContextPlugin.class,
-                    boolean.class
-                };
-        
                 VisualPanelAPI visualPanel = dialog.getVisualPanel();
                 visualPanel.showFleetInfo("", Global.getSector().getPlayerFleet(), null, null);
         
                 for (Object child : (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", visualPanel, 0)) {
-                    if (UIPanelAPI.class.isAssignableFrom(child.getClass()) && ReflectionUtilis.doInstantiationParamsMatch(child.getClass().getCanonicalName(), targetConstructorParams)) {
-                        visualPanelfleetInfoClass = child.getClass(); // found it
+                    if (UIPanelAPI.class.isAssignableFrom(child.getClass()) && ReflectionUtilis.doInstantiationParamsMatch(child.getClass().getCanonicalName(), visualPanelFleetInfoClassParams)) {
+                        visualPanelFleetInfoClass = child.getClass(); // found it
                         dialog.dismiss();
                         Global.getSector().removeListener(this);
                         return;
@@ -142,21 +151,14 @@ public class ClassRefs {
         UIPanelAPI coreUI = UtilReflection.getCoreUI();
         if (coreUI == null) return;
 
-        Class<?>[] targetConstructornParams = new Class<?>[] {
-            InputEventClass.class, 
-            InputEventType.class, 
-            int.class, 
-            int.class, 
-            int.class, 
-            char.class
-        };
+;
         for (Object child : (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", coreUI, 0)) {
             if (ButtonAPI.class.isAssignableFrom(child.getClass()) && !child.getClass().getSimpleName().equals("ButtonAPI")) {
 
                 for (Method method : child.getClass().getDeclaredMethods()) {
                     if (method.getName().equals("buttonPressed")) {
                         for (Class<?> paramType : ReflectionUtilis.getMethodParamTypes(method)) {
-                            if (ReflectionUtilis.doInstantiationParamsMatch(paramType.getCanonicalName(), targetConstructornParams)) {
+                            if (ReflectionUtilis.doInstantiationParamsMatch(paramType.getCanonicalName(), inputEventClassParamTypes)) {
                                 inputEventClass = paramType;
                                 return;
                             }
@@ -258,7 +260,7 @@ public class ClassRefs {
             findRenderableUIElementInterface(UtilReflection.getField(campaignUI, "screenPanel"));
         }
 
-        if (visualPanelfleetInfoClass == null) {
+        if (visualPanelFleetInfoClass == null) {
             findFleetInfoClass();
         }
         if (buttonClass == null) {
@@ -274,7 +276,7 @@ public class ClassRefs {
                 && actionListenerInterface != null
                 && uiPanelClass != null
                 && renderableUIElementInterface != null
-                && visualPanelfleetInfoClass != null
+                && visualPanelFleetInfoClass != null
                 && buttonClass != null
                 && inputEventClass != null) {
             foundAllClasses = true;

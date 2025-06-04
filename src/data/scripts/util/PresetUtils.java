@@ -301,8 +301,8 @@ public class PresetUtils {
             }
 
             presetsMembersMap.get(newMember.getId()).add(newWrappedMember);
-
             reorderCampaignFleet();
+            oldWrappedMember = null;
         }
 
         public void updateIndexesAfterMemberRemoved(int removedIndex) {
@@ -357,8 +357,8 @@ public class PresetUtils {
                 
                 if (!isOfficerNought(member.member.getCaptain())) {
                     this.officersMap.put(i, new OfficerVariantPair(member.member.getCaptain(), member.member.getVariant(), i));
-                    if (Global.getSector().getPlayerPerson().getId().equals(member.member.getCaptain().getId())) {
-                        this.campaignFleet.setCommander(wrappedMember.captainCopy);
+                    if (Global.getSector().getPlayerPerson().getId().equals(member.captainId)) {
+                        this.campaignFleet.setCommander(wrappedMember.member.getCaptain());
                         this.campaignFleet.getFleetData().setFlagship(wrappedMember.member);
                     }
                 }
@@ -398,34 +398,68 @@ public class PresetUtils {
         }
     }
 
-    public static void handlePerishedPresetMembers() {
-        Collection<FleetPreset> presets = getFleetPresets().values();
-        List<String> storedMembers = getStoredFleetPresetsMemberIds();
+    // if preset member perished while preset was not active or auto update was disabled we need to remove it from the cache
+    public static void cleanUpPerishedPresetMembers() {
+        Collection<Set<String>> allStoredMembers = getStoredFleetPresetsMemberIds().values();
         Map<String, List<FleetMemberWrapper>> presetMembers = getFleetPresetsMembers();
-
-        for (FleetPreset preset : presets) {
-            for (FleetMemberWrapper wrappedMember : preset.fleetMembers) {
-                
-                if (isPresetMemberPerished(wrappedMember.parentMember, storedMembers) && getFleetPresetsMembers().get(wrappedMember.member.getId()) != null) {
-                    presetMembers.remove(wrappedMember.member.getId());
+    
+        Set<String> toRemove = new HashSet<>();
+        for (Map.Entry<String, List<FleetMemberWrapper>> entry : presetMembers.entrySet()) {
+            List<FleetMemberWrapper> wrappedMembers = entry.getValue();
+    
+            for (FleetMemberWrapper wrappedMember : wrappedMembers) {
+                boolean isStored = false;
+    
+                for (Set<String> storedMembers : allStoredMembers) {
+                    if (storedMembers.contains(wrappedMember.parentMember.getId())) {
+                        isStored = true;
+                        break;
+                    }
+                }
+                if (isPresetMemberPerished(wrappedMember.parentMember, isStored)) {
+                    toRemove.add(wrappedMember.member.getId());
+                    break;
                 }
             }
         }
+    
+        for (String id : toRemove) {
+            presetMembers.remove(id);
+        }
     }
 
-    public static boolean isPresetMemberPerished(FleetMemberAPI member, List<String> storedMemberIds) {
-        if (storedMemberIds.contains(member.getId()) || isMemberFromAnyPreset(member)) {
+    public static boolean isPresetMemberPerished(FleetMemberAPI member, boolean isStored) {
+        if (isStored) {
             return false;
         } else if (member.getFleetData() == null) {
+            return true;
+        } else if (member.getFleetData().getFleet() == null) {
+            // edge case - initmothballedships was called on this member's  market before it was decivilized and it hasn't been nulled yet
             return true;
         }
         return false;
     }
 
+    public static List<FleetMemberWrapper> getMemberCopiesFromPresets(FleetMemberAPI member) {
+        List<FleetMemberWrapper> list = new ArrayList<>();
+
+        for (FleetPreset preset : getFleetPresets().values()) {
+            for (FleetMemberWrapper wrappedMember : preset.fleetMembers) {
+                if (wrappedMember.id.equals(member.getId())) {
+                    list.add(wrappedMember);
+                }
+            }
+        }
+
+        return !list.isEmpty() ? list : null;
+    }
+
+
+
     public static boolean isMemberFromAnyPreset(FleetMemberAPI member) {
         for (FleetPreset preset : getFleetPresets().values()) {
             for (FleetMemberWrapper wrappedMember : preset.fleetMembers) {
-                if (wrappedMember.member.getId().equals(member.getId())) return true;
+                if (wrappedMember.parentMember.getId().equals(member.getId())) return true;
             }
         }
         return false;
@@ -452,8 +486,8 @@ public class PresetUtils {
         return (Map<String, List<FleetMemberWrapper>>) Global.getSector().getPersistentData().get(PRESET_MEMBERS_KEY);
     }
 
-    public static List<String> getStoredFleetPresetsMemberIds() {
-        return (List<String>) Global.getSector().getPersistentData().get(STORED_PRESET_MEMBERIDS_KEY);
+    public static Map<String, Set<String>> getStoredFleetPresetsMemberIds() {
+        return (Map<String, Set<String>>) Global.getSector().getPersistentData().get(STORED_PRESET_MEMBERIDS_KEY);
     }
 
     public static boolean isMemberinFleet(CampaignFleetAPI targetFleet, FleetMemberAPI fleetMember) {
@@ -880,7 +914,7 @@ public class PresetUtils {
 
     public static boolean isMemberFromPreset(FleetMemberAPI member, FleetPreset preset) {
         for (FleetMemberWrapper wrappedMember : preset.fleetMembers) {
-            if (wrappedMember.id == member.getId()) {
+            if (wrappedMember.id.equals(member.getId())) {
                 return true;
             }
         }
@@ -1042,7 +1076,7 @@ public class PresetUtils {
             OfficerVariantPair pair = preset.officersMap.get(i);
             if (pair != null) {
                 PersonAPI officer = pair.officer;
-                if (officer.getId() == officerId) return true;
+                if (officer.getId().equals(officerId)) return true;
             }
         }
         return false;

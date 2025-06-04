@@ -20,6 +20,7 @@ import data.scripts.util.PresetUtils.FleetPreset;
 import data.scripts.util.PresetUtils.FleetMemberWrapper;
 import data.scripts.util.UtilReflection;
 import data.scripts.FleetPresetManagerCoreScript;
+import data.scripts.listeners.ColonyStorageListener;
 import data.scripts.listeners.DockingListener;
 import data.scripts.listeners.FleetMonitor;
 import data.scripts.listeners.OfficerTracker;
@@ -67,8 +68,9 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
             Global.getSector().getPersistentData().put(PresetUtils.PRESETS_MEMORY_KEY, new HashMap<String, FleetPreset>());
             Global.getSector().getPersistentData().put(PresetUtils.PRESET_MEMBERS_KEY, new HashMap<String, List<FleetMemberWrapper>>());
             Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, true);
-            Global.getSector().getPersistentData().put(PresetUtils.STORED_PRESET_MEMBERIDS_KEY, new ArrayList<>());
+            Global.getSector().getPersistentData().put(PresetUtils.STORED_PRESET_MEMBERIDS_KEY, new HashMap<>());
             Global.getSector().getPersistentData().put("$fleetPresetsManagerVer", ver);
+            Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY); // i was having trouble with this when debugging i dont know why it needed this 
         }
         Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.MESSAGEQUEUE_KEY, new ArrayList<>());
 
@@ -85,33 +87,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
             Global.getSector().addTransientScript(new FleetMonitor());
 
             Global.getSector().addListener(new DockingListener());
-            Global.getSector().getListenerManager().addListener(new ColonyDecivListener() {
-                @Override
-                public void reportColonyDecivilized(MarketAPI market, boolean fullyDestroyed) {
-                    if (fullyDestroyed) {
-                        SubmarketAPI storageSubmarket = market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
-
-                        if (storageSubmarket != null) {
-                            CargoAPI storageCargo = storageSubmarket.getCargo();
-                            PresetUtils.initMothballedShips(storageCargo);
-                            List<FleetMemberAPI> mothballedShips = storageCargo.getMothballedShips().getMembersInPriorityOrder();
-
-                            if (mothballedShips != null && !mothballedShips.isEmpty()) {
-                                boolean isRemoved = false;
-                                for (FleetMemberAPI member : storageCargo.getMothballedShips().getMembersInPriorityOrder()) {
-                                    if (PresetUtils.getStoredFleetPresetsMemberIds().remove(member.getId()) && !isRemoved) {
-                                        isRemoved = true;
-                                    }
-                                }
-                                if (isRemoved) PresetUtils.handlePerishedPresetMembers();
-                                
-                            }
-                        }
-                    }
-                }
-                @Override public void reportColonyAboutToBeDecivilized(MarketAPI arg0, boolean arg1) {}
-                
-            });
+            Global.getSector().getListenerManager().addListener(new ColonyStorageListener());
         } catch (Exception e) {
             print("Failure to load core script class; exiting", e);
             return;

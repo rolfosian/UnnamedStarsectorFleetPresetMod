@@ -29,6 +29,7 @@ import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.PresetUtils.FleetMemberWrapper;
 import data.scripts.util.PresetUtils.RunningMembers;
+import data.scripts.util.UtilReflection.ConfirmDialogData;
 import data.scripts.util.ReflectionUtilis;
 import data.scripts.util.UtilReflection;
 import data.scripts.util.PresetUtils;
@@ -61,7 +62,7 @@ public class FleetPresetsFleetPanelInjector {
     private Button pullAllShipsButton;
 
     private RunningMembers runningMembers;
-    List<String> storedMemberIds;
+    Map<String, Set<String>> storedMemberIds;
     private Map<String, List<FleetMemberWrapper>> presetMembers;
 
     public FleetPresetsFleetPanelInjector() {
@@ -72,14 +73,7 @@ public class FleetPresetsFleetPanelInjector {
 
     private Object getButtonInputEventInstance(PositionAPI buttonPosition) {
             return ReflectionUtilis.getClassInstance(ClassRefs.inputEventClass.getCanonicalName(),
-            new Class<?>[] {
-                InputEventClass.class, 
-                InputEventType.class, 
-                int.class, // x
-                int.class, // y
-                int.class, // keyboard key/mouse button id
-                char.class
-            },
+            ClassRefs.inputEventClassParamTypes,
             new Object[] {
                 InputEventClass.MOUSE_EVENT,
                 InputEventType.MOUSE_DOWN,
@@ -114,7 +108,6 @@ public class FleetPresetsFleetPanelInjector {
         }
 
         List<FleetMemberAPI> playerFleetMembers = Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder();
-        // RunningMembers runningMembers = new RunningMembers(playerFleetMembers);
         MarketAPI market = (MarketAPI) Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY);
         List<FleetMemberAPI> mothballedShips = PresetUtils.getMothBalledShips(market);
 
@@ -136,10 +129,13 @@ public class FleetPresetsFleetPanelInjector {
                                 
                                 if (mothballedShips != null && !mothballedShips.contains(runningMember)) {
                                     // member was sold
-                                    PresetUtils.handlePerishedPresetMembers();
+                                    PresetUtils.cleanUpPerishedPresetMembers();
                                 } else if (mothballedShips != null && mothballedShips.contains(runningMember) && PresetUtils.getFleetPresetsMembers().get(runningMember.getId()) != null) {
                                     // member was stored
-                                    storedMemberIds.add(runningMember.getId());
+                                    if (storedMemberIds.get(market.getName()) == null) {
+                                        storedMemberIds.put(market.getName(), new HashSet<>());
+                                    }
+                                    storedMemberIds.get(market.getName()).add(runningMember.getId());
                                 }
                             }
                         }
@@ -147,9 +143,10 @@ public class FleetPresetsFleetPanelInjector {
                     }
                 } else if (playerFleetMembers.size() > runningMembers.size()) {
                     for (FleetMemberAPI member : playerFleetMembers) {
-                        if (storedMemberIds.contains(member.getId())) {
+                        if (storedMemberIds.get(market.getName()) != null && storedMemberIds.get(market.getName()).contains(member.getId())) {
                             // member was taken from storage
-                            storedMemberIds.remove(member.getId());
+                            storedMemberIds.get(market.getName()).remove(member.getId());
+                            if (storedMemberIds.get(market.getName()).isEmpty()) storedMemberIds.remove(market.getName());
                         }
                     }
                 }
@@ -182,17 +179,9 @@ public class FleetPresetsFleetPanelInjector {
                         new ActionListener() {
                             @Override
                             public void trigger(Object... args) {
-                                if (!PresetUtils.isPlayerPaidForStorage(market.getSubmarket(Submarkets.SUBMARKET_STORAGE).getPlugin())) {
-                                    Object infoPanelParent = ReflectionUtilis.invokeMethod("getParent", fleetInfoPanelRef);
-                                    Object marketPicker = ReflectionUtilis.getMethodAndInvokeDirectly("getMarketPicker", infoPanelParent, 0);
-
-                                    ReflectionUtilis.getMethodAndInvokeDirectly("actionPerformed", marketPicker, 2, getButtonInputEventInstance(storageButton.getPosition()), storageButtonObf);
-                                } else {
-                                    Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
-                                    PresetUtils.storeFleetInStorage();
-                                }
+                                Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
+                                PresetUtils.storeFleetInStorage();
                             }
-
                         },
                         Misc.getBasePlayerColor(),
                         Misc.getDarkPlayerColor(),
@@ -209,19 +198,12 @@ public class FleetPresetsFleetPanelInjector {
                     pos.getInstance().setYAlignOffset(-28f).setXAlignOffset(18f);
                     
                     pullAllShipsButton = UtilReflection.makeButton(
-                        "Take all ships from storage",
+                        "  Take all ships from storage",
                         new ActionListener() {
                             @Override
                             public void trigger(Object... args) {
-                                if (!PresetUtils.isPlayerPaidForStorage(market.getSubmarket(Submarkets.SUBMARKET_STORAGE).getPlugin())) {
-                                    Object infoPanelParent = ReflectionUtilis.invokeMethod("getParent", fleetInfoPanelRef);
-                                    Object marketPicker = ReflectionUtilis.getMethodAndInvokeDirectly("getMarketPicker", infoPanelParent, 0);
-
-                                    ReflectionUtilis.getMethodAndInvokeDirectly("actionPerformed", marketPicker, 2, getButtonInputEventInstance(storageButton.getPosition()), storageButtonObf);
-                                } else {
                                     Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
                                     PresetUtils.takeAllShipsFromStorage();
-                                }
                             }
                         },
                         Misc.getBasePlayerColor(),
@@ -238,11 +220,19 @@ public class FleetPresetsFleetPanelInjector {
                     // pos.getInstance().setYAlignOffset(-7f).setXAlignOffset(-storageButtonPosition.getWidth()-10f);
                     pos.getInstance().setYAlignOffset(-28f).setXAlignOffset(-storageButtonPosition.getWidth()+56f);
 
-                    if (playerFleetMembers.size() == 1) {
+                    if (!PresetUtils.isPlayerPaidForStorage(market.getSubmarket(Submarkets.SUBMARKET_STORAGE).getPlugin())) {
                         storeFleetButton.setEnabled(false);
-                    } else if (mothballedShips == null || mothballedShips.size() == 0) {
                         pullAllShipsButton.setEnabled(false);
+
+                    } else {
+                        if (playerFleetMembers.size() == 1) {
+                            storeFleetButton.setEnabled(false);
+                        } else if (mothballedShips == null || mothballedShips.size() == 0) {
+                            pullAllShipsButton.setEnabled(false);
+                        }
                     }
+
+
 
             } else {
                 storeFleetButton = null;

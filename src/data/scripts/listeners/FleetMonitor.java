@@ -23,13 +23,11 @@ public class FleetMonitor implements EveryFrameScript {
 
     RunningMembers runningMembers;
     // List<FleetMemberAPI> runningMembers;
-    List<String> storedMemberIds;
     Map<String, List<FleetMemberWrapper>> presetMembers;
 
     @SuppressWarnings("unchecked")
     public FleetMonitor() {
         this.runningMembers = new RunningMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
-        this.storedMemberIds = PresetUtils.getStoredFleetPresetsMemberIds();
         this.presetMembers = (Map<String, List<FleetMemberWrapper>>) Global.getSector().getPersistentData().get(PresetUtils.PRESET_MEMBERS_KEY);
     }
 
@@ -44,7 +42,8 @@ public class FleetMonitor implements EveryFrameScript {
         runningMembers = PresetUtils.checkFleetAgainstPreset(runningMembers);
 
             if (checkPerishedMembersInterval.intervalElapsed()) {
-                PresetUtils.handlePerishedPresetMembers();
+                // if garbage needs collecting
+                PresetUtils.cleanUpPerishedPresetMembers();
             }
         }
     }

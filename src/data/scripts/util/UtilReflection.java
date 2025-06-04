@@ -18,7 +18,9 @@ import data.scripts.listeners.ActionListener;
 import data.scripts.listeners.DialogDismissedListener;
 import data.scripts.ui.Button;
 
-import java.awt.*;
+// import java.awt.*;
+import java.util.*;
+import java.awt.Color;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -28,6 +30,7 @@ import java.lang.invoke.MethodHandle;
 
 import org.apache.log4j.Logger;
 
+@SuppressWarnings("unchecked")
 public class UtilReflection {
     public static final Logger logger = Logger.getLogger(UtilReflection.class);
     public static final void print(Object... args) {
@@ -195,15 +198,8 @@ public class UtilReflection {
     }
 
     public static UIPanelAPI getObfFleetInfoPanel(String name, CampaignFleetAPI fleet) {
-        return (UIPanelAPI) ReflectionUtilis.getClassInstance(ClassRefs.visualPanelfleetInfoClass.getCanonicalName(),
-        new Class<?>[] {
-            String.class, 
-            CampaignFleet.class,
-            String.class,
-            CampaignFleet.class,
-            FleetEncounterContextPlugin.class,
-            boolean.class
-        },
+        return (UIPanelAPI) ReflectionUtilis.getClassInstance(ClassRefs.visualPanelFleetInfoClass.getCanonicalName(),
+        ClassRefs.visualPanelFleetInfoClassParams,
         name,
         fleet,
         null,
