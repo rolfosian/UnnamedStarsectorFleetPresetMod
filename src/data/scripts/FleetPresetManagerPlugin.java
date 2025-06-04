@@ -86,8 +86,8 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
             Global.getSector().addTransientScript(new OfficerTracker());
             Global.getSector().addTransientScript(new FleetMonitor());
 
-            Global.getSector().addListener(new DockingListener());
-            Global.getSector().getListenerManager().addListener(new ColonyStorageListener());
+            Global.getSector().addTransientListener(new DockingListener());
+            Global.getSector().getListenerManager().addListener(new ColonyStorageListener(), true);
         } catch (Exception e) {
             print("Failure to load core script class; exiting", e);
             return;

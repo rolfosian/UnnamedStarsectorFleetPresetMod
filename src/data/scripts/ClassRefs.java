@@ -58,7 +58,7 @@ public class ClassRefs {
     public static Class<?> renderableUIElementInterface;
     /** Obfuscated UI panel class */
     public static Class<?> uiPanelClass;
-    
+
     /** Obfuscated fleet info panel class from the VisualPanelAPI */
     public static Class<?> visualPanelFleetInfoClass; 
     public static Class<?>[] visualPanelFleetInfoClassParams = new Class<?>[] {
@@ -88,7 +88,7 @@ public class ClassRefs {
     public static void findFleetInfoClass() {
         if (visualPanelFleetInfoClass != null) return;
 
-        Global.getSector().addListener(new CampaignEventListener() {
+        Global.getSector().addTransientListener(new CampaignEventListener() {
             @Override @SuppressWarnings("unchecked")
             public void reportShownInteractionDialog(InteractionDialogAPI dialog) {
                 if (visualPanelFleetInfoClass != null) {
