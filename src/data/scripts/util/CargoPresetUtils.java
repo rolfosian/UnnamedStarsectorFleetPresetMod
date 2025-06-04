@@ -159,8 +159,15 @@ public class CargoPresetUtils {
         float playerCargoCapacity = playerCargo.getMaxCapacity();
         float maxFuel = playerCargo.getMaxFuel();
         
-        storageCargo.addAll(playerCargo);
-        playerCargo.clear();
+        storageCargo.addFuel(playerCargo.getFuel());
+        storageCargo.addSupplies(playerCargo.getSupplies());
+        storageCargo.addCrew(playerCargo.getCrew());
+        storageCargo.addMarines(playerCargo.getMarines());
+
+        playerCargo.removeFuel(playerCargo.getFuel());
+        playerCargo.removeSupplies(playerCargo.getSupplies());
+        playerCargo.removeCrew(playerCargo.getCrew());
+        playerCargo.removeMarines(playerCargo.getMarines());
 
         float storageFuel = storageCargo.getFuel();
         float storageSupplies = storageCargo.getSupplies();
@@ -187,6 +194,7 @@ public class CargoPresetUtils {
         // minimum is needed crew + 10%
         float desiredCrew = Math.max(maxPersonnel * previousCargoRatios.rawCrewRatio, totalNeededCrew * 1.1f);
         float actualCrew = Math.min(desiredCrew, storageCrew);
+        print(actualCrew);
         playerCargo.addCrew((int)actualCrew);
         storageCargo.removeCrew((int)actualCrew);
 

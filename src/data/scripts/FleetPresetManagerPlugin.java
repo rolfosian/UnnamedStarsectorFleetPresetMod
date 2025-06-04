@@ -69,8 +69,8 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
             Global.getSector().getPersistentData().put(PresetUtils.PRESET_MEMBERS_KEY, new HashMap<String, List<FleetMemberWrapper>>());
             Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, true);
             Global.getSector().getPersistentData().put(PresetUtils.STORED_PRESET_MEMBERIDS_KEY, new HashMap<>());
+            Global.getSector().getPersistentData().put(PresetUtils.KEEPCARGORATIOS_KEY, false);
             Global.getSector().getPersistentData().put("$fleetPresetsManagerVer", ver);
-            Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY); // i was having trouble with this when debugging i dont know why it needed this 
         }
         Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.MESSAGEQUEUE_KEY, new ArrayList<>());
 
@@ -89,8 +89,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
             Global.getSector().addTransientListener(new DockingListener());
             Global.getSector().getListenerManager().addListener(new ColonyStorageListener(), true);
         } catch (Exception e) {
-            print("Failure to load core script class; exiting", e);
-            return;
+            throw new RuntimeException(e);
         }
     }
 
@@ -99,8 +98,9 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         Global.getSector().getPersistentData().put("$fleetPresetsManagerVer", ver);
         Global.getSector().getPersistentData().put(PresetUtils.PRESETS_MEMORY_KEY, new HashMap<String, PresetUtils.FleetPreset>());
         Global.getSector().getPersistentData().put(PresetUtils.PRESET_MEMBERS_KEY, new HashMap<String, List<FleetMemberWrapper>>());
-        Global.getSector().getPersistentData().put(PresetUtils.STORED_PRESET_MEMBERIDS_KEY, new ArrayList<>());
+        Global.getSector().getPersistentData().put(PresetUtils.STORED_PRESET_MEMBERIDS_KEY, new HashMap<>());
         Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, true);
+        Global.getSector().getPersistentData().put(PresetUtils.KEEPCARGORATIOS_KEY, false);
     }
 
     @Override

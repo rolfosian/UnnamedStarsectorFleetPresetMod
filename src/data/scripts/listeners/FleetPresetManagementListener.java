@@ -109,6 +109,10 @@ public class FleetPresetManagementListener extends ActionListener {
     private static final String AUTO_UPDATE_BUTTON_ID = "autoUpdateButton";
     private static final String AUTO_UPDATE_BUTTON_TOOLTIP_PARA_TEXT = "Toggle to automatically update the preset when the fleet changes, if undocked with a preset fleet.";
     private static final String AUTO_UPDATE_BUTTON_TEXT = "AUTO UPDATE";
+
+    // private static final String KEEP_CARGO_RATIOS_BUTTON_ID = "cargoRatiosButton";
+    // private static final String KEEP_CARGO_RATIOS_BUTTON_PARA_TEXT = "Toggle to keep the supplies/fuel/crew ratios when switching fleets.";
+    // private static final String KEEP_CARGO_RATIOS_BUTTON_TEXT = "EQUALIZE CARGO";
     
     private static final String BLANK_TABLE_TEXT = "Presets Go Here";
     private static final Color c1 = Global.getSettings().getBasePlayerColor();
@@ -222,7 +226,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
         ButtonPlugin buttonPlugin = new ButtonPlugin();
         buttonsPanel = Global.getSettings().createCustom(CANCEL_CONFIRM_BUTTON_WIDTH, PANEL_HEIGHT, buttonPlugin);
-        TooltipMakerAPI tooltipMaker = buttonsPanel.createUIElement(CANCEL_CONFIRM_BUTTON_WIDTH, PANEL_HEIGHT, true);
+        TooltipMakerAPI tooltipMaker = buttonsPanel.createUIElement(CANCEL_CONFIRM_BUTTON_WIDTH+2f, PANEL_HEIGHT, true);
         buttonPlugin.init(buttonsPanel, tooltipMaker);
 
         addTheButtons(tooltipMaker, confirmButtonPosition, cancelButtonPosition);
@@ -294,12 +298,18 @@ public class FleetPresetManagementListener extends ActionListener {
         autoUpdateButton.setChecked((boolean)Global.getSector().getPersistentData().get(PresetUtils.IS_AUTO_UPDATE_KEY));
         tooltipMaker.addTooltipTo(tc(AUTO_UPDATE_BUTTON_TOOLTIP_PARA_TEXT), autoUpdateButton, TooltipLocation.RIGHT, false);
 
+        // ButtonAPI cargoRatiosButton = tooltipMaker.addCheckbox(buttonWidth, buttonHeight, KEEP_CARGO_RATIOS_BUTTON_TEXT, KEEP_CARGO_RATIOS_BUTTON_ID, Fonts.ORBITRON_12, c1,
+        // ButtonAPI.UICheckboxSize.SMALL, 5f);
+        // cargoRatiosButton.setChecked((boolean)Global.getSector().getPersistentData().get(PresetUtils.KEEPCARGORATIOS_KEY));
+        // tooltipMaker.addTooltipTo(tc(KEEP_CARGO_RATIOS_BUTTON_PARA_TEXT), cargoRatiosButton, TooltipLocation.RIGHT, false);
+
         theButtons.put(SAVE_DIALOG_BUTTON_ID, saveDialogButton);
         theButtons.put(RESTORE_BUTTON_ID, restorePresetButton);
         theButtons.put(STORE_BUTTON_ID, storeAllButton);
         theButtons.put(DELETE_BUTTON_ID, deleteButton);
         theButtons.put(OVERWRITE_PRESET_BUTTON_ID, overwriteToPresetButton);
         theButtons.put(AUTO_UPDATE_BUTTON_ID, autoUpdateButton);
+        // theButtons.put(KEEP_CARGO_RATIOS_BUTTON_ID, cargoRatiosButton);
         disableButtonsRequiringSelection();
         enableButtonsRequiringSelection();
 
@@ -429,6 +439,13 @@ public class FleetPresetManagementListener extends ActionListener {
                         Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
                     }
                     return;
+
+                // case KEEP_CARGO_RATIOS_BUTTON_ID:
+                //     if (theButtons.get(KEEP_CARGO_RATIOS_BUTTON_ID).isChecked()) {
+                //         Global.getSector().getPersistentData().put(PresetUtils.KEEPCARGORATIOS_KEY, true);
+                //     } else {
+                //         Global.getSector().getPersistentData().put(PresetUtils.KEEPCARGORATIOS_KEY, false);
+                //     }
 
                 default:
                     break;

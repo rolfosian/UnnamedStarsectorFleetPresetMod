@@ -61,12 +61,12 @@ public class FleetPresetsFleetPanelInjector {
     private Button storeFleetButton;
     private Button pullAllShipsButton;
 
-    private RunningMembers runningMembers;
+    private List<FleetMemberAPI> runningMembers; //we dont need the RunningMembers class for this because we don't care about the officer assignments here
     Map<String, Set<String>> storedMemberIds;
     private Map<String, List<FleetMemberWrapper>> presetMembers;
 
     public FleetPresetsFleetPanelInjector() {
-        this.runningMembers = new RunningMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
+        this.runningMembers = Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder();
         this.storedMemberIds = PresetUtils.getStoredFleetPresetsMemberIds();
         this.presetMembers = (Map<String, List<FleetMemberWrapper>>) Global.getSector().getPersistentData().get(PresetUtils.PRESET_MEMBERS_KEY);
     }
@@ -124,7 +124,7 @@ public class FleetPresetsFleetPanelInjector {
                 // checking if members are sold so there's no memory leak for wrappedMembers
                 if (runningMembers.size() > playerFleetMembers.size()) {
                     if ((boolean)Global.getSector().getPersistentData().get(PresetUtils.IS_AUTO_UPDATE_KEY)) {
-                        for (FleetMemberAPI runningMember : runningMembers.keySet()) {
+                        for (FleetMemberAPI runningMember : runningMembers) {
                             if (!playerFleetMembers.contains(runningMember)) {
                                 
                                 if (mothballedShips != null && !mothballedShips.contains(runningMember)) {
@@ -139,7 +139,6 @@ public class FleetPresetsFleetPanelInjector {
                                 }
                             }
                         }
-                        PresetUtils.checkFleetAgainstPreset(runningMembers);
                     }
                 } else if (playerFleetMembers.size() > runningMembers.size()) {
                     for (FleetMemberAPI member : playerFleetMembers) {
@@ -149,13 +148,15 @@ public class FleetPresetsFleetPanelInjector {
                             if (storedMemberIds.get(market.getName()).isEmpty()) storedMemberIds.remove(market.getName());
                         }
                     }
+                } else {
+                    // add logic for if sizes are the same but composition is different (order does not matter)
                 }
             }
             if (playerFleetMembers.size() == 1 && storeFleetButton != null) {
                 storeFleetButton.setEnabled(false);
             }
         }
-        runningMembers = new RunningMembers(playerFleetMembers);
+        runningMembers = playerFleetMembers;
 
         if (!injected) {
             injected = true;
@@ -231,9 +232,6 @@ public class FleetPresetsFleetPanelInjector {
                             pullAllShipsButton.setEnabled(false);
                         }
                     }
-
-
-
             } else {
                 storeFleetButton = null;
                 pullAllShipsButton = null;

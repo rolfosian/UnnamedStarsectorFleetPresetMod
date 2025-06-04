@@ -47,6 +47,7 @@ public class PresetUtils {
     public static final String IS_AUTO_UPDATE_KEY = "$isPresetAutoUpdate";
     public static final String PRESET_MEMBERS_KEY = "$fleetPresetMembers";
     public static final String STORED_PRESET_MEMBERIDS_KEY = "$storedFleetPresetMembers";
+    public static final String KEEPCARGORATIOS_KEY = "$isPresetCargoRatios";
 
     // Non-persistent data keys
     public static final String FLEETINFOPANEL_KEY = "$fleetInfoPanel";
@@ -57,7 +58,7 @@ public class PresetUtils {
     public static final String ISPLAYERPAIDFORSTORAGE_KEY = "$isPlayerPaidForStorage";
     public static final String MESSAGEQUEUE_KEY = "$presetsMessageQueue";
     public static final String VISUALFLEETINFOPANEL_KEY = "$visualFleetInfoPanelClass";
-
+    
     public static final String RESTOREMESSAGE_SUCCESS_PREFIX = "Successfully restored fleet preset: ";
     public static final String RESTOREMESSAGE_FAIL_PREFIX = "Could not find one or more of ";
     public static final String RESTOREMESSAGE_FAIL_SUFFIX = " in storage to load for preset: ";
@@ -1341,12 +1342,18 @@ public class PresetUtils {
         SubmarketAPI storage = market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
         CargoAPI storageCargo = storage.getCargo();
         initMothballedShips(storageCargo);
-        
+
         FleetDataAPI playerFleetData = playerFleet.getFleetData();
         List<FleetMemberAPI> playerFleetMembers = playerFleet.getFleetData().getMembersInPriorityOrder();
-        // CargoAPI playerCargo = playerFleet.getCargo();
-        // CargoResourceRatios cargoRatios = new CargoResourceRatios(playerFleetMembers, playerCargo);
 
+        // boolean isEqualizeCargo = (boolean)Global.getSector().getPersistentData().get(KEEPCARGORATIOS_KEY);
+        // CargoAPI playerCargo = null;
+        // CargoResourceRatios cargoRatios = null;
+        // if (isEqualizeCargo) {
+        //     playerCargo = playerFleet.getCargo();
+        //     cargoRatios = new CargoResourceRatios(playerFleetMembers, playerCargo);
+        // }
+        
         FleetMemberAPI playerFleetMember = getPlayerFleetMember(playerFleetData);
 
         for (FleetMemberAPI member : playerFleetMembers) {
@@ -1416,8 +1423,7 @@ public class PresetUtils {
             }
         }
         refreshFleetUI();
-        // this needs more work and conditional logic with options
-        // CargoPresetUtils.equalizeCargo(playerFleetData.getMembersInPriorityOrder(), playerCargo, storageCargo, cargoRatios);
+        // if (isEqualizeCargo) CargoPresetUtils.equalizeCargo(playerFleetData.getMembersInPriorityOrder(), playerCargo, storageCargo, cargoRatios);
 
         if (allFound) {
             CampaignUIMessage msg = new CampaignUIMessage(RESTOREMESSAGE_SUCCESS_PREFIX + name, Misc.getPositiveHighlightColor());
