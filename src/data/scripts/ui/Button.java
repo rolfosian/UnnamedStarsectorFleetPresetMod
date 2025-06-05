@@ -7,7 +7,7 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.ClassRefs;
 import data.scripts.util.UtilReflection;
-import data.scripts.listeners.ActionListener;
+import data.scripts.util.ReflectionUtilis.ListenerFactory.ActionListener;
 import data.scripts.ui.Renderable;
 import data.scripts.ui.UIComponent;
 import data.scripts.util.ReflectionUtilis;

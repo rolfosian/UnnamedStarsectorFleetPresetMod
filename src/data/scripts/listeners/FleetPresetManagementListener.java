@@ -33,7 +33,6 @@ import com.fs.starfarer.api.util.Misc;
 import com.fs.starfarer.campaign.fleet.CampaignFleet;
 
 import data.scripts.ClassRefs;
-import data.scripts.listeners.DialogDismissedListener;
 import data.scripts.listeners.DockingListener;
 
 import data.scripts.ui.BaseSelfRefreshingPanel;
@@ -42,6 +41,8 @@ import data.scripts.ui.UIPanel;
 import data.scripts.ui.UiConfig;
 
 import data.scripts.util.ReflectionUtilis;
+import data.scripts.util.ReflectionUtilis.ListenerFactory.DialogDismissedListener;
+import data.scripts.util.ReflectionUtilis.ListenerFactory.ActionListener;
 import data.scripts.util.UtilReflection;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.PresetUtils.FleetMemberWrapper;
@@ -49,6 +50,7 @@ import data.scripts.util.PresetUtils.FleetPreset;
 import data.scripts.util.PresetMiscUtils;
 
 import java.awt.Color;
+import java.awt.Desktop.Action;
 import java.util.*;
 
 import org.apache.log4j.Logger;
@@ -360,7 +362,6 @@ public class FleetPresetManagementListener extends ActionListener {
             CONFIRM_DIALOG_WIDTH / 1.5f,
             CONFIRM_DIALOG_HEIGHT / 2,
             saveListener);
-        subData.confirmButton.getInstance().setShortcut(Keyboard.KEY_G, false);
 
         // PositionAPI subPos = subData.panel.getPosition();
         subData.panel.addComponent(textFieldPanel).inTL(0f, 0f).setXAlignOffset(CONFIRM_DIALOG_WIDTH / 2 / 2 / 2).setYAlignOffset(-CONFIRM_DIALOG_HEIGHT / 2 / 2 / 2);
@@ -379,6 +380,7 @@ public class FleetPresetManagementListener extends ActionListener {
             CONFIRM_DIALOG_WIDTH / 1.5f,
             CONFIRM_DIALOG_HEIGHT / 4,
             deleteListener);
+        subData.confirmButton.setShortcut(Keyboard.KEY_G, false);
 
         subData.panel.addComponent(textPanel).inTL(0f, 0f);
     }

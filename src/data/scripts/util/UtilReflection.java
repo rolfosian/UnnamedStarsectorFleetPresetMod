@@ -14,8 +14,8 @@ import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.campaign.fleet.CampaignFleet;
 
 import data.scripts.ClassRefs;
-import data.scripts.listeners.ActionListener;
-import data.scripts.listeners.DialogDismissedListener;
+import data.scripts.util.ReflectionUtilis.ListenerFactory.ActionListener;
+import data.scripts.util.ReflectionUtilis.ListenerFactory.DialogDismissedListener;
 import data.scripts.ui.Button;
 
 // import java.awt.*;

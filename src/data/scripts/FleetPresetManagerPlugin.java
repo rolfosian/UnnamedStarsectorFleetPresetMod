@@ -2,17 +2,14 @@
 
 package data.scripts;
 
-import com.fs.starfarer.api.BaseModPlugin;
+
 import com.fs.starfarer.api.Global;
-import com.fs.starfarer.api.EveryFrameScript;
+
+import com.fs.starfarer.api.BaseModPlugin;
 import com.fs.starfarer.api.campaign.CampaignEventListener;
-import com.fs.starfarer.api.campaign.CargoAPI;
-import com.fs.starfarer.api.campaign.econ.MarketAPI;
-import com.fs.starfarer.api.campaign.econ.SubmarketAPI;
-import com.fs.starfarer.api.campaign.listeners.ColonyDecivListener;
-import com.fs.starfarer.api.campaign.rules.MemoryAPI;
+import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
-import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
+import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;

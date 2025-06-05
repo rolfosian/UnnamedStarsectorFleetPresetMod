@@ -14,8 +14,6 @@ import java.lang.invoke.MethodHandle;
 import java.awt.Color;
 import java.util.*;
 
-import data.scripts.listeners.ProxyTriggerNew;
-
 import org.apache.log4j.Logger;
 public class ReflectionUtilis {
     private static final Logger logger = Logger.getLogger(ReflectionUtilis.class);
@@ -47,7 +45,6 @@ public class ReflectionUtilis {
     private static final MethodHandle getFieldHandle;
     private static final MethodHandle getFieldNameHandle;
     private static final MethodHandle setFieldAccessibleHandle;
-    
     
     private static final MethodHandle getMethodNameHandle;
     private static final MethodHandle invokeMethodHandle;
@@ -108,11 +105,15 @@ public class ReflectionUtilis {
         }
     }
 
+
     public static class ListenerFactory {
         private static Class<?> dialogDismissedParamClass;
 
         static {
-            ClassRefs.findAllClasses();
+            if (!ClassRefs.foundAllClasses()) {
+                ClassRefs.findAllClasses();
+            }
+            
 
             for (Class<?> type : getMethodParamTypes(ClassRefs.dialogDismissedInterface.getDeclaredMethods()[0])) {
                 if (type != int.class) {
@@ -121,18 +122,52 @@ public class ReflectionUtilis {
             };
         }
 
-        public interface BaseActionListener {
+        public static interface Triggerable {
+            void trigger(Object... args);
+        }
+        // Rewritten proxy class from officer extension mod to work without using java.lang.reflect.Proxy and InvocationHandler imports
+        public static class ProxyTrigger implements Triggerable {
+            private final Object listener;
+        
+            public ProxyTrigger(Class<?> interfc, final String methodName) {
+                try {
+                    listener = getListener(interfc, this, methodName);
+                } catch (Throwable e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        
+            @Override public void trigger(Object... args) {};
+            
+            public Object getProxy() {
+                return listener;
+            }
+        }
+
+        public static abstract class ActionListener extends ProxyTrigger {
+            public ActionListener() {
+                super(ClassRefs.actionListenerInterface, "actionPerformed");
+            }
+        }
+
+        public static abstract class DialogDismissedListener extends ProxyTrigger {
+            public DialogDismissedListener() {
+                super(ClassRefs.dialogDismissedInterface, "dialogDismissed");
+            }
+        }
+
+        public static interface BaseActionListener {
             public void actionPerformed(Object arg0, Object arg1);
         }
     
-        public interface BaseDialogDismissedListener {
+        public static interface BaseDialogDismissedListener {
             public void dialogDismissed(Object arg0, int arg1);
         }
     
-        public static class DialogDismissedListener implements BaseDialogDismissedListener {
-            private final ProxyTriggerNew proxyTriggerClassInstance;
+        public static class DialogDismissedListenerProxy implements BaseDialogDismissedListener {
+            private final ProxyTrigger proxyTriggerClassInstance;
     
-            public DialogDismissedListener(ProxyTriggerNew proxyTriggerClassInstance) {
+            public DialogDismissedListenerProxy(ProxyTrigger proxyTriggerClassInstance) {
                 this.proxyTriggerClassInstance = proxyTriggerClassInstance;
             }
     
@@ -141,10 +176,10 @@ public class ReflectionUtilis {
             };
         }
     
-        public static class ActionListener implements BaseActionListener {
-            private final ProxyTriggerNew proxyTriggerClassInstance;
+        public static class ActionListenerProxy implements BaseActionListener {
+            private final ProxyTrigger proxyTriggerClassInstance;
     
-            public ActionListener(ProxyTriggerNew proxyTriggerClassInstance) {
+            public ActionListenerProxy(ProxyTrigger proxyTriggerClassInstance) {
                 this.proxyTriggerClassInstance = proxyTriggerClassInstance;
             }
     
@@ -153,26 +188,25 @@ public class ReflectionUtilis {
                 proxyTriggerClassInstance.trigger(new Object[] {arg0, arg1});
             }
         }
-    
 
-        public static Object getListener(Class<?> unknownListenerInterfc, ProxyTriggerNew proxyTriggerClassInstance, String targetMethodName) throws Throwable {
+        public static Object getListener(Class<?> unknownListenerInterfc, ProxyTrigger proxyTriggerClassInstance, String targetMethodName) throws Throwable {
             Object listener;
             MethodHandle implementationMethodHandle;
             MethodType actualSamMethodType;
     
             if ("dialogDismissed".equals(targetMethodName)) {
-                listener = new DialogDismissedListener(proxyTriggerClassInstance);
+                listener = new DialogDismissedListenerProxy(proxyTriggerClassInstance);
 
                 MethodType implSignature = MethodType.methodType(void.class, Object.class, int.class);
-                implementationMethodHandle = lookup.findVirtual(DialogDismissedListener.class, "dialogDismissed", implSignature);
+                implementationMethodHandle = lookup.findVirtual(DialogDismissedListenerProxy.class, "dialogDismissed", implSignature);
                 actualSamMethodType = MethodType.methodType(void.class, dialogDismissedParamClass, int.class);
     
             } else if ("actionPerformed".equals(targetMethodName)) {
-                listener = new ActionListener(proxyTriggerClassInstance);
+                listener = new ActionListenerProxy(proxyTriggerClassInstance);
                 
                 actualSamMethodType = MethodType.methodType(void.class, Object.class, Object.class);
                 MethodType implSignature = MethodType.methodType(void.class, Object.class, Object.class);
-                implementationMethodHandle = lookup.findVirtual(ActionListener.class, "actionPerformed", implSignature);
+                implementationMethodHandle = lookup.findVirtual(ActionListenerProxy.class, "actionPerformed", implSignature);
     
             } else {
                 throw new IllegalArgumentException("Unsupported method: " + targetMethodName);
@@ -850,6 +884,16 @@ public class ReflectionUtilis {
             setFieldAccessibleHandle.invoke(fields[index], true);
             // return getPrivateVariable((String)getFieldNameHandle.invoke(fields[index]), instance);
             return getFieldHandle.invoke(fields[index], instance);
+        } catch (Throwable e) {
+            print(e);
+            return null;
+        }
+    }
+
+    public static Class<?> getFieldTypeAtIndex(Object instance, int index) {
+        try {
+            Object[] fields = instance.getClass().getDeclaredFields();
+            return (Class<?>) getFieldTypeHandle.invoke(fields[index]);
         } catch (Throwable e) {
             print(e);
             return null;
