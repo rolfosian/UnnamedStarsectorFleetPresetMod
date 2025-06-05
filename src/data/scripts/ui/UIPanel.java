@@ -1,4 +1,4 @@
-// credit for this goes to the author of the code in the officer extension mod
+// Code taken and modified from officer extension mod
 
 package data.scripts.ui;
 
@@ -7,24 +7,25 @@ import com.fs.starfarer.api.ui.UIPanelAPI;
 
 import data.scripts.ClassRefs;
 import data.scripts.ui.UIComponent;
+import data.scripts.util.ReflectionUtilis;
 import data.scripts.ui.Renderable;
 import data.scripts.ui.Position;
 
-import java.lang.reflect.Method;
+// import java.lang.reflect.Method;
 import java.util.List;
 
 @SuppressWarnings("unused")
 public class UIPanel extends UIComponent implements Renderable {
 
-    private static Method addMethod;
-    private static Method getChildrenNonCopyMethod;
-    private static Method removeMethod;
+    private static Object addMethod;
+    private static Object getChildrenNonCopyMethod;
+    private static Object removeMethod;
 
     public UIPanel(Object o) {
         super(o);
         if (addMethod == null) {
             try {
-                addMethod = inner.getClass().getMethod("add", ClassRefs.renderableUIElementInterface);
+                addMethod = ReflectionUtilis.getMethodExplicit("add", inner, new Class<?>[]{ClassRefs.renderableUIElementInterface});//inner.getClass().getMethod("add", ClassRefs.renderableUIElementInterface);
             }
             catch (Exception e) {
                 throw new RuntimeException("UIPanel's add method not found");
@@ -32,7 +33,7 @@ public class UIPanel extends UIComponent implements Renderable {
         }
         if (getChildrenNonCopyMethod == null) {
             try {
-                getChildrenNonCopyMethod = inner.getClass().getMethod("getChildrenNonCopy");
+                getChildrenNonCopyMethod = ReflectionUtilis.getMethod("getChildrenNonCopy", inner, 0);
             }
             catch (Exception e) {
                 throw new RuntimeException("UIPanel's getChildrenNonCopy method not found");
@@ -40,7 +41,7 @@ public class UIPanel extends UIComponent implements Renderable {
         }
         if (removeMethod == null) {
             try {
-                removeMethod = inner.getClass().getMethod("remove", ClassRefs.renderableUIElementInterface);
+                removeMethod = ReflectionUtilis.getMethodExplicit("remove", inner, new Class<?>[]{ClassRefs.renderableUIElementInterface});
             }
             catch (Exception e) {
                 throw new RuntimeException("UIPanel's remove method not found");
@@ -50,7 +51,7 @@ public class UIPanel extends UIComponent implements Renderable {
 
     public Position add(Renderable elem) {
         try {
-            return new Position((PositionAPI) addMethod.invoke(inner, elem.getInstance()));
+            return new Position((PositionAPI) ReflectionUtilis.invokeMethodDirectly(addMethod, inner, elem.getInstance()));
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -60,7 +61,7 @@ public class UIPanel extends UIComponent implements Renderable {
 
     public void remove(Renderable elem) {
         try {
-            removeMethod.invoke(inner, elem.getInstance());
+            ReflectionUtilis.invokeMethodDirectly(removeMethod, inner, elem.getInstance());
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -69,7 +70,7 @@ public class UIPanel extends UIComponent implements Renderable {
 
     public List<?> getChildrenNonCopy() {
         try {
-            return (List<?>) getChildrenNonCopyMethod.invoke(inner);
+            return (List<?>) ReflectionUtilis.invokeMethodDirectly(getChildrenNonCopyMethod, inner);
         }
         catch (Exception e) {
             e.printStackTrace();

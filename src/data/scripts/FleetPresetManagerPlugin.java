@@ -27,10 +27,6 @@ import data.scripts.listeners.OfficerTracker;
 
 import java.util.*;
 
-import java.net.URL;
-import java.net.URLClassLoader;
-// import java.nio.file.Paths;
-
 import org.apache.log4j.Logger;
 
 public class FleetPresetManagerPlugin extends BaseModPlugin {
@@ -40,29 +36,8 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
 
     private static final String ver = "0.0.5";
 
-    private static final String[] reflectionWhitelist = new String[] {
-        "data.scripts.FleetPresetManagerCoreScript",
-        "data.scripts.FleetPresetsFleetPanelInjector",
-
-        "data.scripts.ClassRefs",
-        "data.scripts.util.UtilReflection",
-        "data.scripts.util.ReflectionUtilis",
-        "data.scripts.util.ReflectionBetterUtilis",
-
-        "data.scripts.ui",
-        "data.scripts.listeners",
-    };
-
     @Override
     public void onGameLoad(boolean newGame) {
-        URL url;
-        try {
-            url = getClass().getProtectionDomain().getCodeSource().getLocation();
-        }
-        catch (SecurityException e) {
-            throw new RuntimeException("Failed to get URL of this class", e);
-        }
-
         String modVer = (String) Global.getSector().getPersistentData().get("$fleetPresetsManagerVer");
         if (modVer == null || !modVer.equals(ver)) {
             Global.getSector().getPersistentData().put(PresetUtils.PRESETS_MEMORY_KEY, new HashMap<String, FleetPreset>());
@@ -79,19 +54,11 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
             Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, activePreset);
         }
 
-        @SuppressWarnings("resource")
-        ClassLoader cl = new ReflectionEnabledClassLoader(url, getClass().getClassLoader());
-        try {
-            // Global.getSector().addTransientScript(new FleetPresetManagerCoreScript());
-            Global.getSector().addTransientScript((EveryFrameScript) UtilReflection.instantiateClassNoParams(cl.loadClass("data.scripts.FleetPresetManagerCoreScript")));
-            Global.getSector().addTransientScript(new OfficerTracker());
-            Global.getSector().addTransientScript(new FleetMonitor());
-
-            Global.getSector().addTransientListener(new DockingListener());
-            Global.getSector().getListenerManager().addListener(new ColonyStorageListener(), true);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        Global.getSector().addTransientScript(new FleetPresetManagerCoreScript());
+        Global.getSector().addTransientScript(new OfficerTracker());
+        Global.getSector().addTransientScript(new FleetMonitor());
+        Global.getSector().addTransientListener(new DockingListener());
+        Global.getSector().getListenerManager().addListener(new ColonyStorageListener(), true);
     }
 
     @Override
@@ -111,37 +78,5 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         // its just smoother this way (its not actually a big deal i just dont like the look of the double loading info) 
         mem.unset(PresetUtils.FLEETINFOPANEL_KEY);
         mem.unset(PresetUtils.COREUI_KEY);
-    }
-
-    public static class ReflectionEnabledClassLoader extends URLClassLoader {
-
-        public ReflectionEnabledClassLoader(URL url, ClassLoader parent) {
-            super(new URL[] {url}, parent);
-        }
-
-        @Override
-        public Class<?> loadClass(String name) throws ClassNotFoundException {
-            if (name.startsWith("java.lang.reflect")) {
-                return ClassLoader.getSystemClassLoader().loadClass(name);
-            }
-            return super.loadClass(name);
-        }
-
-        @Override
-        public Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
-            Class<?> c = findLoadedClass(name);
-            if (c != null) {
-                return c;
-            }
-            // Be the defining classloader for all classes in the reflection whitelist
-            // For classes defined by this loader, classes in java.lang.reflect will be loaded directly
-            // by the system classloader, without the intermediate delegations.
-            for (String str : reflectionWhitelist) {
-                if (name.startsWith(str)) {
-                    return findClass(name);
-                }
-            }
-            return super.loadClass(name, resolve);
-        }
     }
 }

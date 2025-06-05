@@ -1,4 +1,4 @@
-// credit for this goes to the author of the code in the officer extension mod
+// Code taken and modified from officer extension mod
 
 package data.scripts.ui;
 
@@ -40,7 +40,7 @@ public class Button extends UIComponent implements Renderable {
     }
 
     public void setEnabled(boolean enabled) {
-        ReflectionUtilis.getMethodAndInvokeDirectly("setEnabled", inner, 0, enabled);
+        ReflectionUtilis.getMethodAndInvokeDirectly("setEnabled", inner, 1, enabled);
     }
 
     public void setListener(ActionListener listener) {

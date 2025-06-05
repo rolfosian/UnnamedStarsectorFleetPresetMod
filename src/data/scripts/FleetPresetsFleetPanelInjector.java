@@ -247,6 +247,7 @@ public class FleetPresetsFleetPanelInjector {
                 Keyboard.KEY_A);
         // UIPanel presetFleetsButtonPanel = new UIPanel(fleetInfoPanel);
         Position pos = new UIPanel(fleetInfoPanel).add(presetFleetsButton);
+        
         pos.set(officerAutoAssignButtonPosition);
         pos.getInstance().setYAlignOffset(-officerAutoAssignButtonHeight * 10f);
         }

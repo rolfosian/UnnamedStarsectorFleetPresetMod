@@ -1,8 +1,9 @@
 package data.scripts.util;
 
+import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.util.Pair;
 
-import data.scripts.listeners.ProxyTriggerNew;
+import data.scripts.ClassRefs;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -13,8 +14,9 @@ import java.lang.invoke.MethodHandle;
 import java.awt.Color;
 import java.util.*;
 
-import org.apache.log4j.Logger;
+import data.scripts.listeners.ProxyTriggerNew;
 
+import org.apache.log4j.Logger;
 public class ReflectionUtilis {
     private static final Logger logger = Logger.getLogger(ReflectionUtilis.class);
     public static void print(Object... args) {
@@ -25,7 +27,7 @@ public class ReflectionUtilis {
         }
         logger.info(sb.toString());
     }
-
+    
     // Code taken and modified from Grand Colonies and Ashes of the Domain
     private static final MethodHandles.Lookup lookup = MethodHandles.lookup();
 
@@ -100,73 +102,93 @@ public class ReflectionUtilis {
             getDeclaredConstructorsHandle = lookup.findVirtual(Class.class, "getDeclaredConstructors", MethodType.methodType(constructorArrayClass));
 
             newProxyInstanceHandle = lookup.findStatic(proxyClass, "newProxyInstance", MethodType.methodType(Object.class, ClassLoader.class, Class[].class, invocationHandlerClass));
+
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static class ProxyHandler {
-        private final String targetMethodName;
-        private final ProxyTriggerNew proxyTriggerClassInstance;
+    public static class ListenerFactory {
+        private static Class<?> dialogDismissedParamClass;
 
-        public ProxyHandler(String targetMethodName, ProxyTriggerNew proxyTriggerClassInstance) {
-            this.targetMethodName = targetMethodName;
-            this.proxyTriggerClassInstance = proxyTriggerClassInstance;
+        static {
+            ClassRefs.findAllClasses();
+
+            for (Class<?> type : getMethodParamTypes(ClassRefs.dialogDismissedInterface.getDeclaredMethods()[0])) {
+                if (type != int.class) {
+                    dialogDismissedParamClass = type;
+                }
+            };
         }
 
-        public Object invoke(Object proxy, Object method, Object[] args) throws Throwable {
-            String name = (String)getMethodNameHandle.invoke(method);
-
-            if (name.equals(targetMethodName)) {
-                proxyTriggerClassInstance.trigger(args);
-                return null;
-            }
-            if (name.equals("equals") && args.length == 1) {
-                return proxy == args[0];
-            }
-            if (name.equals("hashCode") && args.length == 0) {
-                return System.identityHashCode(proxy);
-            }
-            if (name.equals("toString") && args.length == 0) {
-                return proxy.getClass() + "@" + Integer.toHexString(System.identityHashCode(proxy));
-            }
-            return null;
+        public interface BaseActionListener {
+            public void actionPerformed(Object arg0, Object arg1);
         }
-    }
+    
+        public interface BaseDialogDismissedListener {
+            public void dialogDismissed(Object arg0, int arg1);
+        }
+    
+        public static class DialogDismissedListener implements BaseDialogDismissedListener {
+            private final ProxyTriggerNew proxyTriggerClassInstance;
+    
+            public DialogDismissedListener(ProxyTriggerNew proxyTriggerClassInstance) {
+                this.proxyTriggerClassInstance = proxyTriggerClassInstance;
+            }
+    
+            public void dialogDismissed(Object arg0, int arg1) {
+                this.proxyTriggerClassInstance.trigger(new Object[] {arg0, arg1});
+            };
+        }
+    
+        public static class ActionListener implements BaseActionListener {
+            private final ProxyTriggerNew proxyTriggerClassInstance;
+    
+            public ActionListener(ProxyTriggerNew proxyTriggerClassInstance) {
+                this.proxyTriggerClassInstance = proxyTriggerClassInstance;
+            }
+    
+            @Override
+            public void actionPerformed(Object arg0, Object arg1) {
+                proxyTriggerClassInstance.trigger(new Object[] {arg0, arg1});
+            }
+        }
+    
 
-    @FunctionalInterface
-    public interface AnonymousInvoker {
-        Object invoke(Object proxy, Object method, Object[] args) throws Throwable;
-    }
+        public static Object getListener(Class<?> unknownListenerInterfc, ProxyTriggerNew proxyTriggerClassInstance, String targetMethodName) throws Throwable {
+            Object listener;
+            MethodHandle implementationMethodHandle;
+            MethodType actualSamMethodType;
+    
+            if ("dialogDismissed".equals(targetMethodName)) {
+                listener = new DialogDismissedListener(proxyTriggerClassInstance);
 
-    public static Object getProxyInstance(ProxyTriggerNew proxyTriggerClassInstance, String targetMethodName, ClassLoader classLoader, Class<?>[] interfc) {
-        try {
-            ProxyHandler handler = new ProxyHandler(targetMethodName, proxyTriggerClassInstance);
-
-            MethodType samMethodType = MethodType.methodType(Object.class, Object.class, methodClass, Object[].class);
-
-            MethodHandle handlerImpl = lookup.findVirtual(
-                ProxyHandler.class,
-                "invoke",
-                MethodType.methodType(Object.class, Object.class, Object.class, Object[].class)
-            );
-
-            MethodType factoryType = MethodType.methodType(AnonymousInvoker.class, ProxyHandler.class);
-
-            CallSite site = LambdaMetafactory.metafactory(
+                MethodType implSignature = MethodType.methodType(void.class, Object.class, int.class);
+                implementationMethodHandle = lookup.findVirtual(DialogDismissedListener.class, "dialogDismissed", implSignature);
+                actualSamMethodType = MethodType.methodType(void.class, dialogDismissedParamClass, int.class);
+    
+            } else if ("actionPerformed".equals(targetMethodName)) {
+                listener = new ActionListener(proxyTriggerClassInstance);
+                
+                actualSamMethodType = MethodType.methodType(void.class, Object.class, Object.class);
+                MethodType implSignature = MethodType.methodType(void.class, Object.class, Object.class);
+                implementationMethodHandle = lookup.findVirtual(ActionListener.class, "actionPerformed", implSignature);
+    
+            } else {
+                throw new IllegalArgumentException("Unsupported method: " + targetMethodName);
+            }
+    
+            MethodType factoryType = MethodType.methodType(unknownListenerInterfc, listener.getClass());
+            CallSite callSite = LambdaMetafactory.metafactory(
                 lookup,
-                "invoke",
+                targetMethodName,
                 factoryType,
-                samMethodType,
-                handlerImpl,
-                samMethodType
+                actualSamMethodType,
+                implementationMethodHandle,
+                actualSamMethodType
             );
-
-            Object actualInvocationHandler = site.getTarget().invoke(handler);
-
-            return newProxyInstanceHandle.invoke(classLoader, interfc, actualInvocationHandler);
-        } catch (Throwable e) {
-            throw new RuntimeException(e);
+    
+            return callSite.getTarget().invoke(listener);
         }
     }
 
@@ -191,6 +213,7 @@ public class ReflectionUtilis {
         try {
             return (String) getFieldNameHandle.invoke(field);
         } catch (Throwable e) {
+            print(e);
             return null;
         }
     }
@@ -290,6 +313,7 @@ public class ReflectionUtilis {
             }
             return false;
         } catch (Throwable e) {
+            print(e);
             return false;
         }
     }
@@ -298,6 +322,7 @@ public class ReflectionUtilis {
         try {
             return (Class<?>[]) getParameterTypesHandle.invoke(method);
         } catch (Throwable e) {
+            print(e);
             throw new RuntimeException(e);
         }
     }
@@ -316,6 +341,7 @@ public class ReflectionUtilis {
                 logger.info(methodName + "(" + paramString.toString() + ")");
             }
         } catch (Throwable e) {
+            print(e);
             logger.info("Error logging methods: ", e);
         }
     }
@@ -334,6 +360,7 @@ public class ReflectionUtilis {
                 logger.info(methodName + "(" + paramString.toString() + ")");
             }
         } catch (Throwable e) {
+            print(e);
             logger.info("Error logging methods: ", e);
         }
     }
@@ -356,7 +383,9 @@ public class ReflectionUtilis {
                     ((Object[])getParameterTypesHandle.invoke(method)).length == paramCount) {
                     return method;
                 }
-            } catch (Throwable ignored) {}
+            } catch (Throwable e) {
+                print(e);
+            }
         }
         return null;
     }
@@ -381,7 +410,9 @@ public class ReflectionUtilis {
     
                     if (match) return method;
                 }
-            } catch (Throwable ignored) {}
+            } catch (Throwable e) {
+                print(e);
+            }
         }
         return null;
     }
@@ -492,7 +523,9 @@ public class ReflectionUtilis {
                 }
                 if (match) return true;
 
-            } catch (Throwable e) {}
+            } catch (Throwable e) {
+                print(e);
+            }
         }
         return false;
     }
@@ -517,7 +550,7 @@ public class ReflectionUtilis {
                         return new Pair<>(method, parameterTypes);
                     }
                 } catch (Throwable e) {
-
+                    print(e);
                     e.printStackTrace();  // Handle any reflection errors
                 }
             }
@@ -712,6 +745,7 @@ public class ReflectionUtilis {
                             return  getFieldHandle.invoke(field, targetObject);
                         }
                     } catch (Throwable e) {
+                        print(e);
                         // Handle exceptions gracefully during field inspection
                         e.printStackTrace();
                     }
@@ -751,6 +785,7 @@ public class ReflectionUtilis {
                             }
                         }
                     } catch (Throwable e) {
+                        print(e);
                         // Handle exceptions gracefully during method inspection
                         e.printStackTrace();
                     }
@@ -824,7 +859,8 @@ public class ReflectionUtilis {
     public static Class<?> getFieldType(Object field) {
         try {
             return (Class<?>) getFieldTypeHandle.invoke(field);
-        } catch (Throwable ignored) {
+        } catch (Throwable e) {
+            print(e);
             return null;
         }
     }

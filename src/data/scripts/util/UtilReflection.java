@@ -77,6 +77,7 @@ public class UtilReflection {
                 new String[]{confirmText, cancelText}
                 }
             );
+            
             ReflectionUtilis.getMethodAndInvokeDirectly("show", confirmDialog, 2, 0.25f, 0.25f);
 
             LabelAPI label = (LabelAPI) ReflectionUtilis.getMethodAndInvokeDirectly("getLabel", confirmDialog, 0);
@@ -177,18 +178,6 @@ public class UtilReflection {
             cancelButton = no;
             this.panel = panel;
             this.dialog = dialog;
-        }
-    }
-
-    public static <T> T instantiateClassNoParams(Class<T> cls) throws NoSuchMethodException, IllegalAccessException {
-        MethodHandles.Lookup lookup = MethodHandles.lookup();
-        MethodHandle mh = lookup.findConstructor(cls, MethodType.methodType(void.class));
-        try {
-            //noinspection unchecked
-            return (T) mh.invoke();
-        }
-        catch (Throwable e) {
-            throw new RuntimeException(e);
         }
     }
 
