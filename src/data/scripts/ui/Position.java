@@ -4,18 +4,18 @@ package data.scripts.ui;
 
 import com.fs.starfarer.api.ui.PositionAPI;
 
-import java.lang.reflect.Method;
+import data.scripts.util.ReflectionUtilis;
 
 public class Position {
 
     private final PositionAPI inner;
-    private static Method setMethod;
+    private static Object setMethod;
 
     public Position(PositionAPI o) {
         inner = o;
         if (setMethod == null) {
             try {
-                setMethod = inner.getClass().getMethod("set", inner.getClass());
+                setMethod =  ReflectionUtilis.getMethod("set", inner, 1);
             }
             catch (Exception e) {
                 throw new RuntimeException("PositionAPI's set method not found");
@@ -25,7 +25,7 @@ public class Position {
 
     public void set(PositionAPI copy) {
         try {
-            setMethod.invoke(inner, copy);
+            ReflectionUtilis.invokeMethodDirectly(setMethod, inner, copy);
         }
         catch (Exception e) {
             e.printStackTrace();

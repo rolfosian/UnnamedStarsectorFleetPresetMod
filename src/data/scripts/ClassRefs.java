@@ -33,14 +33,12 @@ import data.scripts.util.PresetUtils;
 import data.scripts.util.ReflectionUtilis;
 import data.scripts.util.UtilReflection;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.*;
 
 import org.apache.log4j.Logger;
 
 /** Stores references to class objects in the obfuscated game files */
+@SuppressWarnings("unchecked")
 public class ClassRefs {
     private static final Logger logger = Logger.getLogger(ClassRefs.class);
     public static void print(Object... args) {
@@ -89,7 +87,6 @@ public class ClassRefs {
         if (visualPanelFleetInfoClass != null) return;
 
         Global.getSector().addTransientListener(new CampaignEventListener() {
-            @Override @SuppressWarnings("unchecked")
             public void reportShownInteractionDialog(InteractionDialogAPI dialog) {
                 if (visualPanelFleetInfoClass != null) {
                     Global.getSector().removeListener(this);
@@ -146,7 +143,6 @@ public class ClassRefs {
         });
     }
 
-    @SuppressWarnings("unchecked")
     public static void findInputEventClass() {
         UIPanelAPI coreUI = UtilReflection.getCoreUI();
         if (coreUI == null) return;
@@ -155,8 +151,8 @@ public class ClassRefs {
         for (Object child : (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", coreUI, 0)) {
             if (ButtonAPI.class.isAssignableFrom(child.getClass()) && !child.getClass().getSimpleName().equals("ButtonAPI")) {
 
-                for (Method method : child.getClass().getDeclaredMethods()) {
-                    if (method.getName().equals("buttonPressed")) {
+                for (Object method : child.getClass().getDeclaredMethods()) {
+                    if (ReflectionUtilis.getMethodName(method).equals("buttonPressed")) {
                         for (Class<?> paramType : ReflectionUtilis.getMethodParamTypes(method)) {
                             if (ReflectionUtilis.doInstantiationParamsMatch(paramType.getCanonicalName(), inputEventClassParamTypes)) {
                                 inputEventClass = paramType;
@@ -169,7 +165,6 @@ public class ClassRefs {
         }
     }
 
-    @SuppressWarnings("unchecked")
     public static void findButtonClass() {
         UIPanelAPI coreUI = UtilReflection.getCoreUI();
         if (coreUI == null) return;
@@ -187,14 +182,14 @@ public class ClassRefs {
         try {
             boolean isPaused = Global.getSector().isPaused();
             if (confirmDialogClass == null && campaignUI.showConfirmDialog("", "", "", null, null)) {
-                Object screenPanel = UtilReflection.getField(campaignUI, "screenPanel");
-                List<?> children = (List<?>) UtilReflection.invokeGetter(screenPanel, "getChildrenNonCopy");
+                Object screenPanel = ReflectionUtilis.getPrivateVariable("screenPanel", campaignUI);
+                List<Object> children = (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", screenPanel, 0);
                 // the confirm dialog will be the last child
                 Object panel = children.get(children.size() - 1);
                 confirmDialogClass = panel.getClass();
                 // we have the class, dismiss the dialog
-                Method dismiss = confirmDialogClass.getMethod("dismiss", int.class);
-                dismiss.invoke(panel, 0);
+
+                ReflectionUtilis.getMethodAndInvokeDirectly("dismiss", panel, 1, 0);
                 Global.getSector().setPaused(isPaused);
             }
         } catch (Exception e) {
@@ -205,8 +200,8 @@ public class ClassRefs {
     public static void findUIPanelClass() {
         CampaignUIAPI campaignUI = Global.getSector().getCampaignUI();
         try {
-            Field field = campaignUI.getClass().getDeclaredField("screenPanel");
-            uiPanelClass = field.getType();
+            Object field = campaignUI.getClass().getDeclaredField("screenPanel");
+            uiPanelClass = ReflectionUtilis.getFieldType(field);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -219,8 +214,8 @@ public class ClassRefs {
         }
         for (Class<?> cls : witness.getClass().getInterfaces()) {
             // Look for an interface that has the "render" method
-            for (Method method : cls.getDeclaredMethods()) {
-                if (method.getName().equals("render")) {
+            for (Object method : cls.getDeclaredMethods()) {
+                if (ReflectionUtilis.getMethodName(method).equals("render")) {
                     renderableUIElementInterface = cls;
                     return;
                 }
@@ -290,12 +285,12 @@ public class ClassRefs {
     /** Tries to find an interface among [interfaces] that has [methodName] as its only method. */
     private static Class<?> findInterfaceByMethod(Class<?>[] interfaces, String methodName) {
         for (Class<?> cls : interfaces) {
-            Method[] methods = cls.getDeclaredMethods();
+            Object[] methods = cls.getDeclaredMethods();
             if (methods.length != 1) {
                 continue;
             }
-            Method method = methods[0];
-            if (method.getName().equals(methodName)) {
+            Object method = methods[0];
+            if (ReflectionUtilis.getMethodName(method).equals(methodName)) {
                 return cls;
             }
         }

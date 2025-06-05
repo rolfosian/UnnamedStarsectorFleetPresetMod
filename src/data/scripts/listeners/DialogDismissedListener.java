@@ -5,7 +5,7 @@ package data.scripts.listeners;
 import com.fs.starfarer.api.Global;
 import data.scripts.ClassRefs;
 
-public abstract class DialogDismissedListener extends ProxyTrigger {
+public abstract class DialogDismissedListener extends ProxyTriggerNew {
     public DialogDismissedListener() {
         super(ClassRefs.dialogDismissedInterface, "dialogDismissed");
     }

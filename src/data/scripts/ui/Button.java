@@ -10,8 +10,8 @@ import data.scripts.util.UtilReflection;
 import data.scripts.listeners.ActionListener;
 import data.scripts.ui.Renderable;
 import data.scripts.ui.UIComponent;
-
-import java.lang.reflect.Method;
+import data.scripts.util.ReflectionUtilis;
+import data.scripts.util.PresetMiscUtils;
 
 @SuppressWarnings("unused")
 public class Button extends UIComponent implements Renderable {
@@ -40,43 +40,23 @@ public class Button extends UIComponent implements Renderable {
     }
 
     public void setEnabled(boolean enabled) {
-        try {
-            Method setEnabled = inner.getClass().getMethod("setEnabled", boolean.class);
-            setEnabled.invoke(inner, enabled);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        ReflectionUtilis.getMethodAndInvokeDirectly("setEnabled", inner, 0, enabled);
     }
 
     public void setListener(ActionListener listener) {
-        try {
-            Method setListener = inner.getClass().getMethod("setListener", ClassRefs.actionListenerInterface);
-            setListener.invoke(inner, listener.getProxy());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        ReflectionUtilis.getMethodAndInvokeDirectly("setListener", inner, 1, listener.getProxy());
     }
 
     public void setShortcut(int key, boolean idkWhatThisDoes) {
-        try {
-            Method setShortcut = inner.getClass().getMethod("setShortcut", int.class, boolean.class);
-            setShortcut.invoke(inner, key, idkWhatThisDoes);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        ReflectionUtilis.getMethodExplicitAndInvokeDirectly("setShortcut", inner, new Class<?>[]{int.class, boolean.class}, key, idkWhatThisDoes);
     }
 
     public Object getListener() {
-        return UtilReflection.invokeGetter(inner, "getListener");
+        return ReflectionUtilis.getMethodAndInvokeDirectly("getListener", inner, 0);
     }
 
     public void setButtonPressedSound(String soundId) {
-        try {
-            Method setSound = inner.getClass().getMethod("setButtonPressedSound", String.class);
-            setSound.invoke(inner, soundId);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        ReflectionUtilis.getMethodAndInvokeDirectly("setButtonPressedSound", inner, 1, soundId);
     }
 
     private static String graphicsObjectGetterName;
@@ -84,17 +64,21 @@ public class Button extends UIComponent implements Renderable {
 
     public String getText() {
         try {
-            Object renderer = UtilReflection.invokeGetter(inner, "getRenderer");
+            Object renderer = ReflectionUtilis.getMethodAndInvokeDirectly("getRenderer", inner, 0);
             Object graphicsObject = null;
             if (graphicsObjectGetterName != null) {
-                graphicsObject = UtilReflection.invokeGetter(renderer, graphicsObjectGetterName);
+                graphicsObject = ReflectionUtilis.getMethodAndInvokeDirectly(graphicsObjectGetterName, renderer, 0);
             }
             else {
-                for (Method method : renderer.getClass().getDeclaredMethods()) {
-                    Package pack = method.getReturnType().getPackage();
-                    if (pack != null && pack.getName().startsWith("com.fs.graphics")) {
-                        graphicsObjectGetterName = method.getName();
-                        graphicsObject = method.invoke(renderer);
+                for (Object method : renderer.getClass().getDeclaredMethods()) {
+                    Class<?> returnType = ReflectionUtilis.getReturnType(method);
+
+                    if (returnType != null) {
+                        Package pack = returnType.getPackage();
+                        if (pack != null && pack.getName().startsWith("com.fs.graphics")) {
+                            graphicsObjectGetterName = ReflectionUtilis.getMethodName(method);
+                            graphicsObject = ReflectionUtilis.invokeMethodDirectly(method, renderer);
+                        }
                     }
                 }
             }
@@ -103,12 +87,12 @@ public class Button extends UIComponent implements Renderable {
             }
 
             if (textGetterName != null) {
-                return (String) UtilReflection.invokeGetter(graphicsObject, textGetterName);
+                return (String) ReflectionUtilis.getMethodAndInvokeDirectly(textGetterName, graphicsObject, 0);
             }
-            for (Method method : graphicsObject.getClass().getDeclaredMethods()) {
-                if (String.class.isAssignableFrom(method.getReturnType())) {
-                    textGetterName = method.getName();
-                    return (String) method.invoke(graphicsObject);
+            for (Object method : graphicsObject.getClass().getDeclaredMethods()) {
+                if (String.class.isAssignableFrom(ReflectionUtilis.getReturnType(method))) {
+                    textGetterName = ReflectionUtilis.getMethodName(method);
+                    return (String) ReflectionUtilis.invokeMethodDirectly(method, graphicsObject);
                 }
             }
             throw new RuntimeException("Text label for button object not found");
@@ -117,7 +101,7 @@ public class Button extends UIComponent implements Renderable {
             throw e;
         }
         catch (Exception e) {
-            e.printStackTrace();
+            PresetMiscUtils.print(e);
             return null;
         }
     }

@@ -3,7 +3,7 @@ package data.scripts.listeners;
 
 import data.scripts.ClassRefs;
 
-public abstract class ActionListener extends ProxyTrigger {
+public abstract class ActionListener extends ProxyTriggerNew {
     public ActionListener() {
         super(ClassRefs.actionListenerInterface, "actionPerformed");
     }

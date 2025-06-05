@@ -2,12 +2,13 @@ package data.scripts.util;
 
 import com.fs.starfarer.api.util.Pair;
 
+import data.scripts.listeners.ProxyTriggerNew;
+
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.lang.invoke.CallSite;
+import java.lang.invoke.LambdaMetafactory;
 import java.lang.invoke.MethodHandle;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Type;
 
 import java.awt.Color;
 import java.util.*;
@@ -29,9 +30,14 @@ public class ReflectionUtilis {
     private static final MethodHandles.Lookup lookup = MethodHandles.lookup();
 
     private static final Class<?> fieldClass;
+    private static final Class<?> fieldArrayClass;
+    private static final Class<?> methodClass;
     private static final Class<?> typeClass;
     private static final Class<?> parameterizedTypeClass;
     private static final Class<?> constructorClass;
+    private static final Class<?> constructorArrayClass;
+    private static final Class<?> proxyClass;
+    private static final Class<?> invocationHandlerClass;
 
     private static final MethodHandle  getFieldTypeHandle;
     
@@ -40,28 +46,36 @@ public class ReflectionUtilis {
     private static final MethodHandle getFieldNameHandle;
     private static final MethodHandle setFieldAccessibleHandle;
     
-    private static final Class<?> methodClass;
+    
     private static final MethodHandle getMethodNameHandle;
     private static final MethodHandle invokeMethodHandle;
     private static final MethodHandle setMethodAccessable;
     private static final MethodHandle getModifiersHandle;
-    private static final MethodHandle  getParameterTypesHandle;
+    private static final MethodHandle getParameterTypesHandle;
+    private static final MethodHandle getReturnTypeHandle;
         
-    private static final MethodHandle getGenericTypeHandle;
+    // private static final MethodHandle getGenericTypeHandle;
     private static final MethodHandle getTypeNameHandle;
-    private static final MethodHandle getActualTypeArgumentsHandle;
+    // private static final MethodHandle getActualTypeArgumentsHandle;
     
     private static final MethodHandle setConstructorAccessibleHandle;
+    private static final MethodHandle getDeclaredConstructorsHandle;
     private static final MethodHandle getConstructorParameterTypesHandle;
     private static final MethodHandle constructorNewInstanceHandle;
+
+    private static final MethodHandle newProxyInstanceHandle;
 
     static {
         try {
             fieldClass = Class.forName("java.lang.reflect.Field", false, Class.class.getClassLoader());
+            fieldArrayClass = Class.forName("[Ljava.lang.reflect.Field;", false, Class.class.getClassLoader());
             methodClass = Class.forName("java.lang.reflect.Method", false, Class.class.getClassLoader());
             typeClass = Class.forName("java.lang.reflect.Type", false, Class.class.getClassLoader());
             parameterizedTypeClass = Class.forName("java.lang.reflect.ParameterizedType", false, Class.class.getClassLoader());
             constructorClass = Class.forName("java.lang.reflect.Constructor", false, Class.class.getClassLoader());
+            constructorArrayClass = Class.forName("[Ljava.lang.reflect.Constructor;", false, Class.class.getClassLoader());
+            proxyClass = Class.forName("java.lang.reflect.Proxy", false, Class.class.getClassLoader());
+            invocationHandlerClass = Class.forName("java.lang.reflect.InvocationHandler", false, Class.class.getClassLoader());
 
             setFieldHandle = lookup.findVirtual(fieldClass, "set", MethodType.methodType(Void.TYPE, Object.class, Object.class));
             getFieldHandle = lookup.findVirtual(fieldClass, "get", MethodType.methodType(Object.class, Object.class));
@@ -74,17 +88,110 @@ public class ReflectionUtilis {
             setMethodAccessable = lookup.findVirtual(methodClass, "setAccessible", MethodType.methodType(Void.TYPE, boolean.class));
             getModifiersHandle = lookup.findVirtual(methodClass, "getModifiers", MethodType.methodType(int.class));
             getParameterTypesHandle = lookup.findVirtual(methodClass, "getParameterTypes", MethodType.methodType(Class[].class));
+            getReturnTypeHandle = lookup.findVirtual(methodClass, "getReturnType", MethodType.methodType(Class.class));
 
-            getGenericTypeHandle = lookup.findVirtual(fieldClass, "getGenericType", MethodType.methodType(Type.class));
+            // getGenericTypeHandle = lookup.findVirtual(fieldClass, "getGenericType", MethodType.methodType(Type.class));
             getTypeNameHandle = lookup.findVirtual(typeClass, "getTypeName", MethodType.methodType(String.class));
-            getActualTypeArgumentsHandle = lookup.findVirtual(parameterizedTypeClass, "getActualTypeArguments", MethodType.methodType(Type[].class));
+            // getActualTypeArgumentsHandle = lookup.findVirtual(parameterizedTypeClass, "getActualTypeArguments", MethodType.methodType(Type[].class));
 
             setConstructorAccessibleHandle = lookup.findVirtual(constructorClass, "setAccessible", MethodType.methodType(Void.TYPE, boolean.class));
             getConstructorParameterTypesHandle = lookup.findVirtual(constructorClass, "getParameterTypes", MethodType.methodType(Class[].class));
             constructorNewInstanceHandle = lookup.findVirtual(constructorClass, "newInstance", MethodType.methodType(Object.class, Object[].class));
+            getDeclaredConstructorsHandle = lookup.findVirtual(Class.class, "getDeclaredConstructors", MethodType.methodType(constructorArrayClass));
 
+            newProxyInstanceHandle = lookup.findStatic(proxyClass, "newProxyInstance", MethodType.methodType(Object.class, ClassLoader.class, Class[].class, invocationHandlerClass));
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public static class ProxyHandler {
+        private final String targetMethodName;
+        private final ProxyTriggerNew proxyTriggerClassInstance;
+
+        public ProxyHandler(String targetMethodName, ProxyTriggerNew proxyTriggerClassInstance) {
+            this.targetMethodName = targetMethodName;
+            this.proxyTriggerClassInstance = proxyTriggerClassInstance;
+        }
+
+        public Object invoke(Object proxy, Object method, Object[] args) throws Throwable {
+            String name = (String)getMethodNameHandle.invoke(method);
+
+            if (name.equals(targetMethodName)) {
+                proxyTriggerClassInstance.trigger(args);
+                return null;
+            }
+            if (name.equals("equals") && args.length == 1) {
+                return proxy == args[0];
+            }
+            if (name.equals("hashCode") && args.length == 0) {
+                return System.identityHashCode(proxy);
+            }
+            if (name.equals("toString") && args.length == 0) {
+                return proxy.getClass() + "@" + Integer.toHexString(System.identityHashCode(proxy));
+            }
+            return null;
+        }
+    }
+
+    @FunctionalInterface
+    public interface AnonymousInvoker {
+        Object invoke(Object proxy, Object method, Object[] args) throws Throwable;
+    }
+
+    public static Object getProxyInstance(ProxyTriggerNew proxyTriggerClassInstance, String targetMethodName, ClassLoader classLoader, Class<?>[] interfc) {
+        try {
+            ProxyHandler handler = new ProxyHandler(targetMethodName, proxyTriggerClassInstance);
+
+            MethodType samMethodType = MethodType.methodType(Object.class, Object.class, methodClass, Object[].class);
+
+            MethodHandle handlerImpl = lookup.findVirtual(
+                ProxyHandler.class,
+                "invoke",
+                MethodType.methodType(Object.class, Object.class, Object.class, Object[].class)
+            );
+
+            MethodType factoryType = MethodType.methodType(AnonymousInvoker.class, ProxyHandler.class);
+
+            CallSite site = LambdaMetafactory.metafactory(
+                lookup,
+                "invoke",
+                factoryType,
+                samMethodType,
+                handlerImpl,
+                samMethodType
+            );
+
+            Object actualInvocationHandler = site.getTarget().invoke(handler);
+
+            return newProxyInstanceHandle.invoke(classLoader, interfc, actualInvocationHandler);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static String getMethodName(Object method) {
+        try {
+            return (String) getMethodNameHandle.invoke(method);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    public static Class<?> getReturnType(Object method) {
+        try {
+            return (Class<?>) getReturnTypeHandle.invoke(method);
+        } catch (Throwable e) {
+            print(e);
+            return null;
+        }
+    }
+
+    public static String getFieldName(Object field) {
+        try {
+            return (String) getFieldNameHandle.invoke(field);
+        } catch (Throwable e) {
+            return null;
         }
     }
 
@@ -138,6 +245,13 @@ public class ReflectionUtilis {
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static void setPrivateVariable(Object field, Object instanceToModify, Object newValue) {
+        try {
+            setFieldAccessibleHandle.invoke(field, true);
+            setFieldHandle.invoke(field, instanceToModify, newValue);
+        } catch (Throwable ignored) {}
     }
 
     public static void setPrivateVariableFromSuperclass(String fieldName, Object instanceToModify, Object newValue) {
@@ -464,13 +578,13 @@ public class ReflectionUtilis {
             // Invoke the static method (pass null as the instance for static methods)
             return invokeMethodHandle.invoke(matchingMethod, null, projectedArgs);
         } catch (Throwable e) {
-            if (e instanceof InvocationTargetException) {
-                Throwable cause = ((InvocationTargetException) e).getTargetException();
-                System.err.println("Root cause of InvocationTargetException: " + cause.getClass().getName());
-                cause.printStackTrace(); // Print root cause
-            } else {
-                e.printStackTrace();
-            }
+            // if (e instanceof InvocationTargetException) {
+            //     Throwable cause = ((InvocationTargetException) e).getTargetException();
+            //     System.err.println("Root cause of InvocationTargetException: " + cause.getClass().getName());
+            //     cause.printStackTrace(); // Print root cause
+            // } else {
+            //     e.printStackTrace();
+            // }
             throw new RuntimeException(e);
         }
     }
@@ -672,21 +786,21 @@ public class ReflectionUtilis {
     }
 
     public static void logField(String fieldName, Class<?> fieldType, Object field, int i) throws Throwable {
-        if (List.class.isAssignableFrom(fieldType)) {
-            print(getGenericTypeHandle.invoke(field), fieldName, i);
+        // if (List.class.isAssignableFrom(fieldType)) {
+        //     print(getGenericTypeHandle.invoke(field), fieldName, i);
 
-        } else if (Map.class.isAssignableFrom(fieldType)) {
-            print(getGenericTypeHandle.invoke(field), fieldName, i);
+        // } else if (Map.class.isAssignableFrom(fieldType)) {
+        //     print(getGenericTypeHandle.invoke(field), fieldName, i);
 
-        } else if (Set.class.isAssignableFrom(fieldType)) {
-            print(getGenericTypeHandle.invoke(field), fieldName, i);
+        // } else if (Set.class.isAssignableFrom(fieldType)) {
+        //     print(getGenericTypeHandle.invoke(field), fieldName, i);
 
-        } else if (Collection.class.isAssignableFrom(fieldType)) {
-            print(getGenericTypeHandle.invoke(field), fieldName, i);
+        // } else if (Collection.class.isAssignableFrom(fieldType)) {
+        //     print(getGenericTypeHandle.invoke(field), fieldName, i);
 
-        } else {
+        // } else {
             print(fieldType.getCanonicalName(), fieldName, i);
-        }
+        // }
     }
 
     public static boolean isNativeJavaClass(Class<?> clazz) {
@@ -703,6 +817,14 @@ public class ReflectionUtilis {
             return getFieldHandle.invoke(fields[index], instance);
         } catch (Throwable e) {
             print(e);
+            return null;
+        }
+    }
+
+    public static Class<?> getFieldType(Object field) {
+        try {
+            return (Class<?>) getFieldTypeHandle.invoke(field);
+        } catch (Throwable ignored) {
             return null;
         }
     }

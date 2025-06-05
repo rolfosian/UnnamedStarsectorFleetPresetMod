@@ -36,9 +36,6 @@ import data.scripts.util.PresetUtils;
 
 import java.util.*;
 import java.awt.Color;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Constructor;
 
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
@@ -49,8 +46,8 @@ public class FleetPresetsFleetPanelInjector {
         PresetMiscUtils.print(args);
     }
 
-    private static Field fleetInfoPanelField;
-    private static Field autoAssignButtonField;
+    private static Object fleetInfoPanelField;
+    private static Object autoAssignButtonField;
 
     /** Keep track of the last known fleet info panel to track when it changes */
     private UIPanelAPI fleetInfoPanelRef;
@@ -272,17 +269,20 @@ public class FleetPresetsFleetPanelInjector {
         // a LabelAPI and a CampaignFleetAPI field in that
         if (fleetInfoPanelField == null) {
             outer:
-            for (Field field : currentTab.getClass().getDeclaredFields()) {
-                if (!UIPanelAPI.class.isAssignableFrom(field.getType())) {
+            for (Object field : currentTab.getClass().getDeclaredFields()) {
+                Class<?> fieldType = ReflectionUtilis.getFieldType(field);
+
+                if (!UIPanelAPI.class.isAssignableFrom(fieldType)) {
                     continue;
                 }
                 boolean hasLabelField = false;
                 boolean hasFleetField = false;
-                for (Field innerField : field.getType().getDeclaredFields()) {
-                    if (CampaignFleetAPI.class.isAssignableFrom(innerField.getType())) {
+                for (Object innerField : fieldType.getDeclaredFields()) {
+                    Class<?> innerFieldType = ReflectionUtilis.getFieldType(innerField);
+                    if (CampaignFleetAPI.class.isAssignableFrom(innerFieldType)) {
                         hasFleetField = true;
                     }
-                    if (LabelAPI.class.isAssignableFrom(innerField.getType())) {
+                    if (LabelAPI.class.isAssignableFrom(innerFieldType)) {
                         hasLabelField = true;
                     }
                     // The outer field is the fleet info panel
@@ -293,14 +293,14 @@ public class FleetPresetsFleetPanelInjector {
                 }
             }
         }
-
         if (fleetInfoPanelField == null) {
             throw new RuntimeException("Could not find the fleet info panel for the fleet tab");
         }
 
-        fleetInfoPanelField.setAccessible(true);
+        // fleetInfoPanelField.setAccessible(true);
         try {
-            return (UIPanelAPI) fleetInfoPanelField.get(currentTab);
+            return (UIPanelAPI) ReflectionUtilis.getPrivateVariable(ReflectionUtilis.getFieldName(fleetInfoPanelField), currentTab);
+            // return (UIPanelAPI) fleetInfoPanelField.get(currentTab);
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -311,17 +311,11 @@ public class FleetPresetsFleetPanelInjector {
     public ButtonAPI getAutoAssignButton(UIPanelAPI fleetInfoPanel) {
         if (autoAssignButtonField == null) {
             // Find the button that starts with "Auto-assign"
-            for (Field field : fleetInfoPanel.getClass().getDeclaredFields()) {
-                if (ButtonAPI.class.isAssignableFrom(field.getType())) {
-                    field.setAccessible(true);
-                    ButtonAPI button;
-                    try {
-                        button = (ButtonAPI) field.get(fleetInfoPanel);
-                    }
-                    catch (Exception e) {
-                        e.printStackTrace();
-                        button = null;
-                    }
+            for (Object field : fleetInfoPanel.getClass().getDeclaredFields()) {
+                if (ButtonAPI.class.isAssignableFrom(ReflectionUtilis.getFieldType(field))) {
+                    ButtonAPI button = (ButtonAPI) ReflectionUtilis.getPrivateVariable(ReflectionUtilis.getFieldName(field), fleetInfoPanel);
+                    
+
                     if (button != null && new Button(button, null, null).getText().trim().startsWith("Auto-assign")) {
                         autoAssignButtonField = field;
                         break;
@@ -334,13 +328,7 @@ public class FleetPresetsFleetPanelInjector {
             throw new RuntimeException("Could not find the auto-assign button");
         }
 
-        autoAssignButtonField.setAccessible(true);
-        try {
-            return (ButtonAPI) autoAssignButtonField.get(fleetInfoPanel);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+        return (ButtonAPI) ReflectionUtilis.getPrivateVariable(ReflectionUtilis.getFieldName(autoAssignButtonField), fleetInfoPanel);
+
     }
 }

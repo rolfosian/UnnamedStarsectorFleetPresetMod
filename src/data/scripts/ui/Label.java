@@ -5,35 +5,34 @@ package data.scripts.ui;
 import com.fs.starfarer.api.ui.Alignment;
 import com.fs.starfarer.api.ui.LabelAPI;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+import data.scripts.util.ReflectionUtilis;
 
 public class Label implements Renderable {
 
     private final LabelAPI inner;
-    private static Method createMethod;
-    private static Method createSmallInsigniaMethod;
-    private static Method setHighlightOnMouseoverMethod;
-    private static Field tooltipField;
-    private static Method setTooltipMethod;
-    private static Method autoSizeMethod;
+    private static Object createMethod;
+    private static Object createSmallInsigniaMethod;
+    private static Object setHighlightOnMouseoverMethod;
+    private static Object tooltipField;
+    private static Object setTooltipMethod;
+    private static Object autoSizeMethod;
 
     public Label(LabelAPI o) {
         inner = o;
         if (createMethod == null) {
             try {
-                createMethod = inner.getClass().getMethod("create", String.class);
+                createMethod = ReflectionUtilis.getMethodExplicit("create", inner, new Class<?>[]{String.class});// inner.getClass().getMethod("create", String.class);
             }
             catch (Exception e) {
-                throw new RuntimeException("LabelAPI's create method not found");
+                throw new RuntimeException("LabelAPI's create Object not found");
             }
         }
         if (createSmallInsigniaMethod == null) {
             try {
-                createSmallInsigniaMethod = inner.getClass().getMethod("createSmallInsigniaLabel", String.class, Alignment.class);
+                createSmallInsigniaMethod = ReflectionUtilis.getMethodExplicit("create", inner, new Class<?>[]{String.class, Alignment.class});// inner.getClass().getMethod("createSmallInsigniaLabel", String.class, Alignment.class);
             }
             catch (Exception e) {
-                throw new RuntimeException("LabelAPI's createSmallInsigniaLabel method not found");
+                throw new RuntimeException("LabelAPI's createSmallInsigniaLabel Object not found");
             }
         }
         if (setHighlightOnMouseoverMethod == null) {
@@ -41,17 +40,18 @@ public class Label implements Renderable {
                 setHighlightOnMouseoverMethod = inner.getClass().getMethod("setHighlightOnMouseover", boolean.class);
             }
             catch (Exception e) {
-                throw new RuntimeException("LabelAPI's setHighlightOnMouseover method not found");
+                throw new RuntimeException("LabelAPI's setHighlightOnMouseover Object not found");
             }
         }
         if (tooltipField == null) {
             try {
-                for (Field field : inner.getClass().getDeclaredFields()) {
+                for (Object field : inner.getClass().getDeclaredFields()) {
                     // Look for an interface with the "notifyShown" method
-                    if (field.getType().isInterface()) {
+                    Class<?> fieldType = ReflectionUtilis.getFieldType(field);
+                    if (fieldType.isInterface()) {
                         try {
-                            field.getType().getMethod("notifyShown");
-                            // Past here, we know we found the field we're looking for
+                            fieldType.getMethod("notifyShown");
+                            // Past here, we know we found the Object we're looking for
                             tooltipField = field;
                         }
                         catch (NoSuchMethodException e) {
@@ -60,34 +60,34 @@ public class Label implements Renderable {
                     }
                 }
                 if (tooltipField == null) {
-                    throw new RuntimeException("LabelAPI's tooltip field not found");
+                    throw new RuntimeException("LabelAPI's tooltip Object not found");
                 }
             }
             catch (Exception e) {
-                throw new RuntimeException("LabelAPI's tooltip field not found");
+                throw new RuntimeException("LabelAPI's tooltip Object not found");
             }
         }
         if (setTooltipMethod == null) {
             try {
-                setTooltipMethod = inner.getClass().getMethod("setTooltip", float.class, tooltipField.getType());
+                setTooltipMethod = ReflectionUtilis.getMethodExplicit("setTooltip", inner, new Class<?>[] {float.class, ReflectionUtilis.getFieldType(tooltipField)});
             }
             catch (Exception e) {
-                throw new RuntimeException("LabelAPI's setTooltip method not found");
+                throw new RuntimeException("LabelAPI's setTooltip Object not found");
             }
         }
         if (autoSizeMethod == null) {
             try {
-                autoSizeMethod = inner.getClass().getMethod("autoSize");
+                autoSizeMethod = ReflectionUtilis.getMethod("autoSize", inner, 0);
             }
             catch (Exception e) {
-                throw new RuntimeException("LabelAPI's autoSize method not found");
+                throw new RuntimeException("LabelAPI's autoSize Object not found");
             }
         }
     }
 
     public Label create(String text) {
         try {
-            return new Label((LabelAPI) createMethod.invoke(null, text));
+            return new Label((LabelAPI) ReflectionUtilis.invokeMethodDirectly(createMethod, inner, new Class<?>[]{String.class}, text));
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -97,7 +97,7 @@ public class Label implements Renderable {
 
     public Label createSmallInsigniaLabel(String text, Alignment alignment) {
         try {
-            return new Label((LabelAPI) createSmallInsigniaMethod.invoke(null, text, alignment));
+            return new Label((LabelAPI) ReflectionUtilis.invokeMethodDirectly(createSmallInsigniaMethod, inner, text, alignment));
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -107,7 +107,7 @@ public class Label implements Renderable {
 
     public void autoSize() {
         try {
-            autoSizeMethod.invoke(inner);
+            ReflectionUtilis.invokeMethodDirectly(autoSizeMethod, inner);
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -116,7 +116,7 @@ public class Label implements Renderable {
 
     public void removeTooltip() {
         try {
-            setTooltipMethod.invoke(inner, 0f, null);
+            ReflectionUtilis.invokeMethodDirectly(setTooltipMethod, inner, 0f, null);
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -125,7 +125,7 @@ public class Label implements Renderable {
 
     public void setHighlightOnMouseover(boolean value) {
         try {
-            setHighlightOnMouseoverMethod.invoke(inner, value);
+            ReflectionUtilis.invokeMethodDirectly(setHighlightOnMouseoverMethod, inner, value);
         }
         catch (Exception e) {
             e.printStackTrace();

@@ -23,7 +23,6 @@ import data.scripts.listeners.*;
 import data.scripts.FleetPresetsFleetPanelInjector;
 
 import java.util.*;
-import java.lang.reflect.Field;
 
 public class FleetPresetManagerCoreScript implements EveryFrameScript {
     private static void print(Object... args) {
@@ -55,21 +54,27 @@ public class FleetPresetManagerCoreScript implements EveryFrameScript {
     @Override
     public void advance(float amount) {
         if (isFirstFrame) {
+            
             try {
                 CampaignUIAPI campaignUI = Global.getSector().getCampaignUI();
-                Field field = campaignUI.getClass().getDeclaredField("screenPanel");
-                field.setAccessible(true);
-                if (field.get(campaignUI) == null) {
-                    field.set(campaignUI,
-                            field.getType()
-                                    .getConstructor(float.class, float.class)
-                                    .newInstance(
-                                            Global.getSettings().getScreenWidth(),
-                                            Global.getSettings().getScreenHeight()));
+                Object field = campaignUI.getClass().getDeclaredField("screenPanel");
+                
+                if (ReflectionUtilis.getPrivateVariable("screenPanel", campaignUI) == null) {
+                    ReflectionUtilis.setPrivateVariable(field, campaignUI,
+                        ReflectionUtilis.getClassInstance(ReflectionUtilis.getFieldType(field).getCanonicalName(),
+                        new Class<?>[] {
+                            float.class,
+                            float.class,
+                        },
+                        Global.getSettings().getScreenWidth(),
+                        Global.getSettings().getScreenHeight()
+                        )
+                    );
                     ClassRefs.findAllClasses();
                 }
+                
             } catch (Exception e) {
-                e.printStackTrace();
+                print(e);
             }
             isFirstFrame = false;
         }

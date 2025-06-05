@@ -29,7 +29,7 @@ import java.util.*;
 
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.file.Paths;
+// import java.nio.file.Paths;
 
 import org.apache.log4j.Logger;
 
@@ -82,6 +82,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         @SuppressWarnings("resource")
         ClassLoader cl = new ReflectionEnabledClassLoader(url, getClass().getClassLoader());
         try {
+            // Global.getSector().addTransientScript(new FleetPresetManagerCoreScript());
             Global.getSector().addTransientScript((EveryFrameScript) UtilReflection.instantiateClassNoParams(cl.loadClass("data.scripts.FleetPresetManagerCoreScript")));
             Global.getSector().addTransientScript(new OfficerTracker());
             Global.getSector().addTransientScript(new FleetMonitor());
