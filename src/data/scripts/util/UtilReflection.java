@@ -21,9 +21,6 @@ import data.scripts.ui.Button;
 // import java.awt.*;
 import java.util.*;
 import java.awt.Color;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-import java.lang.invoke.MethodHandle;
 
 import org.apache.log4j.Logger;
 
@@ -59,7 +56,7 @@ public class UtilReflection {
             DialogDismissedListener dialogListener) {
         try {
             Object confirmDialog = ReflectionUtilis.getClassInstance(
-                ClassRefs.confirmDialogClass.getCanonicalName(),
+                ClassRefs.confirmDialogClass,
                 new Class<?>[] {
                     float.class,
                     float.class,
@@ -69,12 +66,12 @@ public class UtilReflection {
                     String[].class
                 },
                 new Object[] {
-                width,
-                height,
-                getField(Global.getSector().getCampaignUI(), "screenPanel"),
-                dialogListener.getProxy(),
-                text,
-                new String[]{confirmText, cancelText}
+                    width,
+                    height,
+                    getField(Global.getSector().getCampaignUI(), "screenPanel"),
+                    dialogListener.getProxy(),
+                    text,
+                    new String[]{confirmText, cancelText}
                 }
             );
             
@@ -182,7 +179,7 @@ public class UtilReflection {
     }
 
     public static UIPanelAPI getObfFleetInfoPanel(String name, CampaignFleetAPI fleet) {
-        return (UIPanelAPI) ReflectionUtilis.getClassInstance(ClassRefs.visualPanelFleetInfoClass.getCanonicalName(),
+        return (UIPanelAPI) ReflectionUtilis.getClassInstance(ClassRefs.visualPanelFleetInfoClass,
         ClassRefs.visualPanelFleetInfoClassParams,
         name,
         fleet,

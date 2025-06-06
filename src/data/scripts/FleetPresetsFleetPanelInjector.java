@@ -69,7 +69,7 @@ public class FleetPresetsFleetPanelInjector {
     }
 
     private Object getButtonInputEventInstance(PositionAPI buttonPosition) {
-            return ReflectionUtilis.getClassInstance(ClassRefs.inputEventClass.getCanonicalName(),
+            return ReflectionUtilis.getClassInstance(ClassRefs.inputEventClass,
             ClassRefs.inputEventClassParamTypes,
             new Object[] {
                 InputEventClass.MOUSE_EVENT,
@@ -109,7 +109,7 @@ public class FleetPresetsFleetPanelInjector {
         List<FleetMemberAPI> mothballedShips = PresetUtils.getMothBalledShips(market);
 
         if (injected) {
-            if (market != null) {
+            if (market != null && market.getSubmarket(Submarkets.SUBMARKET_STORAGE) != null) {
                 if (PresetUtils.isPlayerPaidForStorage(market.getSubmarket(Submarkets.SUBMARKET_STORAGE).getPlugin())) {
                     if (mothballedShips != null && mothballedShips.size() > 0) {
                         pullAllShipsButton.setEnabled(true);
@@ -164,7 +164,7 @@ public class FleetPresetsFleetPanelInjector {
             float officerAutoAssignButtonHeight = officerAutoAssignButtonPosition.getHeight();
 
             PositionAPI storageButtonPosition = null;
-            if (market != null) {
+            if (market != null && market.getSubmarket(Submarkets.SUBMARKET_STORAGE) != null) {
                 UIPanelAPI core = (UIPanelAPI) Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.COREUI_KEY);
                 Object storageButtonObf = getStorageButton(core);
                 ButtonAPI storageButton = (ButtonAPI) storageButtonObf;
@@ -176,7 +176,7 @@ public class FleetPresetsFleetPanelInjector {
                         " Store Entire Fleet",
                         new ActionListener() {
                             @Override
-                            public void trigger(Object... args) {
+                            public void trigger(Object arg0, Object arg1) {
                                 Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
                                 PresetUtils.storeFleetInStorage();
                             }
@@ -199,7 +199,7 @@ public class FleetPresetsFleetPanelInjector {
                         "  Take all ships from storage",
                         new ActionListener() {
                             @Override
-                            public void trigger(Object... args) {
+                            public void trigger(Object arg0, Object arg1) {
                                     Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
                                     PresetUtils.takeAllShipsFromStorage();
                             }

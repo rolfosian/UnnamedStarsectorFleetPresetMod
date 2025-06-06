@@ -58,10 +58,10 @@ public class FleetPresetManagerCoreScript implements EveryFrameScript {
             try {
                 CampaignUIAPI campaignUI = Global.getSector().getCampaignUI();
                 Object field = campaignUI.getClass().getDeclaredField("screenPanel");
-                
+
                 if (ReflectionUtilis.getPrivateVariable("screenPanel", campaignUI) == null) {
                     ReflectionUtilis.setPrivateVariable(field, campaignUI,
-                        ReflectionUtilis.getClassInstance(ReflectionUtilis.getFieldType(field).getCanonicalName(),
+                        ReflectionUtilis.getClassInstance(ReflectionUtilis.getFieldType(field),
                         new Class<?>[] {
                             float.class,
                             float.class,

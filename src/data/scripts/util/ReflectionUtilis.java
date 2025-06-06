@@ -36,11 +36,8 @@ public class ReflectionUtilis {
     private static final Class<?> parameterizedTypeClass;
     private static final Class<?> constructorClass;
     private static final Class<?> constructorArrayClass;
-    private static final Class<?> proxyClass;
-    private static final Class<?> invocationHandlerClass;
 
-    private static final MethodHandle  getFieldTypeHandle;
-    
+    private static final MethodHandle getFieldTypeHandle;
     private static final MethodHandle setFieldHandle;
     private static final MethodHandle getFieldHandle;
     private static final MethodHandle getFieldNameHandle;
@@ -52,7 +49,7 @@ public class ReflectionUtilis {
     private static final MethodHandle getModifiersHandle;
     private static final MethodHandle getParameterTypesHandle;
     private static final MethodHandle getReturnTypeHandle;
-        
+    
     // private static final MethodHandle getGenericTypeHandle;
     private static final MethodHandle getTypeNameHandle;
     // private static final MethodHandle getActualTypeArgumentsHandle;
@@ -61,8 +58,6 @@ public class ReflectionUtilis {
     private static final MethodHandle getDeclaredConstructorsHandle;
     private static final MethodHandle getConstructorParameterTypesHandle;
     private static final MethodHandle constructorNewInstanceHandle;
-
-    private static final MethodHandle newProxyInstanceHandle;
 
     static {
         try {
@@ -73,8 +68,6 @@ public class ReflectionUtilis {
             parameterizedTypeClass = Class.forName("java.lang.reflect.ParameterizedType", false, Class.class.getClassLoader());
             constructorClass = Class.forName("java.lang.reflect.Constructor", false, Class.class.getClassLoader());
             constructorArrayClass = Class.forName("[Ljava.lang.reflect.Constructor;", false, Class.class.getClassLoader());
-            proxyClass = Class.forName("java.lang.reflect.Proxy", false, Class.class.getClassLoader());
-            invocationHandlerClass = Class.forName("java.lang.reflect.InvocationHandler", false, Class.class.getClassLoader());
 
             setFieldHandle = lookup.findVirtual(fieldClass, "set", MethodType.methodType(Void.TYPE, Object.class, Object.class));
             getFieldHandle = lookup.findVirtual(fieldClass, "get", MethodType.methodType(Object.class, Object.class));
@@ -98,46 +91,84 @@ public class ReflectionUtilis {
             constructorNewInstanceHandle = lookup.findVirtual(constructorClass, "newInstance", MethodType.methodType(Object.class, Object[].class));
             getDeclaredConstructorsHandle = lookup.findVirtual(Class.class, "getDeclaredConstructors", MethodType.methodType(constructorArrayClass));
 
-            newProxyInstanceHandle = lookup.findStatic(proxyClass, "newProxyInstance", MethodType.methodType(Object.class, ClassLoader.class, Class[].class, invocationHandlerClass));
-
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-
     public static class ListenerFactory {
+        private static final CallSite dialogDismissedCallSite;
+        private static final CallSite actionListenerCallSite;
+
         private static Class<?> dialogDismissedParamClass;
 
         static {
             if (!ClassRefs.foundAllClasses()) {
                 ClassRefs.findAllClasses();
             }
-            
 
             for (Class<?> type : getMethodParamTypes(ClassRefs.dialogDismissedInterface.getDeclaredMethods()[0])) {
                 if (type != int.class) {
                     dialogDismissedParamClass = type;
+                    break;
                 }
             };
+
+            try {
+                MethodHandle implementationMethodHandle;
+                MethodType actualSamMethodType;
+                MethodType factoryType;
+                MethodType implSignature;
+        
+                actualSamMethodType = MethodType.methodType(void.class, dialogDismissedParamClass, int.class);
+                implSignature = MethodType.methodType(void.class, Object.class, int.class);
+                implementationMethodHandle = lookup.findVirtual(DialogDismissedListenerProxy.class, "dialogDismissed", implSignature);
+
+                factoryType = MethodType.methodType(ClassRefs.dialogDismissedInterface, DialogDismissedListenerProxy.class);
+                dialogDismissedCallSite = LambdaMetafactory.metafactory(
+                    lookup,
+                    "dialogDismissed",
+                    factoryType,
+                    actualSamMethodType,
+                    implementationMethodHandle,
+                    actualSamMethodType
+                );
+        
+                actualSamMethodType = MethodType.methodType(void.class, Object.class, Object.class);
+                implSignature = MethodType.methodType(void.class, Object.class, Object.class);
+                implementationMethodHandle = lookup.findVirtual(ActionListenerProxy.class, "actionPerformed", implSignature);
+        
+                factoryType = MethodType.methodType(ClassRefs.actionListenerInterface, ActionListenerProxy.class);
+                actionListenerCallSite = LambdaMetafactory.metafactory(
+                    lookup,
+                    "actionPerformed",
+                    factoryType,
+                    actualSamMethodType,
+                    implementationMethodHandle,
+                    actualSamMethodType
+                );
+
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
 
-        public static interface Triggerable {
-            void trigger(Object... args);
+        private static interface Triggerable {
+            void trigger(Object arg0, Object arg1);
         }
-        // Rewritten proxy class from officer extension mod to work without using java.lang.reflect.Proxy and InvocationHandler imports
-        public static class ProxyTrigger implements Triggerable {
+        // Rewritten proxy class from officer extension mod that works without using java.lang.reflect.Proxy and InvocationHandler imports
+        private static abstract class ProxyTrigger implements Triggerable {
             private final Object listener;
         
-            public ProxyTrigger(Class<?> interfc, final String methodName) {
+            public ProxyTrigger(final String methodName) {
                 try {
-                    listener = getListener(interfc, this, methodName);
+                    listener = getListener(methodName, this);
                 } catch (Throwable e) {
                     throw new RuntimeException(e);
                 }
             }
         
-            @Override public void trigger(Object... args) {};
+            @Override public void trigger(Object arg0, Object arg1) {};
             
             public Object getProxy() {
                 return listener;
@@ -146,25 +177,25 @@ public class ReflectionUtilis {
 
         public static abstract class ActionListener extends ProxyTrigger {
             public ActionListener() {
-                super(ClassRefs.actionListenerInterface, "actionPerformed");
+                super("actionPerformed");
             }
         }
 
         public static abstract class DialogDismissedListener extends ProxyTrigger {
             public DialogDismissedListener() {
-                super(ClassRefs.dialogDismissedInterface, "dialogDismissed");
+                super("dialogDismissed");
             }
         }
 
-        public static interface BaseActionListener {
+        private static interface BaseActionListener {
             public void actionPerformed(Object arg0, Object arg1);
         }
     
-        public static interface BaseDialogDismissedListener {
+        private static interface BaseDialogDismissedListener {
             public void dialogDismissed(Object arg0, int arg1);
         }
     
-        public static class DialogDismissedListenerProxy implements BaseDialogDismissedListener {
+        private static class DialogDismissedListenerProxy implements BaseDialogDismissedListener {
             private final ProxyTrigger proxyTriggerClassInstance;
     
             public DialogDismissedListenerProxy(ProxyTrigger proxyTriggerClassInstance) {
@@ -172,11 +203,11 @@ public class ReflectionUtilis {
             }
     
             public void dialogDismissed(Object arg0, int arg1) {
-                this.proxyTriggerClassInstance.trigger(new Object[] {arg0, arg1});
+                this.proxyTriggerClassInstance.trigger(arg0, arg1);
             };
         }
     
-        public static class ActionListenerProxy implements BaseActionListener {
+        private static class ActionListenerProxy implements BaseActionListener {
             private final ProxyTrigger proxyTriggerClassInstance;
     
             public ActionListenerProxy(ProxyTrigger proxyTriggerClassInstance) {
@@ -185,44 +216,19 @@ public class ReflectionUtilis {
     
             @Override
             public void actionPerformed(Object arg0, Object arg1) {
-                proxyTriggerClassInstance.trigger(new Object[] {arg0, arg1});
+                proxyTriggerClassInstance.trigger(arg0, arg1);
             }
         }
 
-        public static Object getListener(Class<?> unknownListenerInterfc, ProxyTrigger proxyTriggerClassInstance, String targetMethodName) throws Throwable {
-            Object listener;
-            MethodHandle implementationMethodHandle;
-            MethodType actualSamMethodType;
-    
-            if ("dialogDismissed".equals(targetMethodName)) {
-                listener = new DialogDismissedListenerProxy(proxyTriggerClassInstance);
-
-                MethodType implSignature = MethodType.methodType(void.class, Object.class, int.class);
-                implementationMethodHandle = lookup.findVirtual(DialogDismissedListenerProxy.class, "dialogDismissed", implSignature);
-                actualSamMethodType = MethodType.methodType(void.class, dialogDismissedParamClass, int.class);
-    
-            } else if ("actionPerformed".equals(targetMethodName)) {
-                listener = new ActionListenerProxy(proxyTriggerClassInstance);
-                
-                actualSamMethodType = MethodType.methodType(void.class, Object.class, Object.class);
-                MethodType implSignature = MethodType.methodType(void.class, Object.class, Object.class);
-                implementationMethodHandle = lookup.findVirtual(ActionListenerProxy.class, "actionPerformed", implSignature);
-    
-            } else {
-                throw new IllegalArgumentException("Unsupported method: " + targetMethodName);
+        private static Object getListener(String targetMethodName, ProxyTrigger proxyTriggerInstance) throws Throwable {
+            switch (targetMethodName) {
+                case "dialogDismissed":
+                    return dialogDismissedCallSite.getTarget().invoke(new DialogDismissedListenerProxy(proxyTriggerInstance));
+                case "actionPerformed":
+                    return actionListenerCallSite.getTarget().invoke(new ActionListenerProxy(proxyTriggerInstance));
+                default:
+                    throw new IllegalArgumentException("Unsupported method: " + targetMethodName);
             }
-    
-            MethodType factoryType = MethodType.methodType(unknownListenerInterfc, listener.getClass());
-            CallSite callSite = LambdaMetafactory.metafactory(
-                lookup,
-                targetMethodName,
-                factoryType,
-                actualSamMethodType,
-                implementationMethodHandle,
-                actualSamMethodType
-            );
-    
-            return callSite.getTarget().invoke(listener);
         }
     }
 
@@ -481,9 +487,8 @@ public class ReflectionUtilis {
         }
     }
 
-    public static Object getClassInstance(String canonicalName, Class<?>[] paramTypes, Object... params) {
+    public static Object getClassInstance(Class<?> clazz, Class<?>[] paramTypes, Object... params) {
         try {
-            Class<?> clazz = Class.forName(canonicalName);
             Object ctor = clazz.getDeclaredConstructor(paramTypes);
             setConstructorAccessibleHandle.invoke(ctor, true);
             return constructorNewInstanceHandle.invoke(ctor, params);

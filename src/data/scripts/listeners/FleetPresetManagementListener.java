@@ -199,7 +199,7 @@ public class FleetPresetManagementListener extends ActionListener {
     }
 
     @Override
-    public void trigger(Object... args) {
+    public void trigger(Object arg0, Object arg1) {
         CustomPanelAPI tableMasterPanel = Global.getSettings().createCustom(PANEL_WIDTH - CANCEL_CONFIRM_BUTTON_WIDTH - 5f, PANEL_HEIGHT, new BaseCustomUIPanelPlugin() );
         UtilReflection.ConfirmDialogData master = UtilReflection.showConfirmationDialog(
             EMPTY_STRING,
@@ -209,7 +209,7 @@ public class FleetPresetManagementListener extends ActionListener {
             CONFIRM_DIALOG_HEIGHT,
             new DialogDismissedListener() {
                 @Override
-                public void trigger(Object... args) {
+                public void trigger(Object arg0, Object arg1) {
                     resetTopLevelVars();
                 }
             });
@@ -928,8 +928,8 @@ public class FleetPresetManagementListener extends ActionListener {
         }
     
         @Override
-        public void trigger(Object... args) {
-            int option = (int) args[1];
+        public void trigger(Object arg0, Object arg1) {
+            int option = (int) arg1;
 
             if (option == 0) {
                 // confirm
@@ -976,8 +976,8 @@ public class FleetPresetManagementListener extends ActionListener {
 
    public class DeleteListener extends DialogDismissedListener {
         @Override
-        public void trigger(Object... args) {
-            int option = (int) args[1];
+        public void trigger(Object arg0, Object arg1) {
+            int option = (int) arg1;
     
             if (option == 0) {
                 // confirm
