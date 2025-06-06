@@ -100,19 +100,9 @@ public class ReflectionUtilis {
         private static final CallSite dialogDismissedCallSite;
         private static final CallSite actionListenerCallSite;
 
-        private static Class<?> dialogDismissedParamClass;
-
         static {
-            if (!ClassRefs.foundAllClasses()) {
-                ClassRefs.findAllClasses();
-            }
-
-            for (Class<?> type : getMethodParamTypes(ClassRefs.dialogDismissedInterface.getDeclaredMethods()[0])) {
-                if (type != int.class) {
-                    dialogDismissedParamClass = type;
-                    break;
-                }
-            };
+            ClassRefs.findAllClasses();
+            Class<?> dialogDismissedParamClass = getMethodParamTypes(ClassRefs.dialogDismissedInterface.getDeclaredMethods()[0])[0];
 
             try {
                 MethodHandle implementationMethodHandle;
@@ -153,9 +143,11 @@ public class ReflectionUtilis {
             }
         }
 
+        @FunctionalInterface
         private static interface Triggerable {
             void trigger(Object arg0, Object arg1);
         }
+
         // Rewritten proxy class from officer extension mod that works without using java.lang.reflect.Proxy and InvocationHandler imports
         private static abstract class ProxyTrigger implements Triggerable {
             private final Object listener;
@@ -168,7 +160,7 @@ public class ReflectionUtilis {
                 }
             }
         
-            @Override public void trigger(Object arg0, Object arg1) {};
+            @Override public abstract void trigger(Object arg0, Object arg1);
             
             public Object getProxy() {
                 return listener;
@@ -187,15 +179,17 @@ public class ReflectionUtilis {
             }
         }
 
-        private static interface BaseActionListener {
+        @FunctionalInterface
+        private static interface DummyActionListenerInterface {
             public void actionPerformed(Object arg0, Object arg1);
         }
-    
-        private static interface BaseDialogDismissedListener {
+
+        @FunctionalInterface
+        private static interface DummyDialogDismissedInterface {
             public void dialogDismissed(Object arg0, int arg1);
         }
     
-        private static class DialogDismissedListenerProxy implements BaseDialogDismissedListener {
+        private static class DialogDismissedListenerProxy implements DummyDialogDismissedInterface {
             private final ProxyTrigger proxyTriggerClassInstance;
     
             public DialogDismissedListenerProxy(ProxyTrigger proxyTriggerClassInstance) {
@@ -207,7 +201,7 @@ public class ReflectionUtilis {
             };
         }
     
-        private static class ActionListenerProxy implements BaseActionListener {
+        private static class ActionListenerProxy implements DummyActionListenerInterface {
             private final ProxyTrigger proxyTriggerClassInstance;
     
             public ActionListenerProxy(ProxyTrigger proxyTriggerClassInstance) {
@@ -520,6 +514,7 @@ public class ReflectionUtilis {
         }
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public static Object getEnumConstantByName(String canonicalName, String constantName) {
         try {
             Class<?> clazz = Class.forName(canonicalName);

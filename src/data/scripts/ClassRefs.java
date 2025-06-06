@@ -238,6 +238,8 @@ public class ClassRefs {
     }
 
     public static void findAllClasses() {
+        if (foundAllClasses) return;
+        
         CampaignUIAPI campaignUI = Global.getSector().getCampaignUI();
         if (confirmDialogClass == null) {
             findConfirmDialogClass();
