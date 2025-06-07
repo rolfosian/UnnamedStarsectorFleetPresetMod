@@ -14,11 +14,10 @@ import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.campaign.fleet.CampaignFleet;
 
 import data.scripts.ClassRefs;
+import data.scripts.ui.Button;
 import data.scripts.util.ReflectionUtilis.ListenerFactory.ActionListener;
 import data.scripts.util.ReflectionUtilis.ListenerFactory.DialogDismissedListener;
-import data.scripts.ui.Button;
 
-// import java.awt.*;
 import java.util.*;
 import java.awt.Color;
 
@@ -55,7 +54,7 @@ public class UtilReflection {
             float height,
             DialogDismissedListener dialogListener) {
         try {
-            Object confirmDialog = ReflectionUtilis.getClassInstance(
+            Object confirmDialog = ReflectionUtilis.instantiateClass(
                 ClassRefs.confirmDialogClass,
                 new Class<?>[] {
                     float.class,
@@ -179,7 +178,7 @@ public class UtilReflection {
     }
 
     public static UIPanelAPI getObfFleetInfoPanel(String name, CampaignFleetAPI fleet) {
-        return (UIPanelAPI) ReflectionUtilis.getClassInstance(ClassRefs.visualPanelFleetInfoClass,
+        return (UIPanelAPI) ReflectionUtilis.instantiateClass(ClassRefs.visualPanelFleetInfoClass,
         ClassRefs.visualPanelFleetInfoClassParams,
         name,
         fleet,

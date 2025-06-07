@@ -154,7 +154,7 @@ public class ReflectionUtilis {
         
             public ProxyTrigger(final String methodName) {
                 try {
-                    listener = getListener(methodName, this);
+                    listener = createListener(methodName, this);
                 } catch (Throwable e) {
                     throw new RuntimeException(e);
                 }
@@ -214,7 +214,7 @@ public class ReflectionUtilis {
             }
         }
 
-        private static Object getListener(String targetMethodName, ProxyTrigger proxyTriggerInstance) throws Throwable {
+        private static Object createListener(String targetMethodName, ProxyTrigger proxyTriggerInstance) throws Throwable {
             switch (targetMethodName) {
                 case "dialogDismissed":
                     return dialogDismissedCallSite.getTarget().invoke(new DialogDismissedListenerProxy(proxyTriggerInstance));
@@ -428,13 +428,13 @@ public class ReflectionUtilis {
         for (Object method : instance.getClass().getMethods()) {
             try {
                 if (((String) getMethodNameHandle.invoke(method)).equals(methodName)) {
-                    Object[] targetParameterTypes = (Object[]) getParameterTypesHandle.invoke(method);
+                    Class<?>[] targetParameterTypes = (Class<?>[]) getParameterTypesHandle.invoke(method);
                     if (targetParameterTypes.length != parameterTypes.length)
                         continue;
     
                     boolean match = true;
                     for (int i = 0; i < targetParameterTypes.length; i++) {
-                        Class<?> targetType = (Class<?>) targetParameterTypes[i];
+                        Class<?> targetType = targetParameterTypes[i];
                         Class<?> inputType = parameterTypes[i];
                         if (!inputType.isAssignableFrom(targetType)) {
                             match = false;
@@ -481,7 +481,7 @@ public class ReflectionUtilis {
         }
     }
 
-    public static Object getClassInstance(Class<?> clazz, Class<?>[] paramTypes, Object... params) {
+    public static Object instantiateClass(Class<?> clazz, Class<?>[] paramTypes, Object... params) {
         try {
             Object ctor = clazz.getDeclaredConstructor(paramTypes);
             setConstructorAccessibleHandle.invoke(ctor, true);

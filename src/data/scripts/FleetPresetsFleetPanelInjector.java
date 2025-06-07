@@ -69,7 +69,7 @@ public class FleetPresetsFleetPanelInjector {
     }
 
     private Object getButtonInputEventInstance(PositionAPI buttonPosition) {
-            return ReflectionUtilis.getClassInstance(ClassRefs.inputEventClass,
+            return ReflectionUtilis.instantiateClass(ClassRefs.inputEventClass,
             ClassRefs.inputEventClassParamTypes,
             new Object[] {
                 InputEventClass.MOUSE_EVENT,
