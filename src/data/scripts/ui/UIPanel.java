@@ -11,7 +11,6 @@ import data.scripts.util.ReflectionUtilis;
 import data.scripts.ui.Renderable;
 import data.scripts.ui.Position;
 
-// import java.lang.reflect.Method;
 import java.util.List;
 
 @SuppressWarnings("unused")

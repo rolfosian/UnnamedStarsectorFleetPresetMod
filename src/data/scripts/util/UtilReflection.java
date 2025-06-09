@@ -56,14 +56,7 @@ public class UtilReflection {
         try {
             Object confirmDialog = ReflectionUtilis.instantiateClass(
                 ClassRefs.confirmDialogClass,
-                new Class<?>[] {
-                    float.class,
-                    float.class,
-                    ClassRefs.uiPanelClass,
-                    ClassRefs.dialogDismissedInterface,
-                    String.class,
-                    String[].class
-                },
+                ClassRefs.confirmDialogClassParamTypes,
                 new Object[] {
                     width,
                     height,
@@ -179,7 +172,7 @@ public class UtilReflection {
 
     public static UIPanelAPI getObfFleetInfoPanel(String name, CampaignFleetAPI fleet) {
         return (UIPanelAPI) ReflectionUtilis.instantiateClass(ClassRefs.visualPanelFleetInfoClass,
-        ClassRefs.visualPanelFleetInfoClassParams,
+        ClassRefs.visualPanelFleetInfoClassParamTypes,
         name,
         fleet,
         null,

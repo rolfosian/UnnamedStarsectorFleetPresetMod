@@ -1,32 +1,24 @@
 // Code taken and modified from Officer Extension mod
 package data.scripts;
 
+
 import com.fs.starfarer.api.Global;
-import com.fs.starfarer.api.campaign.BattleAPI;
-import com.fs.starfarer.api.campaign.CampaignEventListener;
-import com.fs.starfarer.api.campaign.CampaignFleetAPI;
+
+import com.fs.starfarer.campaign.fleet.CampaignFleet;
+import com.fs.starfarer.api.campaign.BaseCampaignEventListener;
 import com.fs.starfarer.api.campaign.CampaignUIAPI;
-import com.fs.starfarer.api.campaign.CargoAPI;
 import com.fs.starfarer.api.campaign.FleetEncounterContextPlugin;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;
 import com.fs.starfarer.api.campaign.InteractionDialogPlugin;
-import com.fs.starfarer.api.campaign.JumpPointAPI;
-import com.fs.starfarer.api.campaign.PlayerMarketTransaction;
-import com.fs.starfarer.api.campaign.SectorEntityToken;
 import com.fs.starfarer.api.campaign.VisualPanelAPI;
-import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.campaign.rules.MemoryAPI;
-import com.fs.starfarer.api.characters.AbilityPlugin;
-import com.fs.starfarer.api.characters.PersonAPI;
-import com.fs.starfarer.api.impl.campaign.rulecmd.ShowDefaultVisual;
+import com.fs.starfarer.api.combat.EngagementResultAPI;
+
 import com.fs.starfarer.api.input.InputEventClass;
 import com.fs.starfarer.api.input.InputEventType;
-import com.fs.starfarer.api.combat.EngagementResultAPI;
+
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
-import com.fs.starfarer.campaign.fleet.CampaignFleet;
-import com.fs.starfarer.api.impl.campaign.JumpPointInteractionDialogPluginImpl;
-import com.fs.starfarer.api.impl.campaign.RuleBasedInteractionDialogPluginImpl;
 
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
@@ -48,6 +40,7 @@ public class ClassRefs {
     /** The class that CampaignUIAPI.showConfirmDialog instantiates. We need this because showConfirmDialog doesn't work
      *  if any core UI is open. */
     public static Class<?> confirmDialogClass;
+    public static Class<?>[] confirmDialogClassParamTypes;
     /** Interface that contains a single method: actionPerformed */
     public static Class<?> actionListenerInterface;
     /** Interface that contains a single method: dialogDismissed */
@@ -59,7 +52,7 @@ public class ClassRefs {
 
     /** Obfuscated fleet info panel class from the VisualPanelAPI */
     public static Class<?> visualPanelFleetInfoClass; 
-    public static Class<?>[] visualPanelFleetInfoClassParams = new Class<?>[] {
+    public static Class<?>[] visualPanelFleetInfoClassParamTypes = new Class<?>[] {
         String.class, // fleet 1 name
         CampaignFleet.class, // fleet 1
         String.class, // fleet 2 name
@@ -86,7 +79,7 @@ public class ClassRefs {
     public static void findFleetInfoClass() {
         if (visualPanelFleetInfoClass != null) return;
 
-        Global.getSector().addTransientListener(new CampaignEventListener() {
+        Global.getSector().addTransientListener(new BaseCampaignEventListener(false) {
             public void reportShownInteractionDialog(InteractionDialogAPI dialog) {
                 if (visualPanelFleetInfoClass != null) {
                     Global.getSector().removeListener(this);
@@ -98,7 +91,7 @@ public class ClassRefs {
                 visualPanel.showFleetInfo("", Global.getSector().getPlayerFleet(), null, null);
         
                 for (Object child : (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", visualPanel, 0)) {
-                    if (UIPanelAPI.class.isAssignableFrom(child.getClass()) && ReflectionUtilis.doInstantiationParamsMatch(child.getClass().getCanonicalName(), visualPanelFleetInfoClassParams)) {
+                    if (UIPanelAPI.class.isAssignableFrom(child.getClass()) && ReflectionUtilis.doInstantiationParamsMatch(child.getClass().getCanonicalName(), visualPanelFleetInfoClassParamTypes)) {
                         visualPanelFleetInfoClass = child.getClass(); // found it
                         dialog.dismiss();
                         Global.getSector().removeListener(this);
@@ -107,28 +100,7 @@ public class ClassRefs {
                 }
                 dialog.dismiss();
             }
-            public void reportBattleFinished(CampaignFleetAPI primaryWinner, BattleAPI battle) {}
-            public void reportBattleOccurred(CampaignFleetAPI primaryWinner, BattleAPI battle) {}
-            public void reportEconomyMonthEnd() {}
-            public void reportEconomyTick(int iterIndex) {}
-            public void reportEncounterLootGenerated(FleetEncounterContextPlugin plugin, CargoAPI loot) {}
-            public void reportFleetDespawned(CampaignFleetAPI fleet, CampaignEventListener.FleetDespawnReason reason, Object param) {}
-            public void reportFleetJumped(CampaignFleetAPI fleet, SectorEntityToken from, JumpPointAPI.JumpDestination to) {}
-            public void reportFleetReachedEntity(CampaignFleetAPI fleet, SectorEntityToken entity) {}
-            public void reportFleetSpawned(CampaignFleetAPI fleet) {}
-            public void reportPlayerActivatedAbility(AbilityPlugin ability, Object param) {}
-            public void reportPlayerDeactivatedAbility(AbilityPlugin ability, Object param) {}
-            public void reportPlayerDidNotTakeCargo(CargoAPI cargo) {}
-            public void reportPlayerDumpedCargo(CargoAPI cargo) {}
-            public void reportPlayerEngagement(EngagementResultAPI result) {}
-            public void reportPlayerMarketTransaction(PlayerMarketTransaction transaction) {}
-            public void reportPlayerOpenedMarketAndCargoUpdated(MarketAPI market) {}
-            public void reportPlayerReputationChange(PersonAPI person, float delta) {}
-            public void reportPlayerReputationChange(String faction, float delta) {}
-            public void reportPlayerClosedMarket(MarketAPI arg0) {}
-            public void reportPlayerOpenedMarket(MarketAPI arg0) {}
-        }
-        );
+        });
 
         Global.getSector().getCampaignUI().showInteractionDialogFromCargo(new InteractionDialogPlugin() {
             public void advance(float arg0) { return; }
@@ -239,7 +211,7 @@ public class ClassRefs {
 
     public static void findAllClasses() {
         if (foundAllClasses) return;
-        
+
         CampaignUIAPI campaignUI = Global.getSector().getCampaignUI();
         if (confirmDialogClass == null) {
             findConfirmDialogClass();
@@ -276,6 +248,14 @@ public class ClassRefs {
                 && visualPanelFleetInfoClass != null
                 && buttonClass != null
                 && inputEventClass != null) {
+            confirmDialogClassParamTypes = new Class<?>[] {
+                float.class,
+                float.class,
+                ClassRefs.uiPanelClass,
+                ClassRefs.dialogDismissedInterface,
+                String.class,
+                String[].class
+            };
             foundAllClasses = true;
         }
     }

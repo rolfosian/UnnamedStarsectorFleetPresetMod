@@ -194,7 +194,7 @@ public class CargoPresetUtils {
         // minimum is needed crew + 10%
         float desiredCrew = Math.max(maxPersonnel * previousCargoRatios.rawCrewRatio, totalNeededCrew * 1.1f);
         float actualCrew = Math.min(desiredCrew, storageCrew);
-        print(actualCrew);
+
         playerCargo.addCrew((int)actualCrew);
         storageCargo.removeCrew((int)actualCrew);
 

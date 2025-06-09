@@ -69,15 +69,15 @@ public class ReflectionUtilis {
             constructorClass = Class.forName("java.lang.reflect.Constructor", false, Class.class.getClassLoader());
             constructorArrayClass = Class.forName("[Ljava.lang.reflect.Constructor;", false, Class.class.getClassLoader());
 
-            setFieldHandle = lookup.findVirtual(fieldClass, "set", MethodType.methodType(Void.TYPE, Object.class, Object.class));
+            setFieldHandle = lookup.findVirtual(fieldClass, "set", MethodType.methodType(void.class, Object.class, Object.class));
             getFieldHandle = lookup.findVirtual(fieldClass, "get", MethodType.methodType(Object.class, Object.class));
             getFieldNameHandle = lookup.findVirtual(fieldClass, "getName", MethodType.methodType(String.class));
             getFieldTypeHandle = lookup.findVirtual(fieldClass, "getType", MethodType.methodType(Class.class));
-            setFieldAccessibleHandle = lookup.findVirtual(fieldClass, "setAccessible", MethodType.methodType(Void.TYPE, boolean.class));
+            setFieldAccessibleHandle = lookup.findVirtual(fieldClass, "setAccessible", MethodType.methodType(void.class, boolean.class));
 
             getMethodNameHandle = lookup.findVirtual(methodClass, "getName", MethodType.methodType(String.class));
             invokeMethodHandle = lookup.findVirtual(methodClass, "invoke", MethodType.methodType(Object.class, Object.class, Object[].class));
-            setMethodAccessable = lookup.findVirtual(methodClass, "setAccessible", MethodType.methodType(Void.TYPE, boolean.class));
+            setMethodAccessable = lookup.findVirtual(methodClass, "setAccessible", MethodType.methodType(void.class, boolean.class));
             getModifiersHandle = lookup.findVirtual(methodClass, "getModifiers", MethodType.methodType(int.class));
             getParameterTypesHandle = lookup.findVirtual(methodClass, "getParameterTypes", MethodType.methodType(Class[].class));
             getReturnTypeHandle = lookup.findVirtual(methodClass, "getReturnType", MethodType.methodType(Class.class));
@@ -86,7 +86,7 @@ public class ReflectionUtilis {
             getTypeNameHandle = lookup.findVirtual(typeClass, "getTypeName", MethodType.methodType(String.class));
             // getActualTypeArgumentsHandle = lookup.findVirtual(parameterizedTypeClass, "getActualTypeArguments", MethodType.methodType(Type[].class));
 
-            setConstructorAccessibleHandle = lookup.findVirtual(constructorClass, "setAccessible", MethodType.methodType(Void.TYPE, boolean.class));
+            setConstructorAccessibleHandle = lookup.findVirtual(constructorClass, "setAccessible", MethodType.methodType(void.class, boolean.class));
             getConstructorParameterTypesHandle = lookup.findVirtual(constructorClass, "getParameterTypes", MethodType.methodType(Class[].class));
             constructorNewInstanceHandle = lookup.findVirtual(constructorClass, "newInstance", MethodType.methodType(Object.class, Object[].class));
             getDeclaredConstructorsHandle = lookup.findVirtual(Class.class, "getDeclaredConstructors", MethodType.methodType(constructorArrayClass));
@@ -223,6 +223,26 @@ public class ReflectionUtilis {
                 default:
                     throw new IllegalArgumentException("Unsupported method: " + targetMethodName);
             }
+        }
+    }
+
+    public static void transplant(Object original, Object template) {
+        try {
+            Class<?> currentClass = original.getClass();
+            while ((currentClass = currentClass.getSuperclass()) != null) {
+                for (Object field : currentClass.getDeclaredFields()) {
+                    String fieldName = (String) getFieldNameHandle.invoke(field);
+                    setPrivateVariableFromSuperclass(fieldName, template, getPrivateVariableFromSuperClass(fieldName, original));
+                }
+            }
+    
+            for (Object field : original.getClass().getDeclaredFields()) {
+                setPrivateVariable(field, template, getPrivateVariable((String)getFieldNameHandle.invoke(field), original));
+            }
+            return;
+        } catch (Throwable e) {
+            print(e);
+            return;
         }
     }
 
@@ -550,7 +570,7 @@ public class ReflectionUtilis {
 
                 boolean match = true;
                 for (int i = 0; i < ctorParams.length; i++) {
-                    if (!ctorParams[0].equals(targetParams[0])) {
+                    if (!ctorParams[i].equals(targetParams[i])) {
                         match = false;
                         break;
                     }
