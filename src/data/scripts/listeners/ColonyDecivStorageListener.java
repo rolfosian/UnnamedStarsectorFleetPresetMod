@@ -1,18 +1,15 @@
 package data.scripts.listeners;
 
-import java.util.Map;
 import java.util.Set;
 
 import com.fs.starfarer.api.campaign.CargoAPI;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.campaign.econ.SubmarketAPI;
 import com.fs.starfarer.api.campaign.listeners.ColonyDecivListener;
-import com.fs.starfarer.api.fleet.FleetMemberAPI;
-import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 
 import data.scripts.util.PresetUtils;
 
-public class ColonyStorageListener implements ColonyDecivListener {
+public class ColonyDecivStorageListener implements ColonyDecivListener {
     @Override
     public void reportColonyDecivilized(MarketAPI market, boolean fullyDestroyed) {
         if (fullyDestroyed) {

@@ -10,7 +10,6 @@ import com.fs.starfarer.api.campaign.econ.SubmarketAPI;
 import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
-import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.input.InputEventType;
 import com.fs.starfarer.api.input.InputEventClass;
 import com.fs.starfarer.api.input.InputEventMouseButton;
@@ -19,20 +18,22 @@ import com.fs.starfarer.api.util.Misc;
 import com.fs.starfarer.campaign.fleet.FleetMember;
 import com.fs.starfarer.campaign.ui.marketinfo.f;
 
-import data.scripts.util.ReflectionUtilis.ListenerFactory.ActionListener;
+
 import data.scripts.listeners.FleetPresetManagementListener;
+
 import data.scripts.ui.Button;
 import data.scripts.ui.Position;
 import data.scripts.ui.Label;
 import data.scripts.ui.UIPanel;
+
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.PresetUtils.FleetMemberWrapper;
 import data.scripts.util.PresetUtils.RunningMembers;
-import data.scripts.util.UtilReflection.ConfirmDialogData;
 import data.scripts.util.ReflectionUtilis;
+import data.scripts.util.ReflectionUtilis.ListenerFactory.ActionListener;
 import data.scripts.util.UtilReflection;
-import data.scripts.util.PresetUtils;
+import data.scripts.util.UtilReflection.ConfirmDialogData;
 
 import java.util.*;
 import java.awt.Color;
@@ -105,7 +106,7 @@ public class FleetPresetsFleetPanelInjector {
         }
 
         List<FleetMemberAPI> playerFleetMembers = Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder();
-        MarketAPI market = (MarketAPI) Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY);
+        MarketAPI market = PresetUtils.getPlayerCurrentMarket();
         List<FleetMemberAPI> mothballedShips = PresetUtils.getMothBalledShips(market);
 
         if (injected) {
@@ -200,8 +201,8 @@ public class FleetPresetsFleetPanelInjector {
                         new ActionListener() {
                             @Override
                             public void trigger(Object arg0, Object arg1) {
-                                    Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
-                                    PresetUtils.takeAllShipsFromStorage();
+                                Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
+                                PresetUtils.takeAllShipsFromStorage();
                             }
                         },
                         Misc.getBasePlayerColor(),
@@ -229,27 +230,29 @@ public class FleetPresetsFleetPanelInjector {
                             pullAllShipsButton.setEnabled(false);
                         }
                     }
-            } else {
-                storeFleetButton = null;
-                pullAllShipsButton = null;
-            }
-        }
 
-        presetFleetsButton = UtilReflection.makeButton(
-                "   Fleet Presets Management",
-                new FleetPresetManagementListener(),
-                Misc.getBasePlayerColor(),
-                Misc.getDarkPlayerColor(),
-                Alignment.LMID,
-                CutStyle.ALL,
-                officerAutoAssignButtonPosition.getWidth(),
-                officerAutoAssignButtonPosition.getHeight(),
-                Keyboard.KEY_A);
-        // UIPanel presetFleetsButtonPanel = new UIPanel(fleetInfoPanel);
-        Position pos = new UIPanel(fleetInfoPanel).add(presetFleetsButton);
-        
-        pos.set(officerAutoAssignButtonPosition);
-        pos.getInstance().setYAlignOffset(-officerAutoAssignButtonHeight * 10f);
+                } else {
+                    storeFleetButton = null;
+                    pullAllShipsButton = null;
+                }
+            }
+
+            presetFleetsButton = UtilReflection.makeButton(
+                    "   Fleet Presets Management",
+                    new FleetPresetManagementListener(),
+                    Misc.getBasePlayerColor(),
+                    Misc.getDarkPlayerColor(),
+                    Alignment.LMID,
+                    CutStyle.ALL,
+                    officerAutoAssignButtonPosition.getWidth(),
+                    officerAutoAssignButtonPosition.getHeight(),
+                    Keyboard.KEY_A);
+            // UIPanel presetFleetsButtonPanel = new UIPanel(fleetInfoPanel);
+            Position pos = new UIPanel(fleetInfoPanel).add(presetFleetsButton);
+            
+            pos.set(officerAutoAssignButtonPosition);
+            pos.getInstance().setYAlignOffset(-officerAutoAssignButtonHeight * 10f);
+            PresetUtils.updateFleetPresetStats(playerFleetMembers);
         }
     }
 
@@ -304,7 +307,7 @@ public class FleetPresetsFleetPanelInjector {
             // return (UIPanelAPI) fleetInfoPanelField.get(currentTab);
         }
         catch (Exception e) {
-            e.printStackTrace();
+            print(e);
             return null;
         }
     }

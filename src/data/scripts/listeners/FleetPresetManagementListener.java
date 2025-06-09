@@ -216,7 +216,6 @@ public class FleetPresetManagementListener extends ActionListener {
         if (master == null) {
             return;
         }
-        PresetUtils.updateFleetPresetStats(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
 
         ButtonAPI confirmButton = master.confirmButton.getInstance();
         PositionAPI confirmButtonPosition = confirmButton.getPosition();
@@ -227,7 +226,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
         ButtonPlugin buttonPlugin = new ButtonPlugin();
         buttonsPanel = Global.getSettings().createCustom(CANCEL_CONFIRM_BUTTON_WIDTH, PANEL_HEIGHT, buttonPlugin);
-        TooltipMakerAPI tooltipMaker = buttonsPanel.createUIElement(CANCEL_CONFIRM_BUTTON_WIDTH+2f, PANEL_HEIGHT, true);
+        TooltipMakerAPI tooltipMaker = buttonsPanel.createUIElement(CANCEL_CONFIRM_BUTTON_WIDTH+2f, PANEL_HEIGHT, false);
         buttonPlugin.init(buttonsPanel, tooltipMaker);
 
         addTheButtons(tooltipMaker, confirmButtonPosition, cancelButtonPosition);
@@ -573,10 +572,10 @@ public class FleetPresetManagementListener extends ActionListener {
     public class TablePlugin extends BaseSelfRefreshingPanel {
         public LabelAPI label;
         public boolean rebuild;
-        public CustomPanelAPI panel;
+        public UIPanelAPI panel;
         
         private TooltipMakerAPI tableTipMaker;
-        private CustomPanelAPI shipListPanel;
+        private CustomPanelAPI shipsPanel;
         private UIPanelAPI fleetInfoPanel;
         public float yScrollOffset;
 
@@ -619,7 +618,7 @@ public class FleetPresetManagementListener extends ActionListener {
             tableTipMaker = panel.createUIElement(NAME_COLUMN_WIDTH, PANEL_HEIGHT, true);
             
             tablePanel = tableTipMaker.beginTable(c1, c2, Misc.getHighlightedOptionColor(), 30f, false, false, 
-            new Object[]{tablePresetNamesColumnHeader, (NAME_COLUMN_WIDTH - 1f) / 1.5f});
+            new Object[]{tablePresetNamesColumnHeader, NAME_COLUMN_WIDTH - 10f });
             // tablePanel = tableTipMaker.beginTable2(Global.getSector().getPlayerFaction(), 30f, true, true, 
             // new Object[]{tablePresetNamesColumnHeader, NAME_COLUMN_WIDTH - 1f});
             
@@ -724,26 +723,27 @@ public class FleetPresetManagementListener extends ActionListener {
 
         // public void addShipList(List<PresetUtils.FleetMemberWrapper> fleetMembers) {
         public void addShipList(CampaignFleetAPI fleet) {
-            if (fleetInfoPanel != null && shipListPanel != null) {
-                shipListPanel.removeComponent(fleetInfoPanel);
+            if (fleetInfoPanel != null && shipsPanel != null) {
+                shipsPanel.removeComponent(fleetInfoPanel);
                 fleetInfoPanel = null;
             }
-            if (shipListPanel != null) {
-                fenaglePanele.parent.removeComponent(shipListPanel);
-                shipListPanel = null;
+            if (shipsPanel != null) {
+                fenaglePanele.parent.removeComponent(shipsPanel);
+                shipsPanel = null;
             }
             if (fleet == null) return;
 
-            shipListPanel = Global.getSettings().createCustom(SHIP_COLUMN_WIDTH, PANEL_HEIGHT - UiConfig.SHIPLIST_PANEL_HEIGHT_SUBTRACTOR, null);
-            TooltipMakerAPI shipListTooltip = shipListPanel.createUIElement(SHIP_COLUMN_WIDTH, PANEL_HEIGHT - masterCancelButton.getPosition().getHeight() + UiConfig.SHIPLIST_PANEL_HEIGHT_SUBTRACTOR, true);
-            fleetInfoPanel = UtilReflection.getObfFleetInfoPanel(selectedPresetName, fleet);
+            shipsPanel = Global.getSettings().createCustom(1, 1, null);
 
-            shipListTooltip.addComponent(fleetInfoPanel).inTL(0f, 0f);
-            shipListPanel.addUIElement(shipListTooltip);
-
-            // have to do this because if directly added to the refreshing panel then the game crashes when the master panel is closed
-            fenaglePanele.parent.addComponent(shipListPanel).rightOfTop(fenaglePanele.panel, 10f)
-            // .setXAlignOffset(-PANEL_WIDTH - NAME_COLUMN_WIDTH)
+            TooltipMakerAPI fleetInfoPanelHolder = shipsPanel.createUIElement(SHIP_COLUMN_WIDTH, PANEL_HEIGHT, false);
+            fleetInfoPanel = UtilReflection.getObfFleetInfoPanel(selectedPresetName, fleet); // Object casted to UIPanelAPI, fixed size 400x400 afaik
+            fleetInfoPanelHolder.addComponent(fleetInfoPanel).inTL(0f, 0f);
+            
+            shipsPanel.addUIElement(fleetInfoPanelHolder).inTL(0f, 0f);
+            
+            // have to do this because if directly added to the refreshing panel then the game crashes when the confirm dialog window is closed
+            fenaglePanele.parent.addComponent(shipsPanel).rightOfTop(fenaglePanele.panel, 0f)
+            .setXAlignOffset(-8f)
             .setYAlignOffset(-1f * UiConfig.SHIPLIST_Y_OFFSET_MULTIPLIER);
         }
 
@@ -974,7 +974,7 @@ public class FleetPresetManagementListener extends ActionListener {
         }
     }
 
-   public class DeleteListener extends DialogDismissedListener {
+    public class DeleteListener extends DialogDismissedListener {
         @Override
         public void trigger(Object arg0, Object arg1) {
             int option = (int) arg1;

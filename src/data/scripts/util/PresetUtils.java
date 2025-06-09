@@ -150,6 +150,7 @@ public class PresetUtils {
 
         public FleetMemberWrapper(FleetPreset preset, FleetMemberAPI member, PersonAPI captain, int index) {
             this.member = Global.getFactory().createFleetMember(FleetMemberType.SHIP, member.getVariant());
+            this.member.setShipName(member.getShipName());
             this.member.getRepairTracker().setCR(member.getRepairTracker().getCR());
             this.member.getStatus().setHullFraction(member.getStatus().getHullFraction());
             this.id = member.getId();
@@ -164,6 +165,7 @@ public class PresetUtils {
                 captainCopy.setFaction(Global.getSector().getPlayerFaction().getId());
                 captainCopy.setStats(captain.getStats());
                 captainCopy.setName(captain.getName());
+                captainCopy.setId(captain.getId());
                 this.member.setCaptain(captainCopy);
 
             } else {
@@ -194,6 +196,7 @@ public class PresetUtils {
             this.captainCopy.getStats().setLevel(captain.getStats().getLevel());
             this.captainCopy.setName(captain.getName());
             this.captainCopy.setPortraitSprite(captain.getPortraitSprite());
+            this.captainCopy.setId(captain.getId());
             this.member.setCaptain(captainCopy);
 
             if (captainId.equals(Global.getSector().getPlayerPerson().getId())) {
@@ -455,8 +458,6 @@ public class PresetUtils {
         return !list.isEmpty() ? list : null;
     }
 
-
-
     public static boolean isMemberFromAnyPreset(FleetMemberAPI member) {
         for (FleetPreset preset : getFleetPresets().values()) {
             for (FleetMemberWrapper wrappedMember : preset.fleetMembers) {
@@ -517,12 +518,12 @@ public class PresetUtils {
                 float presetHullFraction = memberToUpdate.member.getStatus().getHullFraction();
                 
                 if (playerMemberCR != presetCR) {
-                    memberToUpdate.member.getRepairTracker().setCR(playerMemberCR);
                     memberToUpdate.preset.campaignFleet.getFleetData().getMembersInPriorityOrder().get(memberToUpdate.index).getRepairTracker().setCR(playerMemberCR);
+                    memberToUpdate.member.getRepairTracker().setCR(playerMemberCR);
                 }
                 if (playerMemberHullFraction != presetHullFraction) {
-                    memberToUpdate.member.getStatus().setHullFraction(playerMemberHullFraction);
                     memberToUpdate.preset.campaignFleet.getFleetData().getMembersInPriorityOrder().get(memberToUpdate.index).getStatus().setHullFraction(playerMemberHullFraction);
+                    memberToUpdate.member.getStatus().setHullFraction(playerMemberHullFraction);
                 }
 
                 if (!isOfficerNought(memberToUpdate.captainCopy)) {
@@ -543,13 +544,20 @@ public class PresetUtils {
 
         boolean isAutoUpdate = (boolean) Global.getSector().getPersistentData().get(IS_AUTO_UPDATE_KEY);
 
+        Set<String> reasons;
+
         CampaignFleetAPI playerFleet = Global.getSector().getPlayerFleet();
         List<FleetMemberAPI> playerFleetMembers = playerFleet.getFleetData().getMembersInPriorityOrder();
 
         if (isAutoUpdate) {
-            boolean updated = false;
-
             if (playerFleetMembers.size() != preset.fleetMembers.size()) {
+                String reason;
+                if (playerFleetMembers.size() > preset.fleetMembers.size()) {
+                    reason =  "Fleet Member was lost";
+                } else {
+                    reason = "Fleet Member was gained";
+                }
+
                 int sizeDifference = preset.fleetMembers.size() - playerFleetMembers.size();
                 // for some reason the officers arent updated immediately before the FleetMonitor calls this function if ships are scuttled with officers in them so we have to do THIS FUCKING BULLSHIT
                 List<PersonAPI> officersToReassign = null;
@@ -628,31 +636,40 @@ public class PresetUtils {
                         }
                     }
                 }
-                Global.getSector().getCampaignUI().addMessage("The fleet composition has changed and the " + preset.name + " fleet preset has been updated.", Misc.getBasePlayerColor());
+                Global.getSector().getCampaignUI().addMessage("The fleet composition has changed and the " + preset.name + " fleet preset has been updated. Reason: " + reason, Misc.getBasePlayerColor());
 
             } else {
+                reasons = new HashSet<>();
+
                 for (FleetMemberWrapper member : preset.fleetMembers) {
                     FleetMemberAPI playerFleetMember = playerFleetMembers.get(member.index);
 
                     if (!areSameVariant(playerFleetMember.getVariant(), member.member.getVariant())) {
                         preset.updateVariant(member.index, playerFleetMember.getVariant());
-                        updated = true; 
+                        reasons.add("Fleet Member ship variant changed");
                     }
 
                     if (!playerFleetMember.getId().equals(member.id) || !getFleetPresetsMembers().containsKey(member.id)) {
                         preset.updateWrappedMember(member.index, playerFleetMember);
-                        updated = true;
+                        reasons.add("Fleet Member ID changed");
                     }
 
                     if (!isOfficerSameAsPresetMember(playerFleetMember, member)) {
                         preset.updateOfficer(member.index, playerFleetMember.getCaptain());
-                        updated = true;
+                        reasons.add("Officer assignment changed");
                     }
                 }
-            }
 
-            if (updated) {
-                Global.getSector().getCampaignUI().addMessage("The fleet composition has changed and the " + preset.name + " fleet preset has been updated.", Misc.getBasePlayerColor());
+                if (!reasons.isEmpty()) {
+                    StringBuilder reason = new StringBuilder();
+                    for (String reason_ : reasons) {
+                        reason.append(reason_);
+                        if (reason.length() != 0) {
+                            reason.append(", ");
+                        }
+                    }
+                    Global.getSector().getCampaignUI().addMessage("The fleet composition has changed and the " + preset.name + " fleet preset has been updated. Reason: " + reason, Misc.getBasePlayerColor());
+                }
             }
 
         } else {
