@@ -61,7 +61,6 @@ public class CustomConsole {
             setIconImage(Toolkit.getDefaultToolkit().getImage("graphics/ui/s_icon64.png"));
     
             Color darkBackground = new Color(43, 43, 43);
-            Color darkForeground = new Color(200, 200, 200);
             Color scrollBarThumb = new Color(100, 100, 100);
             Color scrollBarTrack = new Color(60, 60, 60);
     

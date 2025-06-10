@@ -36,12 +36,12 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
     }
     private static final String ver = "0.0.5";
 
-    @Override
-    public void onApplicationLoad() {
-        CustomConsoleAppender consoleAppender = new CustomConsoleAppender();
-        consoleAppender.setLayout(new PatternLayout("%d{HH:mm:ss} %-5p - %m%n"));
-        Logger.getRootLogger().addAppender(consoleAppender);
-    }
+    // @Override
+    // public void onApplicationLoad() {
+    //     CustomConsoleAppender consoleAppender = new CustomConsoleAppender();
+    //     consoleAppender.setLayout(new PatternLayout("%d{HH:mm:ss} %-5p - %m%n"));
+    //     Logger.getRootLogger().addAppender(consoleAppender);
+    // }
     
     @Override
     public void onGameLoad(boolean newGame) {
