@@ -898,9 +898,9 @@ public class PresetUtils {
         if (market == null) return false;
         FleetPreset preset = getFleetPresets().get(presetName);
         if (preset == null) return false;
-
         SubmarketAPI storage = market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
         if (storage == null) return false;
+
         SubmarketPlugin storagePlugin = storage.getPlugin();
         if (!isPlayerPaidForStorage(storagePlugin)) return false;
 
@@ -990,6 +990,7 @@ public class PresetUtils {
     // should only be called if isPresetAvailableAtCurrentMarket returns true
     public static Map<FleetMemberWrapper, FleetMemberAPI> getIdAgnosticRequiredMembers(MarketAPI market, String presetName) {
         if (market == null) return null;
+        if (market.getSubmarket(Submarkets.SUBMARKET_STORAGE) == null) return null;
         FleetPreset preset = getFleetPresets().get(presetName);
         if (preset == null) return null;
         Map<String, List<FleetMemberWrapper>> neededShips = findNeededShipsWrappedNonIdMatching(preset, Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
@@ -1228,6 +1229,8 @@ public class PresetUtils {
         if (market == null) return;
 
         SubmarketAPI storage = market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
+        if (storage == null) return;
+
         SubmarketPlugin storagePlugin = storage.getPlugin();
         if (!isPlayerPaidForStorage(storagePlugin)) return;
 
@@ -1366,6 +1369,8 @@ public class PresetUtils {
         if (preset == null) return;
         
         SubmarketAPI storage = market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
+        if (storage == null) return;
+
         CargoAPI storageCargo = storage.getCargo();
         initMothballedShips(storageCargo);
 

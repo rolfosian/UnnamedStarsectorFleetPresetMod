@@ -23,7 +23,7 @@ public class DockingListener extends BaseCampaignEventListener {
     public static final String ISPLAYERPAIDFORSTORAGE_KEY = PresetUtils.ISPLAYERPAIDFORSTORAGE_KEY;
 
     public static boolean canPlayerAccessStorage(MarketAPI market) {
-        return (market != null && PresetUtils.isPlayerPaidForStorage(market.getSubmarket(Submarkets.SUBMARKET_STORAGE).getPlugin()));
+        return (market != null && market.getSubmarket(Submarkets.SUBMARKET_STORAGE) != null && PresetUtils.isPlayerPaidForStorage(market.getSubmarket(Submarkets.SUBMARKET_STORAGE).getPlugin()));
     }
 
     public static MarketAPI getPlayerCurrentMarket() {
