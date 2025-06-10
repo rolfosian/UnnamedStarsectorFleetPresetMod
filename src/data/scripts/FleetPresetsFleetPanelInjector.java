@@ -54,7 +54,7 @@ public class FleetPresetsFleetPanelInjector {
     private UIPanelAPI fleetInfoPanelRef;
 
     private boolean injected = false;
-    private Button autoAssignButton;
+    private ButtonAPI autoAssignButton;
     private Button presetFleetsButton;
     private Button storeFleetButton;
     private Button pullAllShipsButton;
@@ -68,19 +68,6 @@ public class FleetPresetsFleetPanelInjector {
         this.storedMemberIds = PresetUtils.getStoredFleetPresetsMemberIds();
         this.presetMembers = (Map<String, List<FleetMemberWrapper>>) Global.getSector().getPersistentData().get(PresetUtils.PRESET_MEMBERS_KEY);
     }
-
-    private Object getButtonInputEventInstance(PositionAPI buttonPosition) {
-            return ReflectionUtilis.instantiateClass(ClassRefs.inputEventClass,
-            ClassRefs.inputEventClassParamTypes,
-            new Object[] {
-                InputEventClass.MOUSE_EVENT,
-                InputEventType.MOUSE_DOWN,
-                (int)buttonPosition.getCenterX(),
-                (int)buttonPosition.getCenterY(),
-                0, // LMB
-                '\0' // unused?
-            }); 
-        }
 
     private ButtonAPI getStorageButton(UIPanelAPI core) { // This will probably crash the game if you call it without the player docked at a market
         Object infoPanelParent = ReflectionUtilis.invokeMethod("getParent", fleetInfoPanelRef);
@@ -160,7 +147,9 @@ public class FleetPresetsFleetPanelInjector {
             injected = true;
             Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.FLEETINFOPANEL_KEY, fleetInfoPanel);
 
-            autoAssignButton = new Button(getAutoAssignButton(fleetInfoPanel), null, null);
+            autoAssignButton = (ButtonAPI) getAutoAssignButton(fleetInfoPanel);
+            Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.OFFICER_AUTOASSIGN_BUTTON_KEY, getAutoAssignButton(fleetInfoPanel));
+
             PositionAPI officerAutoAssignButtonPosition = autoAssignButton.getPosition();
             float officerAutoAssignButtonHeight = officerAutoAssignButtonPosition.getHeight();
 

@@ -10,6 +10,8 @@ import com.fs.starfarer.api.campaign.CoreUIAPI;
 import com.fs.starfarer.api.campaign.FleetEncounterContextPlugin;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;
 import com.fs.starfarer.api.combat.EngagementResultAPI;
+import com.fs.starfarer.api.input.InputEventClass;
+import com.fs.starfarer.api.input.InputEventType;
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.campaign.fleet.CampaignFleet;
 
@@ -44,6 +46,19 @@ public class UtilReflection {
         }
 
         return button;
+    }
+
+    public static Object getButtonInputEventInstance(PositionAPI buttonPosition) {
+        return ReflectionUtilis.instantiateClass(ClassRefs.inputEventClass,
+        ClassRefs.inputEventClassParamTypes,
+        new Object[] {
+            InputEventClass.MOUSE_EVENT,
+            InputEventType.MOUSE_DOWN,
+            (int)buttonPosition.getCenterX(),
+            (int)buttonPosition.getCenterY(),
+            0, // LMB
+            '\0' // unused?
+        }); 
     }
 
     public static ConfirmDialogData showConfirmationDialog(

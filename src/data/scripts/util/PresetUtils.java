@@ -31,6 +31,7 @@ import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 
 import com.fs.starfarer.api.loading.WeaponGroupSpec;
+import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 import com.fs.starfarer.api.util.Misc;
 
@@ -58,6 +59,7 @@ public class PresetUtils {
     public static final String ISPLAYERPAIDFORSTORAGE_KEY = "$isPlayerPaidForStorage";
     public static final String MESSAGEQUEUE_KEY = "$presetsMessageQueue";
     public static final String VISUALFLEETINFOPANEL_KEY = "$visualFleetInfoPanelClass";
+    public static final String OFFICER_AUTOASSIGN_BUTTON_KEY = "$officerAutoAssignButton";
     
     public static final String RESTOREMESSAGE_SUCCESS_PREFIX = "Successfully restored fleet preset: ";
     public static final String RESTOREMESSAGE_FAIL_PREFIX = "Could not find one or more of ";
@@ -183,6 +185,7 @@ public class PresetUtils {
                 this.captain = null;
                 this.captainId = null;
                 this.captainCopy = null;
+                this.preset.campaignFleet.getFleetData().getMembersInPriorityOrder().get(this.index).setCaptain(null);
                 this.member.setCaptain(null);
                 return;
             }
@@ -191,13 +194,19 @@ public class PresetUtils {
             this.captainId = captain.getId();
 
             this.captainCopy = Global.getFactory().createPerson();
+            this.captainCopy.setPersonality(captain.getPersonalityAPI().getId());
             this.captainCopy.setRankId(captain.getRankId());
             this.captainCopy.setFaction(Global.getSector().getPlayerFaction().getId());
             this.captainCopy.getStats().setLevel(captain.getStats().getLevel());
             this.captainCopy.setName(captain.getName());
             this.captainCopy.setPortraitSprite(captain.getPortraitSprite());
             this.captainCopy.setId(captain.getId());
+            if (captain.isAICore()) {
+                this.captainCopy.setAICoreId(captain.getAICoreId());
+            }
+
             this.member.setCaptain(captainCopy);
+            this.preset.campaignFleet.getFleetData().getMembersInPriorityOrder().get(this.index).setCaptain(captainCopy);
 
             if (captainId.equals(Global.getSector().getPlayerPerson().getId())) {
                 this.preset.campaignFleet.setCommander(this.captainCopy);
@@ -205,7 +214,7 @@ public class PresetUtils {
             }
         }
 
-        // i dont even remember where this was used
+        // i dont remember why i made this and where it was used
         public void removeFrompreset() {
             this.preset.campaignFleet.getFleetData().removeFleetMember(this.member);
             this.preset.shipIds.remove(this.index);
@@ -275,7 +284,7 @@ public class PresetUtils {
             }
         }
 
-        public void reorderCampaignFleet() {
+        private void reorderCampaignFleet() {
             List<FleetMemberAPI> order = new ArrayList<>();
             for (FleetMemberWrapper member : this.fleetMembers) {
                 order.add(member.member);
@@ -309,6 +318,7 @@ public class PresetUtils {
             oldWrappedMember = null;
         }
 
+        // i dont remember why i made this and where it was used
         public void updateIndexesAfterMemberRemoved(int removedIndex) {
             this.shipIds.remove(removedIndex);
             this.variantsMap.remove(removedIndex);
@@ -335,6 +345,7 @@ public class PresetUtils {
             reorderCampaignFleet();
         }
 
+        // i dont remember why i made this and where it was used
         public void rebuildPresetAfterMemberRemoved() {
             List<FleetMemberWrapper> wrappedMembers = new ArrayList<>();
 
@@ -402,7 +413,7 @@ public class PresetUtils {
         }
     }
 
-    // if preset member perished while preset was not active or auto update was disabled we need to remove it from the cache
+    // if preset member perished while preset was not active or auto update was disabled we need to remove it from the cache to save a few kb of memory xd
     public static void cleanUpPerishedPresetMembers() {
         Collection<Set<String>> allStoredMembers = getStoredFleetPresetsMemberIds().values();
         Map<String, List<FleetMemberWrapper>> presetMembers = getFleetPresetsMembers();
@@ -1180,6 +1191,7 @@ public class PresetUtils {
 
         return fittedList.isEmpty();
     }
+
     // prolly make sure you call PresetUtils.initMothballedShips before calling this
     public static ShipVariantAPI findBareHullVariantInStorage(CargoAPI storageCargo) {
         FleetDataAPI mothballedShipsFleetData = storageCargo.getMothballedShips();
@@ -1204,6 +1216,12 @@ public class PresetUtils {
         return storageCargo.getMothballedShips().getMembersInPriorityOrder();
     }
 
+    public static void autoAssignOfficers() {
+        Object autoassignButton = Global.getSector().getMemoryWithoutUpdate().get(OFFICER_AUTOASSIGN_BUTTON_KEY);
+        Object listener = ReflectionUtilis.getMethodAndInvokeDirectly("getListener", autoassignButton, 0);
+        ReflectionUtilis.getMethodAndInvokeDirectly("actionPerformed", listener, 2, UtilReflection.getButtonInputEventInstance(((ButtonAPI)autoassignButton).getPosition()), autoassignButton);
+    }
+
     public static void takeAllShipsFromStorage() {
         CampaignFleetAPI playerFleet = Global.getSector().getPlayerFleet();
         MarketAPI market = getPlayerCurrentMarket();
@@ -1223,15 +1241,7 @@ public class PresetUtils {
             playerFleet.getFleetData().addFleetMember(member);
         }
 
-        for (OfficerDataAPI officer : Global.getSector().getPlayerFleet().getFleetData().getOfficersCopy()) {
-            if (officer.getPerson().isPlayer()) continue;
-            for (FleetMemberAPI member : playerFleet.getFleetData().getMembersInPriorityOrder()) {
-                if (member.getCaptain().isPlayer() || !member.getCaptain().getName().getFullName().equals("")) continue;
-
-                member.setCaptain(officer.getPerson());
-                break;
-            }
-        }
+        autoAssignOfficers();
         refreshFleetUI();
     }
 
@@ -1318,7 +1328,6 @@ public class PresetUtils {
             }
         }
 
-
         // print("Weapon groups are the same");
         // print("hullId match:", variant1.getHullSpec().getHullId().equals(variant2.getHullSpec().getHullId()));
         // print(variant1.getHullSpec().getHullId(), variant2.getHullSpec().getHullId());
@@ -1346,7 +1355,7 @@ public class PresetUtils {
         return (variant1.getHullMods().equals(variant2.getHullMods()));
     }
 
-    // TODO make D/SMOD AGNOSTIC SETTINGS, NEW HULLS? 
+    // TODO Make D/SMOD Agnostic Settings, New Hulls? 
     // WHAT IF PLAYER WANTS VERY SPECIFIC DMOD/OFFICER VARIANTS?
     public static void restoreFleetFromPreset(String name) {
         CampaignFleetAPI playerFleet = Global.getSector().getPlayerFleet();

@@ -2,7 +2,7 @@ package data.scripts.listeners;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.EveryFrameScript;
-
+import com.fs.starfarer.api.characters.MutableCharacterStatsAPI;
 import com.fs.starfarer.api.characters.OfficerDataAPI;
 import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.util.IntervalUtil;
@@ -47,10 +47,16 @@ public class OfficerTracker implements EveryFrameScript {
                     OfficerVariantPair pair = preset.officersMap.get(i);
     
                     if (pair != null && !PresetUtils.isOfficerNought(pair.officer)) {
-                        int currentOfficerLevel = currentOfficers.get(pair.officer.getId()).getStats().getLevel();
-    
-                        preset.fleetMembers.get(i).captain.getStats().setLevel(currentOfficerLevel);
-                        preset.campaignFleet.getFleetData().getMembersInPriorityOrder().get(i).getCaptain().getStats().setLevel(currentOfficerLevel);
+                        if (pair.officer.isAICore()) {
+                            setSkills(preset.fleetMembers.get(i).captainCopy, pair.officer);
+                        } else {
+                            int currentOfficerLevel = currentOfficers.get(pair.officer.getId()).getStats().getLevel();
+
+                            setSkills(preset.fleetMembers.get(i).captainCopy, pair.officer);
+                            preset.fleetMembers.get(i).captainCopy.getStats().setLevel(currentOfficerLevel);
+                            preset.campaignFleet.getFleetData().getMembersInPriorityOrder().get(i).getCaptain().getStats().setLevel(currentOfficerLevel);
+                        }
+
                     }  
                 }
             }
@@ -62,6 +68,16 @@ public class OfficerTracker implements EveryFrameScript {
 
     private void onOfficerDismissed(String officerId) {
         PresetUtils.removeOfficerFromPresets(officerId);
+    }
+
+    private void setSkills(PersonAPI old, PersonAPI new_) {
+        List<MutableCharacterStatsAPI.SkillLevelAPI> oldSkills = old.getStats().getSkillsCopy();
+        List<MutableCharacterStatsAPI.SkillLevelAPI> newSkills = new_.getStats().getSkillsCopy();
+        
+        for (int i = 0; i < oldSkills.size(); i++) {
+            oldSkills.get(i).setLevel(newSkills.get(i).getLevel());
+            old.getStats().setSkillLevel(newSkills.get(i).getSkill().getId(), newSkills.get(i).getLevel());
+        }
     }
 
     @Override
