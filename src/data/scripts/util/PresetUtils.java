@@ -564,9 +564,9 @@ public class PresetUtils {
             if (playerFleetMembers.size() != preset.fleetMembers.size()) {
                 String reason;
                 if (playerFleetMembers.size() > preset.fleetMembers.size()) {
-                    reason =  "Fleet Member was lost";
+                    reason =  "Fleet Member was gained";
                 } else {
-                    reason = "Fleet Member was gained";
+                    reason = "Fleet Member was lost";
                 }
 
                 int sizeDifference = preset.fleetMembers.size() - playerFleetMembers.size();

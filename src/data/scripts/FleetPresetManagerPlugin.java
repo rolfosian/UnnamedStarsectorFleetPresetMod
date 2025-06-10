@@ -66,9 +66,6 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
             sector.getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, activePreset);
         }
 
-        for (EveryFrameScript script : sector.getScripts()) {
-            print(script.getClass().getName());
-        }
         sector.addTransientScript(new FleetPresetManagerCoreScript());
         sector.addTransientScript(new OfficerTracker());
         sector.addTransientScript(new FleetMonitor());
