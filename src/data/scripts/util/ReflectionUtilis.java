@@ -33,6 +33,7 @@ public class ReflectionUtilis {
     private static final Class<?> fieldArrayClass;
     private static final Class<?> methodClass;
     private static final Class<?> typeClass;
+    private static final Class<?> typeArrayClass;
     private static final Class<?> parameterizedTypeClass;
     private static final Class<?> constructorClass;
     private static final Class<?> constructorArrayClass;
@@ -50,9 +51,9 @@ public class ReflectionUtilis {
     private static final MethodHandle getParameterTypesHandle;
     private static final MethodHandle getReturnTypeHandle;
     
-    // private static final MethodHandle getGenericTypeHandle;
+    private static final MethodHandle getGenericTypeHandle;
     private static final MethodHandle getTypeNameHandle;
-    // private static final MethodHandle getActualTypeArgumentsHandle;
+    private static final MethodHandle getActualTypeArgumentsHandle;
     
     private static final MethodHandle setConstructorAccessibleHandle;
     private static final MethodHandle getDeclaredConstructorsHandle;
@@ -65,6 +66,7 @@ public class ReflectionUtilis {
             fieldArrayClass = Class.forName("[Ljava.lang.reflect.Field;", false, Class.class.getClassLoader());
             methodClass = Class.forName("java.lang.reflect.Method", false, Class.class.getClassLoader());
             typeClass = Class.forName("java.lang.reflect.Type", false, Class.class.getClassLoader());
+            typeArrayClass = Class.forName("[Ljava.lang.reflect.Type;", false, Class.class.getClassLoader());
             parameterizedTypeClass = Class.forName("java.lang.reflect.ParameterizedType", false, Class.class.getClassLoader());
             constructorClass = Class.forName("java.lang.reflect.Constructor", false, Class.class.getClassLoader());
             constructorArrayClass = Class.forName("[Ljava.lang.reflect.Constructor;", false, Class.class.getClassLoader());
@@ -82,9 +84,9 @@ public class ReflectionUtilis {
             getParameterTypesHandle = lookup.findVirtual(methodClass, "getParameterTypes", MethodType.methodType(Class[].class));
             getReturnTypeHandle = lookup.findVirtual(methodClass, "getReturnType", MethodType.methodType(Class.class));
 
-            // getGenericTypeHandle = lookup.findVirtual(fieldClass, "getGenericType", MethodType.methodType(Type.class));
+            getGenericTypeHandle = lookup.findVirtual(fieldClass, "getGenericType", MethodType.methodType(typeClass));
             getTypeNameHandle = lookup.findVirtual(typeClass, "getTypeName", MethodType.methodType(String.class));
-            // getActualTypeArgumentsHandle = lookup.findVirtual(parameterizedTypeClass, "getActualTypeArguments", MethodType.methodType(Type[].class));
+            getActualTypeArgumentsHandle = lookup.findVirtual(parameterizedTypeClass, "getActualTypeArguments", MethodType.methodType(typeArrayClass));
 
             setConstructorAccessibleHandle = lookup.findVirtual(constructorClass, "setAccessible", MethodType.methodType(void.class, boolean.class));
             getConstructorParameterTypesHandle = lookup.findVirtual(constructorClass, "getParameterTypes", MethodType.methodType(Class[].class));
@@ -593,10 +595,6 @@ public class ReflectionUtilis {
 
             for (Object method : methods) {
                 try {
-                    // Retrieve the MethodHandle for the getParameterTypes method
-                    MethodHandle getParameterTypesHandle = ReflectionBetterUtilis.getParameterTypesHandle(method.getClass(), "getParameterTypes");
-                    // Use the MethodHandle to retrieve the method's name
-
                     // Check if the method name matches
                     if (getMethodNameHandle.invoke(method).equals(methodName)) {
                         // Invoke the MethodHandle to get the parameter types
@@ -875,21 +873,12 @@ public class ReflectionUtilis {
     }
 
     public static void logField(String fieldName, Class<?> fieldType, Object field, int i) throws Throwable {
-        // if (List.class.isAssignableFrom(fieldType)) {
-        //     print(getGenericTypeHandle.invoke(field), fieldName, i);
-
-        // } else if (Map.class.isAssignableFrom(fieldType)) {
-        //     print(getGenericTypeHandle.invoke(field), fieldName, i);
-
-        // } else if (Set.class.isAssignableFrom(fieldType)) {
-        //     print(getGenericTypeHandle.invoke(field), fieldName, i);
-
-        // } else if (Collection.class.isAssignableFrom(fieldType)) {
-        //     print(getGenericTypeHandle.invoke(field), fieldName, i);
-
-        // } else {
+        if (List.class.isAssignableFrom(fieldType) || Map.class.isAssignableFrom(fieldType)
+        || Set.class.isAssignableFrom(fieldType) || Collection.class.isAssignableFrom(fieldType)) {
+            print(getGenericTypeHandle.invoke(field), fieldName, i);
+        } else {
             print(fieldType.getCanonicalName(), fieldName, i);
-        // }
+        }
     }
 
     public static boolean isNativeJavaClass(Class<?> clazz) {

@@ -111,6 +111,7 @@ public class FleetPresetManagementListener extends ActionListener {
     private static final String AUTO_UPDATE_BUTTON_TOOLTIP_PARA_TEXT = "Toggle to automatically update the preset when the fleet changes, if undocked with a preset fleet.";
     private static final String AUTO_UPDATE_BUTTON_TEXT = "AUTO UPDATE";
 
+    // the underlying function for this is broken and needs work and i cannot be bothered right now
     // private static final String KEEP_CARGO_RATIOS_BUTTON_ID = "cargoRatiosButton";
     // private static final String KEEP_CARGO_RATIOS_BUTTON_PARA_TEXT = "Toggle to keep the supplies/fuel/crew ratios when switching fleets.";
     // private static final String KEEP_CARGO_RATIOS_BUTTON_TEXT = "EQUALIZE CARGO";
@@ -257,8 +258,6 @@ public class FleetPresetManagementListener extends ActionListener {
         
         master.panel.addComponent(buttonsPanel).inTL(FLOAT_ZERO, FLOAT_ZERO);
         master.panel.addComponent(canvasPanel).rightOfTop(buttonsPanel, 10f);
-        // ClassRefs.findFleetInfoClass();
-        // master.panel.addComponent(ReflectionUtilis.getObfFleetInfoPanel("poggers", Global.getSector().getPlayerFleet())).rightOfTop(canvasPanel, 10f);
 
         tablePlugin.setRoot(tableMasterPanel);
         overlordPanelPos = master.panel.getPosition();

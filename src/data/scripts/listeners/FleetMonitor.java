@@ -18,6 +18,7 @@ public class FleetMonitor implements EveryFrameScript {
     public void print(Object... args) {
         PresetMiscUtils.print(args);
     }
+    
     IntervalUtil checkFleetInterval = new IntervalUtil(0.2f, 0.3f);
     IntervalUtil checkPerishedMembersInterval = new IntervalUtil(599f, 600f);
 

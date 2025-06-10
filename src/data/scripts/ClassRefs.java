@@ -119,7 +119,6 @@ public class ClassRefs {
         UIPanelAPI coreUI = UtilReflection.getCoreUI();
         if (coreUI == null) return;
 
-;
         for (Object child : (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", coreUI, 0)) {
             if (ButtonAPI.class.isAssignableFrom(child.getClass()) && !child.getClass().getSimpleName().equals("ButtonAPI")) {
 

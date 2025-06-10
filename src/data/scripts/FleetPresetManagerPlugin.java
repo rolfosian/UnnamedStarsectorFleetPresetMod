@@ -14,6 +14,7 @@ import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
+import data.scripts.util.ReflectionUtilis;
 import data.scripts.util.PresetUtils.FleetPreset;
 import data.scripts.util.PresetUtils.FleetMemberWrapper;
 import data.scripts.util.UtilReflection;
@@ -35,16 +36,17 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
     }
     private static final String ver = "0.0.5";
 
-    // @Override // outputs log to a console window separate to the game
-    // public void onApplicationLoad() {
-    //     CustomConsoleAppender consoleAppender = new CustomConsoleAppender();
-    //     consoleAppender.setLayout(new PatternLayout("%d{HH:mm:ss} %-5p - %m%n"));
-    //     Logger.getRootLogger().addAppender(consoleAppender);
-    // }
+    @Override
+    public void onApplicationLoad() {
+        CustomConsoleAppender consoleAppender = new CustomConsoleAppender();
+        consoleAppender.setLayout(new PatternLayout("%d{HH:mm:ss} %-5p - %m%n"));
+        Logger.getRootLogger().addAppender(consoleAppender);
+    }
     
     @Override
     public void onGameLoad(boolean newGame) {
         SectorAPI sector = Global.getSector();
+        MemoryAPI mem = sector.getMemoryWithoutUpdate();
         Map<String, Object> persistentData = sector.getPersistentData();
 
         String modVer = (String) persistentData.get("$fleetPresetsManagerVer");
@@ -56,13 +58,17 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
             persistentData.put(PresetUtils.KEEPCARGORATIOS_KEY, false);
             persistentData.put("$fleetPresetsManagerVer", ver);
         }
-        sector.getMemoryWithoutUpdate().set(PresetUtils.MESSAGEQUEUE_KEY, new ArrayList<>());
+        mem.set(PresetUtils.MESSAGEQUEUE_KEY, new ArrayList<>());
+        mem.unset(PresetUtils.UNDOCKED_PRESET_KEY);
 
         FleetPreset activePreset = PresetUtils.getPresetOfMembers(sector.getPlayerFleet().getFleetData().getMembersInPriorityOrder());
         if (activePreset != null &&(boolean)persistentData.get(PresetUtils.IS_AUTO_UPDATE_KEY)) {
             sector.getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, activePreset);
         }
 
+        for (EveryFrameScript script : sector.getScripts()) {
+            print(script.getClass().getName());
+        }
         sector.addTransientScript(new FleetPresetManagerCoreScript());
         sector.addTransientScript(new OfficerTracker());
         sector.addTransientScript(new FleetMonitor());
@@ -85,9 +91,8 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
     @Override
     public void beforeGameSave() {
         MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
-        // required or else game catches exception about reflection during load and kicks this stuff from memory
-        // its just smoother this way (its not actually a big deal i just dont like the look of the double loading info) 
-        mem.unset(PresetUtils.FLEETINFOPANEL_KEY);
-        mem.unset(PresetUtils.COREUI_KEY);
+        mem.unset(PresetUtils.FLEETINFOPANEL_KEY); // required or else game catches exception about reflection during load and kicks this stuff from memory
+        mem.unset(PresetUtils.COREUI_KEY); // its just smoother this way (its not actually a big deal i just dont like the look of the double loading info)
+        mem.unset(PresetUtils.OFFICER_AUTOASSIGN_BUTTON_KEY);
     }
 }
