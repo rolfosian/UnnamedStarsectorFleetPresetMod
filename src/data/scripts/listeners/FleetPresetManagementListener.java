@@ -453,7 +453,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
         @Override
         public void processInput(List<InputEventAPI> arg0) {
-            for (InputEventAPI event : arg0) {                
+            for (InputEventAPI event : arg0) {
                 if (event.isKeyDownEvent()) {
                     if (Keyboard.isKeyDown(Keyboard.KEY_RETURN) || Keyboard.isKeyDown(Keyboard.KEY_NUMPADENTER)) {
                         event.consume();
@@ -474,6 +474,7 @@ public class FleetPresetManagementListener extends ActionListener {
                                     selectedPresetName = tableRowListeners.get(selectedRowIndex).rowName;
                                     tablePlugin.rebuild();
                                 }
+                                enableButtonsRequiringSelection();
                             
                             } else if (Keyboard.isKeyDown(Keyboard.KEY_UP)) {
                                 selectedRowIndex += tableUp ? -1 : 1;
@@ -486,6 +487,7 @@ public class FleetPresetManagementListener extends ActionListener {
                                     selectedPresetName = tableRowListeners.get(selectedRowIndex).rowName;
                                     tablePlugin.rebuild();
                                 }
+                                enableButtonsRequiringSelection();
 
                             } else if (Keyboard.isKeyDown(Keyboard.KEY_ESCAPE) && rowNum > 0 && selectedPresetName != EMPTY_STRING) {
                                 disableButtonsRequiringSelection();

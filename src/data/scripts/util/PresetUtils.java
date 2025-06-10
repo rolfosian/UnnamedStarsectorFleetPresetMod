@@ -570,7 +570,7 @@ public class PresetUtils {
                 }
 
                 int sizeDifference = preset.fleetMembers.size() - playerFleetMembers.size();
-                // for some reason the officers arent updated immediately before the FleetMonitor calls this function if ships are scuttled with officers in them so we have to do THIS FUCKING BULLSHIT
+                // for some reason the officers arent updated immediately before the FleetMonitor calls this function if ships are scuttled (or just destroyed?) with officers in them so we have to do THIS FUCKING BULLSHIT
                 List<PersonAPI> officersToReassign = null;
                 if (sizeDifference >= 1) {
                     officersToReassign = new ArrayList<>();
