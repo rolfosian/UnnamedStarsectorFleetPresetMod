@@ -2,8 +2,11 @@ package data.scripts.util;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CargoAPI;
+import com.fs.starfarer.api.campaign.econ.MarketAPI;
+import com.fs.starfarer.api.campaign.econ.SubmarketAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
+import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 import com.fs.starfarer.api.loading.WeaponGroupSpec;
 
 import java.util.*;
@@ -12,6 +15,13 @@ import org.apache.log4j.Logger;
 public class CargoPresetUtils {
     public static void print(Object... args) {
         PresetMiscUtils.print(args);
+    }
+
+    public static SubmarketAPI getStorageSubmarket(MarketAPI market) {
+        SubmarketAPI settlementStorage = market.getSubmarket("rat_settlement_storage");
+        if (settlementStorage != null) return settlementStorage;
+        
+        return market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
     }
 
     public static boolean playerKnowsHullmod(String modId) {

@@ -43,6 +43,9 @@ public class PresetUtils {
         PresetMiscUtils.print(args);
     }
 
+    public static final boolean haveNexerelin = Global.getSettings().getModManager().isModEnabled("nexerelin");
+    public static final boolean haveRAT = Global.getSettings().getModManager().isModEnabled("assortment_of_things");
+
     // Persistent data keys
     public static final String PRESETS_MEMORY_KEY = "$playerFleetPresets";
     public static final String IS_AUTO_UPDATE_KEY = "$isPresetAutoUpdate";
@@ -898,7 +901,7 @@ public class PresetUtils {
         if (market == null) return false;
         FleetPreset preset = getFleetPresets().get(presetName);
         if (preset == null) return false;
-        SubmarketAPI storage = market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
+        SubmarketAPI storage = CargoPresetUtils.getStorageSubmarket(market);
         if (storage == null) return false;
 
         SubmarketPlugin storagePlugin = storage.getPlugin();
@@ -990,13 +993,13 @@ public class PresetUtils {
     // should only be called if isPresetAvailableAtCurrentMarket returns true
     public static Map<FleetMemberWrapper, FleetMemberAPI> getIdAgnosticRequiredMembers(MarketAPI market, String presetName) {
         if (market == null) return null;
-        if (market.getSubmarket(Submarkets.SUBMARKET_STORAGE) == null) return null;
+        if (CargoPresetUtils.getStorageSubmarket(market) == null) return null;
         FleetPreset preset = getFleetPresets().get(presetName);
         if (preset == null) return null;
         Map<String, List<FleetMemberWrapper>> neededShips = findNeededShipsWrappedNonIdMatching(preset, Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
         if (neededShips.isEmpty()) return null;
 
-        CargoAPI storageCargo = market.getSubmarket(Submarkets.SUBMARKET_STORAGE).getCargo();
+        CargoAPI storageCargo = CargoPresetUtils.getStorageSubmarket(market).getCargo();
         initMothballedShips(storageCargo);
 
         Map<FleetMemberWrapper, FleetMemberAPI> neededMembers = new HashMap<>();
@@ -1206,7 +1209,7 @@ public class PresetUtils {
 
     public static List<FleetMemberAPI> getMothBalledShips(MarketAPI market) {
         if (market == null) return null;
-        SubmarketAPI storage = market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
+        SubmarketAPI storage = CargoPresetUtils.getStorageSubmarket(market);
         if (storage == null) return null;
         SubmarketPlugin storagePlugin = storage.getPlugin();
         if (!isPlayerPaidForStorage(storagePlugin)) return null;
@@ -1228,7 +1231,7 @@ public class PresetUtils {
         MarketAPI market = getPlayerCurrentMarket();
         if (market == null) return;
 
-        SubmarketAPI storage = market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
+        SubmarketAPI storage = CargoPresetUtils.getStorageSubmarket(market);
         if (storage == null) return;
 
         SubmarketPlugin storagePlugin = storage.getPlugin();
@@ -1253,7 +1256,7 @@ public class PresetUtils {
         MarketAPI market = getPlayerCurrentMarket();
         if (market == null) return;
 
-        SubmarketAPI storage = market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
+        SubmarketAPI storage = CargoPresetUtils.getStorageSubmarket(market);
         // CargoResourceRatios cargoRatios = new CargoResourceRatios(playerFleet.getFleetData().getMembersInPriorityOrder(), playerFleet.getCargo());
         SubmarketPlugin storagePlugin = storage.getPlugin();
         if (!isPlayerPaidForStorage(storagePlugin)) return;
@@ -1368,7 +1371,7 @@ public class PresetUtils {
         FleetPreset preset = getFleetPresets().get(name);
         if (preset == null) return;
         
-        SubmarketAPI storage = market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
+        SubmarketAPI storage = CargoPresetUtils.getStorageSubmarket(market);
         if (storage == null) return;
 
         CargoAPI storageCargo = storage.getCargo();

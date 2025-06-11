@@ -3,6 +3,7 @@
         "src"
     ],
     "java.project.referencedLibraries": [
+        "c:\\Starsector\\mods\\Random-Assortment-of-Things\\jars\\RandomAssortmentofThings.jar",
         "c:\\Starsector\\starsector-core\\starfarer.api.jar",
         "c:\\Starsector\\starsector-core\\log4j-1.2.9.jar",
         "c:\\Starsector\\starsector-core\\lwjgl_util.jar",

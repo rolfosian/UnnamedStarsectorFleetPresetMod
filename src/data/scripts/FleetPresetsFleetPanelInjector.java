@@ -16,8 +16,6 @@ import com.fs.starfarer.api.input.InputEventMouseButton;
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.util.Misc;
 import com.fs.starfarer.campaign.fleet.FleetMember;
-import com.fs.starfarer.campaign.ui.marketinfo.f;
-
 
 import data.scripts.listeners.FleetPresetManagementListener;
 
@@ -25,7 +23,7 @@ import data.scripts.ui.Button;
 import data.scripts.ui.Position;
 import data.scripts.ui.Label;
 import data.scripts.ui.UIPanel;
-
+import data.scripts.util.CargoPresetUtils;
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.PresetUtils.FleetMemberWrapper;
@@ -71,9 +69,11 @@ public class FleetPresetsFleetPanelInjector {
 
     private ButtonAPI getStorageButton(UIPanelAPI core) { // This will probably crash the game if you call it without the player docked at a market
         Object infoPanelParent = ReflectionUtilis.invokeMethod("getParent", fleetInfoPanelRef);
+        // ReflectionUtilis.logMethods(infoPanelParent);
         Object marketPicker = ReflectionUtilis.getMethodAndInvokeDirectly("getMarketPicker", infoPanelParent, 0);
-        List<ButtonAPI> marketButtons = ((List<ButtonAPI>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", marketPicker, 0));
+        if (marketPicker == null) return null;
 
+        List<ButtonAPI> marketButtons = ((List<ButtonAPI>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", marketPicker, 0));
         return marketButtons.get(marketButtons.size() - 1);
     }
 
@@ -97,8 +97,8 @@ public class FleetPresetsFleetPanelInjector {
         List<FleetMemberAPI> mothballedShips = PresetUtils.getMothBalledShips(market);
 
         if (injected) {
-            if (market != null && market.getSubmarket(Submarkets.SUBMARKET_STORAGE) != null) {
-                if (PresetUtils.isPlayerPaidForStorage(market.getSubmarket(Submarkets.SUBMARKET_STORAGE).getPlugin())) {
+            if (market != null && CargoPresetUtils.getStorageSubmarket(market) != null) {
+                if (PresetUtils.isPlayerPaidForStorage(CargoPresetUtils.getStorageSubmarket(market).getPlugin())) {
                     if (mothballedShips != null && mothballedShips.size() > 0) {
                         pullAllShipsButton.setEnabled(true);
                     } else {
@@ -153,8 +153,10 @@ public class FleetPresetsFleetPanelInjector {
             PositionAPI officerAutoAssignButtonPosition = autoAssignButton.getPosition();
             float officerAutoAssignButtonHeight = officerAutoAssignButtonPosition.getHeight();
 
-            PositionAPI storageButtonPosition = null;
-            if (market != null && market.getSubmarket(Submarkets.SUBMARKET_STORAGE) != null) {
+            getStorageButton((UIPanelAPI) Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.COREUI_KEY));
+
+            if (market != null && CargoPresetUtils.getStorageSubmarket(market) != null) {
+                PositionAPI storageButtonPosition = null;
                 UIPanelAPI core = (UIPanelAPI) Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.COREUI_KEY);
                 Object storageButtonObf = getStorageButton(core);
                 ButtonAPI storageButton = (ButtonAPI) storageButtonObf;
@@ -180,10 +182,10 @@ public class FleetPresetsFleetPanelInjector {
                         null);
 
                     Position pos = new UIPanel(fleetInfoPanel).add(storeFleetButton);
-                    pos.set(storageButtonPosition);
+                    pos.set(officerAutoAssignButtonPosition);
                     pos.getInstance().setSize(storageButtonPosition.getWidth()-(storageButtonPosition.getWidth() / 4.8f), officerAutoAssignButtonPosition.getHeight()-6f);
                     // pos.getInstance().setYAlignOffset(29f).setXAlignOffset(-storageButtonPosition.getWidth()-10f);
-                    pos.getInstance().setYAlignOffset(-28f).setXAlignOffset(18f);
+                    pos.getInstance().setYAlignOffset(157f).setXAlignOffset(1352f);
                     
                     pullAllShipsButton = UtilReflection.makeButton(
                         "  Take all ships from storage",
@@ -203,12 +205,12 @@ public class FleetPresetsFleetPanelInjector {
                         null);
 
                     pos = new UIPanel(fleetInfoPanel).add(pullAllShipsButton);
-                    pos.set(storageButtonPosition);
+                    pos.set(officerAutoAssignButtonPosition);
                     pos.getInstance().setSize(storageButtonPosition.getWidth()+30f, officerAutoAssignButtonPosition.getHeight()-6f);
                     // pos.getInstance().setYAlignOffset(-7f).setXAlignOffset(-storageButtonPosition.getWidth()-10f);
-                    pos.getInstance().setYAlignOffset(-28f).setXAlignOffset(-storageButtonPosition.getWidth()+56f);
+                    pos.getInstance().setYAlignOffset(157f).setXAlignOffset(1127f);
 
-                    if (!PresetUtils.isPlayerPaidForStorage(market.getSubmarket(Submarkets.SUBMARKET_STORAGE).getPlugin())) {
+                    if (!PresetUtils.isPlayerPaidForStorage(CargoPresetUtils.getStorageSubmarket(market).getPlugin())) {
                         storeFleetButton.setEnabled(false);
                         pullAllShipsButton.setEnabled(false);
 

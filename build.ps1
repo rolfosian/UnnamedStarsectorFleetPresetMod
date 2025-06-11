@@ -31,7 +31,9 @@ $dependencies = @(
     "../../starsector-core/jinput.jar",
     "../../starsector-core/log4j-1.2.9.jar",
     "../../starsector-core/lwjgl.jar",
-    "../../starsector-core/lwjgl_util.jar"
+    "../../starsector-core/lwjgl_util.jar",
+
+    "../Random-Assortment-of-Things/jars/RandomAssortmentofThings.jar"
 
 )
 
