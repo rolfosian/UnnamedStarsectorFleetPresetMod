@@ -163,7 +163,7 @@ public class CargoPresetUtils {
         }
     }
 
-    // needs debugging, more work and conditional logic with params for options
+    // TODO needs debugging, more work and conditional logic with params for options
     public static void equalizeCargo(List<FleetMemberAPI> fleetMembers, CargoAPI storageCargo, CargoAPI playerCargo, CargoResourceRatios previousCargoRatios) {
         float maxPersonnel = playerCargo.getMaxPersonnel();
         float playerCargoCapacity = playerCargo.getMaxCapacity();

@@ -25,6 +25,7 @@ import java.awt.Color;
 
 import org.apache.log4j.Logger;
 
+@SuppressWarnings("unchecked")
 public class UtilReflection {
     public static final Logger logger = Logger.getLogger(UtilReflection.class);
     public static final void print(Object... args) {
@@ -48,7 +49,7 @@ public class UtilReflection {
         return button;
     }
 
-    public static Object getButtonInputEventInstance(PositionAPI buttonPosition) {
+    public static Object getButtonClickEventInstance(PositionAPI buttonPosition) {
         return ReflectionUtilis.instantiateClass(ClassRefs.inputEventClass,
         ClassRefs.inputEventClassParamTypes,
         new Object[] {
@@ -59,6 +60,30 @@ public class UtilReflection {
             0, // LMB
             '\0' // unused?
         }); 
+    }
+
+    public static void clickButton(Object button) {
+        if (button == null) return;
+
+        Object listener = ReflectionUtilis.getMethodAndInvokeDirectly("getListener", button, 0);
+        ReflectionUtilis.getMethodAndInvokeDirectly("actionPerformed", listener, 2, UtilReflection.getButtonClickEventInstance(((ButtonAPI)button).getPosition()), button);
+    }
+
+    public static List<Object> getChildrenRecursive(Object parentPanel) {
+        List<Object> list = new ArrayList<>();
+        collectChildren(parentPanel, list);
+        return list;
+    }
+    
+    private static void collectChildren(Object parent, List<Object> list) {
+        List<Object> children = (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", parent, 0);
+
+        if (children != null) {
+            for (Object child : children) {
+                list.add(child);
+                collectChildren(child, list);
+            }
+        }
     }
 
     public static ConfirmDialogData showConfirmationDialog(

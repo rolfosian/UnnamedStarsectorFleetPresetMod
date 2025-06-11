@@ -9,10 +9,6 @@ import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.campaign.econ.SubmarketAPI;
 import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
-import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
-import com.fs.starfarer.api.input.InputEventType;
-import com.fs.starfarer.api.input.InputEventClass;
-import com.fs.starfarer.api.input.InputEventMouseButton;
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.util.Misc;
 import com.fs.starfarer.campaign.fleet.FleetMember;
@@ -23,6 +19,7 @@ import data.scripts.ui.Button;
 import data.scripts.ui.Position;
 import data.scripts.ui.Label;
 import data.scripts.ui.UIPanel;
+
 import data.scripts.util.CargoPresetUtils;
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
@@ -37,7 +34,6 @@ import java.util.*;
 import java.awt.Color;
 
 import org.lwjgl.input.Keyboard;
-import org.lwjgl.input.Mouse;
 
 @SuppressWarnings("unchecked")
 public class FleetPresetsFleetPanelInjector {
@@ -69,7 +65,6 @@ public class FleetPresetsFleetPanelInjector {
 
     private ButtonAPI getStorageButton(UIPanelAPI core) { // This will probably crash the game if you call it without the player docked at a market
         Object infoPanelParent = ReflectionUtilis.invokeMethod("getParent", fleetInfoPanelRef);
-        // ReflectionUtilis.logMethods(infoPanelParent);
         Object marketPicker = ReflectionUtilis.getMethodAndInvokeDirectly("getMarketPicker", infoPanelParent, 0);
         if (marketPicker == null) return null;
 
@@ -113,7 +108,7 @@ public class FleetPresetsFleetPanelInjector {
                             if (!playerFleetMembers.contains(runningMember)) {
                                 
                                 if (mothballedShips != null && !mothballedShips.contains(runningMember)) {
-                                    // member was sold
+                                    // member was sold or scuttled
                                     PresetUtils.cleanUpPerishedPresetMembers();
                                 } else if (mothballedShips != null && mothballedShips.contains(runningMember) && PresetUtils.getFleetPresetsMembers().get(runningMember.getId()) != null) {
                                     // member was stored
@@ -152,8 +147,6 @@ public class FleetPresetsFleetPanelInjector {
 
             PositionAPI officerAutoAssignButtonPosition = autoAssignButton.getPosition();
             float officerAutoAssignButtonHeight = officerAutoAssignButtonPosition.getHeight();
-
-            getStorageButton((UIPanelAPI) Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.COREUI_KEY));
 
             if (market != null && CargoPresetUtils.getStorageSubmarket(market) != null) {
                 PositionAPI storageButtonPosition = null;
@@ -207,7 +200,6 @@ public class FleetPresetsFleetPanelInjector {
                     pos = new UIPanel(fleetInfoPanel).add(pullAllShipsButton);
                     pos.set(officerAutoAssignButtonPosition);
                     pos.getInstance().setSize(storageButtonPosition.getWidth()+30f, officerAutoAssignButtonPosition.getHeight()-6f);
-                    // pos.getInstance().setYAlignOffset(-7f).setXAlignOffset(-storageButtonPosition.getWidth()-10f);
                     pos.getInstance().setYAlignOffset(157f).setXAlignOffset(1127f);
 
                     if (!PresetUtils.isPlayerPaidForStorage(CargoPresetUtils.getStorageSubmarket(market).getPlugin())) {
@@ -238,7 +230,6 @@ public class FleetPresetsFleetPanelInjector {
                     officerAutoAssignButtonPosition.getWidth(),
                     officerAutoAssignButtonPosition.getHeight(),
                     Keyboard.KEY_A);
-            // UIPanel presetFleetsButtonPanel = new UIPanel(fleetInfoPanel);
             Position pos = new UIPanel(fleetInfoPanel).add(presetFleetsButton);
             
             pos.set(officerAutoAssignButtonPosition);
@@ -292,10 +283,8 @@ public class FleetPresetsFleetPanelInjector {
             throw new RuntimeException("Could not find the fleet info panel for the fleet tab");
         }
 
-        // fleetInfoPanelField.setAccessible(true);
         try {
             return (UIPanelAPI) ReflectionUtilis.getPrivateVariable(ReflectionUtilis.getFieldName(fleetInfoPanelField), currentTab);
-            // return (UIPanelAPI) fleetInfoPanelField.get(currentTab);
         }
         catch (Exception e) {
             print(e);

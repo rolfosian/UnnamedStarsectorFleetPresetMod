@@ -1221,9 +1221,7 @@ public class PresetUtils {
     }
 
     public static void autoAssignOfficers() {
-        Object autoassignButton = Global.getSector().getMemoryWithoutUpdate().get(OFFICER_AUTOASSIGN_BUTTON_KEY);
-        Object listener = ReflectionUtilis.getMethodAndInvokeDirectly("getListener", autoassignButton, 0);
-        ReflectionUtilis.getMethodAndInvokeDirectly("actionPerformed", listener, 2, UtilReflection.getButtonInputEventInstance(((ButtonAPI)autoassignButton).getPosition()), autoassignButton);
+        UtilReflection.clickButton(Global.getSector().getMemoryWithoutUpdate().get(OFFICER_AUTOASSIGN_BUTTON_KEY));
     }
 
     public static void takeAllShipsFromStorage() {
@@ -1499,7 +1497,17 @@ public class PresetUtils {
         if (fleetInfoPanel == null) return;
 
         Object infoPanelParent = ReflectionUtilis.invokeMethod("getParent", fleetInfoPanel);
-        ReflectionUtilis.getMethodAndInvokeDirectly("recreateUI", ReflectionUtilis.invokeMethod("getFleetPanel", infoPanelParent), 1, true);
+        Object fleetPanel = ReflectionUtilis.invokeMethod("getFleetPanel", infoPanelParent);
+
+        ReflectionUtilis.getMethodAndInvokeDirectly("recreateUI", fleetPanel, 1, false);
+        // ReflectionUtilis.logMethods(ReflectionUtilis.getMethodAndInvokeDirectly("getHandler", fleetPanel, 0));
+        // ReflectionUtilis.getMethodAndInvokeDirectly("getHandler", fleetPanel, 0);
+        // ReflectionUtilis.logClasses(A.class);
+        
+
+        // for (Object child : UtilReflection.getChildrenRecursive(fleetPanel)) {
+        //     I DONT KNOW HOW TO RESET THE THING AFTER IT ADVANCES ONCE AFTER REBUILDING TO FIX THE TOOLTIP BULLSHIT AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+        // };
     }
 
     public static void deleteFleetPreset(String name) {

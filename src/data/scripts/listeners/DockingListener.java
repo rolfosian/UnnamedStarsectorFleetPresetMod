@@ -92,7 +92,7 @@ public class DockingListener extends BaseCampaignEventListener {
                         default:
                             return;
                     }
-                };
+                }
             };
             dialog.setPlugin(newPlugin);
             newPlugin.init(dialog);

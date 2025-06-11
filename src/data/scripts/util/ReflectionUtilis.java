@@ -382,19 +382,75 @@ public class ReflectionUtilis {
             throw new RuntimeException(e);
         }
     }
+
+    public static void logClasses(Object instance) {
+        print("---------------------------------");
+        print("CLASSES FOR:", instance.getClass());
+        print("---------------------------------");
+        try {
+            Class<?>[] classes = instance.getClass().getDeclaredClasses();
+            for (Class<?> cls : classes) {
+                logger.info("Class: " + cls.getCanonicalName());
     
+                Object[] constructors = cls.getDeclaredConstructors();
+                for (Object constructor : constructors) {
+                    StringBuilder paramString = new StringBuilder();
+                    Class<?>[] paramTypes = (Class<?>[]) getConstructorParameterTypesHandle.invoke(constructor);
+                    for (int i = 0; i < paramTypes.length; i++) {
+                        if (i > 0) paramString.append(", ");
+                        paramString.append(paramTypes[i].getCanonicalName());
+                    }
+                    logger.info("  Constructor: " + cls.getSimpleName() + "(" + paramString.toString() + ")");
+                }
+            }
+        } catch (Throwable e) {
+            print(e);
+            logger.info("Error logging classes: ", e);
+        }
+    }
+
+    public static void logClasses(Class<?> masterClass) {
+        print("---------------------------------");
+        print("CLASSES FOR:", masterClass);
+        print("---------------------------------");
+        try {
+            Class<?>[] classes = masterClass.getClasses();
+            for (Class<?> cls : classes) {
+                logger.info("Class: " + cls.getCanonicalName());
+    
+                Object[] constructors = cls.getDeclaredConstructors();
+                for (Object constructor : constructors) {
+                    StringBuilder paramString = new StringBuilder();
+                    Class<?>[] paramTypes = (Class<?>[]) getConstructorParameterTypesHandle.invoke(constructor);
+                    for (int i = 0; i < paramTypes.length; i++) {
+                        if (i > 0) paramString.append(", ");
+                        paramString.append(paramTypes[i].getCanonicalName());
+                    }
+                    logger.info("  Constructor: " + cls.getSimpleName() + "(" + paramString.toString() + ")");
+                }
+            }
+        } catch (Throwable e) {
+            print(e);
+            logger.info("Error logging classes: ", e);
+        }
+    }
+
     public static void logMethods(Object instance) {
+        print("---------------------------------");
+        print("METHODS FOR:", instance.getClass());
+        print("---------------------------------");
         try {
             for (Object method : instance.getClass().getMethods()) {
-                logger.info("---------------------------------------------");
                 String methodName = (String) getMethodNameHandle.invoke(method);
+                Class<?> returnType = (Class<?>) getReturnTypeHandle.invoke(method);
                 Class<?>[] paramTypes = (Class<?>[]) getParameterTypesHandle.invoke(method);
+
                 StringBuilder paramString = new StringBuilder();
                 for (Class<?> paramType : paramTypes) {
                     if (paramString.length() > 0) paramString.append(", ");
                     paramString.append(paramType.getCanonicalName());
                 }
-                logger.info(methodName + "(" + paramString.toString() + ")");
+                logger.info(returnType.getSimpleName() + " " + methodName + "(" + paramString.toString() + ")");
             }
         } catch (Throwable e) {
             print(e);
@@ -403,17 +459,21 @@ public class ReflectionUtilis {
     }
 
     public static void logMethods(Class<?> cls) {
+        print("---------------------------------");
+        print("METHODS FOR:", cls);
+        print("---------------------------------");
         try {
             for (Object method : cls.getMethods()) {
-                logger.info("---------------------------------------------");
                 String methodName = (String) getMethodNameHandle.invoke(method);
+                Class<?> returnType = (Class<?>) getReturnTypeHandle.invoke(method);
                 Class<?>[] paramTypes = (Class<?>[]) getParameterTypesHandle.invoke(method);
+
                 StringBuilder paramString = new StringBuilder();
                 for (Class<?> paramType : paramTypes) {
                     if (paramString.length() > 0) paramString.append(", ");
                     paramString.append(paramType.getCanonicalName());
                 }
-                logger.info(methodName + "(" + paramString.toString() + ")");
+                logger.info(returnType.getSimpleName() + " " + methodName + "(" + paramString.toString() + ")");
             }
         } catch (Throwable e) {
             print(e);
@@ -498,6 +558,17 @@ public class ReflectionUtilis {
     public static Object invokeMethodDirectly(Object method, Object instance, Object... arguments) {
         try {
             return invokeMethodHandle.invoke(method, instance, arguments);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Object instantiateClass(String canonicalName, Class<?>[] paramTypes, Object... params) {
+        try {
+            Class<?> clazz = Class.forName(canonicalName, false, Class.class.getClassLoader());
+            Object ctor = clazz.getDeclaredConstructor(paramTypes);
+            setConstructorAccessibleHandle.invoke(ctor, true);
+            return constructorNewInstanceHandle.invoke(ctor, params);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
@@ -922,6 +993,33 @@ public class ReflectionUtilis {
         try {
             int i = 0;
             for (Object field : instance.getClass().getDeclaredFields()) {
+                print("---------------------------------------------");
+                String fieldName = (String) getFieldNameHandle.invoke(field);
+                Class<?> fieldType = (Class<?>) getFieldTypeHandle.invoke(field);
+                
+                if (fieldType.isPrimitive()) {
+                    print(fieldType.getCanonicalName() + " " + fieldName + " " + i);
+                    i++;
+                    continue;
+                } else {
+                    logField(fieldName, fieldType, field, i);
+                }
+                try {
+                    ReflectionUtilis.logConstructorParams(fieldType.getCanonicalName());
+                } catch (Exception e) {
+                    print(e);
+                }
+                i++;
+            }
+        } catch (Throwable e) {
+            logger.info("Error logging fields: ", e);
+        }
+    }
+
+    public static void logFields(Class<?> cls) {
+        try {
+            int i = 0;
+            for (Object field : cls.getDeclaredFields()) {
                 print("---------------------------------------------");
                 String fieldName = (String) getFieldNameHandle.invoke(field);
                 Class<?> fieldType = (Class<?>) getFieldTypeHandle.invoke(field);
