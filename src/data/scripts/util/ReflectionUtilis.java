@@ -52,8 +52,10 @@ public class ReflectionUtilis {
     private static final MethodHandle getReturnTypeHandle;
     
     private static final MethodHandle getGenericTypeHandle;
+    private static final MethodHandle getRawTypeHandle;
     private static final MethodHandle getTypeNameHandle;
     private static final MethodHandle getActualTypeArgumentsHandle;
+    private static final MethodHandle getGenericParameterTypesHandle;
     
     private static final MethodHandle setConstructorAccessibleHandle;
     private static final MethodHandle getDeclaredConstructorsHandle;
@@ -85,8 +87,10 @@ public class ReflectionUtilis {
             getReturnTypeHandle = lookup.findVirtual(methodClass, "getReturnType", MethodType.methodType(Class.class));
 
             getGenericTypeHandle = lookup.findVirtual(fieldClass, "getGenericType", MethodType.methodType(typeClass));
+            getRawTypeHandle = lookup.findVirtual(parameterizedTypeClass, "getRawType", MethodType.methodType(typeClass));
             getTypeNameHandle = lookup.findVirtual(typeClass, "getTypeName", MethodType.methodType(String.class));
-            getActualTypeArgumentsHandle = lookup.findVirtual(parameterizedTypeClass, "getActualTypeArguments", MethodType.methodType(typeArrayClass));
+            getActualTypeArgumentsHandle = lookup.findVirtual(parameterizedTypeClass, "getActualTypeArguments", MethodType.methodType(typeArrayClass)); // this throws dont bother
+            getGenericParameterTypesHandle = lookup.findVirtual(methodClass, "getGenericParameterTypes", MethodType.methodType(typeArrayClass)); // this one does not throw, use this one and cast to Object[]. for constructor params like List, Map etc you will have to log the methods of the class and look for 'Public'
 
             setConstructorAccessibleHandle = lookup.findVirtual(constructorClass, "setAccessible", MethodType.methodType(void.class, boolean.class));
             getConstructorParameterTypesHandle = lookup.findVirtual(constructorClass, "getParameterTypes", MethodType.methodType(Class[].class));
@@ -414,7 +418,7 @@ public class ReflectionUtilis {
         print("CLASSES FOR:", masterClass);
         print("---------------------------------");
         try {
-            Class<?>[] classes = masterClass.getClasses();
+            Class<?>[] classes = masterClass.getDeclaredClasses();
             for (Class<?> cls : classes) {
                 logger.info("Class: " + cls.getCanonicalName());
     
@@ -422,6 +426,7 @@ public class ReflectionUtilis {
                 for (Object constructor : constructors) {
                     StringBuilder paramString = new StringBuilder();
                     Class<?>[] paramTypes = (Class<?>[]) getConstructorParameterTypesHandle.invoke(constructor);
+
                     for (int i = 0; i < paramTypes.length; i++) {
                         if (i > 0) paramString.append(", ");
                         paramString.append(paramTypes[i].getCanonicalName());
@@ -443,12 +448,13 @@ public class ReflectionUtilis {
             for (Object method : instance.getClass().getMethods()) {
                 String methodName = (String) getMethodNameHandle.invoke(method);
                 Class<?> returnType = (Class<?>) getReturnTypeHandle.invoke(method);
-                Class<?>[] paramTypes = (Class<?>[]) getParameterTypesHandle.invoke(method);
+                // Class<?>[] paramTypes = (Class<?>[]) getParameterTypesHandle.invoke(method);
+                Object[] paramTypes = (Object[]) getGenericParameterTypesHandle.invoke(method);
 
                 StringBuilder paramString = new StringBuilder();
-                for (Class<?> paramType : paramTypes) {
+                for (Object paramType : paramTypes) {
                     if (paramString.length() > 0) paramString.append(", ");
-                    paramString.append(paramType.getCanonicalName());
+                    paramString.append(String.valueOf(paramType));
                 }
                 logger.info(returnType.getSimpleName() + " " + methodName + "(" + paramString.toString() + ")");
             }
@@ -466,12 +472,12 @@ public class ReflectionUtilis {
             for (Object method : cls.getMethods()) {
                 String methodName = (String) getMethodNameHandle.invoke(method);
                 Class<?> returnType = (Class<?>) getReturnTypeHandle.invoke(method);
-                Class<?>[] paramTypes = (Class<?>[]) getParameterTypesHandle.invoke(method);
+                Object[] paramTypes = (Object[]) getGenericParameterTypesHandle.invoke(method);
 
                 StringBuilder paramString = new StringBuilder();
-                for (Class<?> paramType : paramTypes) {
+                for (Object paramType : paramTypes) {
                     if (paramString.length() > 0) paramString.append(", ");
-                    paramString.append(paramType.getCanonicalName());
+                    paramString.append(String.valueOf(paramType));
                 }
                 logger.info(returnType.getSimpleName() + " " + methodName + "(" + paramString.toString() + ")");
             }
