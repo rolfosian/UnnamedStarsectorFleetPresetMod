@@ -19,7 +19,9 @@ import com.fs.starfarer.api.campaign.econ.SubmarketAPI;
 import com.fs.starfarer.api.campaign.SubmarketPlugin;
 import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
-
+import com.fs.starfarer.api.input.InputEventAPI;
+import com.fs.starfarer.api.input.InputEventClass;
+import com.fs.starfarer.api.input.InputEventType;
 import com.fs.starfarer.api.characters.OfficerDataAPI;
 import com.fs.starfarer.api.characters.PersonAPI;
 
@@ -1314,23 +1316,23 @@ public class PresetUtils {
     // this is because variant1.equals(variant2) doesnt always work, idk why and i dont really care
     public static boolean areSameVariant(ShipVariantAPI variant1, ShipVariantAPI variant2) {
         // xstream serializer mangles weapon groups on game save/load or something? so we need to do this
-        List<WeaponGroupSpec> variant1WeaponGroups = variant1.getWeaponGroups();
-        List<WeaponGroupSpec> variant2WeaponGroups = variant2.getWeaponGroups();
+        // List<WeaponGroupSpec> variant1WeaponGroups = variant1.getWeaponGroups();
+        // List<WeaponGroupSpec> variant2WeaponGroups = variant2.getWeaponGroups();
 
         // print("-------------------------------------------------------");
         // print(variant1.getHullSpec().getHullId());
 
-        if (variant1WeaponGroups.size() != variant2WeaponGroups.size()) return false;
-        for (int i = 0; i < variant1WeaponGroups.size(); i++) {
-            List<String> slots1 = variant1WeaponGroups.get(i).getSlots();
-            List<String> slots2 = variant2WeaponGroups.get(i).getSlots();
-            // slots1.equals(slots2) doesnt work either, we actually have to go through it and compare each directly
+        // if (variant1WeaponGroups.size() != variant2WeaponGroups.size()) return false;
+        // for (int i = 0; i < variant1WeaponGroups.size(); i++) {
+        //     List<String> slots1 = variant1WeaponGroups.get(i).getSlots();
+        //     List<String> slots2 = variant2WeaponGroups.get(i).getSlots();
+        //     // slots1.equals(slots2) doesnt work either, we actually have to go through it and compare each directly
 
-            if (slots1.size() != slots2.size()) return false;
-            for (int j = 0; j < slots1.size(); j++) {
-                if (!slots1.get(j).equals(slots2.get(j))) return false;
-            }
-        }
+        //     if (slots1.size() != slots2.size()) return false;
+        //     for (int j = 0; j < slots1.size(); j++) {
+        //         if (!slots1.get(j).equals(slots2.get(j))) return false;
+        //     }
+        // }
 
         // print("Weapon groups are the same");
         // print("hullId match:", variant1.getHullSpec().getHullId().equals(variant2.getHullSpec().getHullId()));
@@ -1500,14 +1502,13 @@ public class PresetUtils {
         Object fleetPanel = ReflectionUtilis.invokeMethod("getFleetPanel", infoPanelParent);
 
         ReflectionUtilis.getMethodAndInvokeDirectly("recreateUI", fleetPanel, 1, false);
-        // ReflectionUtilis.logMethods(ReflectionUtilis.getMethodAndInvokeDirectly("getHandler", fleetPanel, 0));
-        // ReflectionUtilis.getMethodAndInvokeDirectly("getHandler", fleetPanel, 0);
-        // ReflectionUtilis.logClasses(A.class);
-        
 
         // for (Object child : UtilReflection.getChildrenRecursive(fleetPanel)) {
-        //     I DONT KNOW HOW TO RESET THE THING AFTER IT ADVANCES ONCE AFTER REBUILDING TO FIX THE TOOLTIP BULLSHIT AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-        // };
+            // I DONT KNOW HOW TO RESET THE THING AFTER IT ADVANCES ONCE AFTER REBUILDING TO FIX THE TOOLTIP BULLSHIT AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+            // List<Object> lst = new ArrayList<>();
+            // lst.add(UtilReflection.createInputEventInstance(InputEventClass.MOUSE_EVENT, InputEventType.MOUSE_MOVE, 1, 1, 1, '\0'));
+            // ReflectionUtilis.getMethodExplicitAndInvokeDirectly("processInput", child, new Class<?>[]{List.class}, lst);
+        // }
     }
 
     public static void deleteFleetPreset(String name) {

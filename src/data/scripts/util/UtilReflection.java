@@ -49,7 +49,7 @@ public class UtilReflection {
         return button;
     }
 
-    public static Object getButtonClickEventInstance(PositionAPI buttonPosition) {
+    public static Object createButtonClickEventInstance(PositionAPI buttonPosition) {
         return ReflectionUtilis.instantiateClass(ClassRefs.inputEventClass,
         ClassRefs.inputEventClassParamTypes,
         new Object[] {
@@ -62,11 +62,24 @@ public class UtilReflection {
         }); 
     }
 
+    public static Object createInputEventInstance(InputEventClass eventClass, InputEventType eventType, int x, int y, int val, char char_) {
+        return ReflectionUtilis.instantiateClass(ClassRefs.inputEventClass,
+        ClassRefs.inputEventClassParamTypes,
+        new Object[] {
+            eventClass,
+            eventType,
+            x,
+            y,
+            0, // LMB
+            '\0' // unused?
+        }); 
+    }
+
     public static void clickButton(Object button) {
         if (button == null) return;
 
         Object listener = ReflectionUtilis.getMethodAndInvokeDirectly("getListener", button, 0);
-        ReflectionUtilis.getMethodAndInvokeDirectly("actionPerformed", listener, 2, UtilReflection.getButtonClickEventInstance(((ButtonAPI)button).getPosition()), button);
+        ReflectionUtilis.getMethodAndInvokeDirectly("actionPerformed", listener, 2, UtilReflection.createButtonClickEventInstance(((ButtonAPI)button).getPosition()), button);
     }
 
     public static List<Object> getChildrenRecursive(Object parentPanel) {

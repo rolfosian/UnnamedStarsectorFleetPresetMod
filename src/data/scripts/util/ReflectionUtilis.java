@@ -440,23 +440,26 @@ public class ReflectionUtilis {
         }
     }
 
+    public static void logMethod(Object method) throws Throwable {
+        String methodName = (String) getMethodNameHandle.invoke(method);
+        Class<?> returnType = (Class<?>) getReturnTypeHandle.invoke(method);
+        Object[] paramTypes = (Object[]) getGenericParameterTypesHandle.invoke(method);
+
+        StringBuilder paramString = new StringBuilder();
+        for (Object paramType : paramTypes) {
+            if (paramString.length() > 0) paramString.append(", ");
+            paramString.append(String.valueOf(paramType));
+        }
+        logger.info(returnType.getSimpleName() + " " + methodName + "(" + paramString.toString() + ")");
+    }
+
     public static void logMethods(Object instance) {
         print("---------------------------------");
         print("METHODS FOR:", instance.getClass());
         print("---------------------------------");
         try {
             for (Object method : instance.getClass().getMethods()) {
-                String methodName = (String) getMethodNameHandle.invoke(method);
-                Class<?> returnType = (Class<?>) getReturnTypeHandle.invoke(method);
-                // Class<?>[] paramTypes = (Class<?>[]) getParameterTypesHandle.invoke(method);
-                Object[] paramTypes = (Object[]) getGenericParameterTypesHandle.invoke(method);
-
-                StringBuilder paramString = new StringBuilder();
-                for (Object paramType : paramTypes) {
-                    if (paramString.length() > 0) paramString.append(", ");
-                    paramString.append(String.valueOf(paramType));
-                }
-                logger.info(returnType.getSimpleName() + " " + methodName + "(" + paramString.toString() + ")");
+                logMethod(method);
             }
         } catch (Throwable e) {
             print(e);
@@ -470,16 +473,7 @@ public class ReflectionUtilis {
         print("---------------------------------");
         try {
             for (Object method : cls.getMethods()) {
-                String methodName = (String) getMethodNameHandle.invoke(method);
-                Class<?> returnType = (Class<?>) getReturnTypeHandle.invoke(method);
-                Object[] paramTypes = (Object[]) getGenericParameterTypesHandle.invoke(method);
-
-                StringBuilder paramString = new StringBuilder();
-                for (Object paramType : paramTypes) {
-                    if (paramString.length() > 0) paramString.append(", ");
-                    paramString.append(String.valueOf(paramType));
-                }
-                logger.info(returnType.getSimpleName() + " " + methodName + "(" + paramString.toString() + ")");
+                logMethod(method);
             }
         } catch (Throwable e) {
             print(e);
@@ -522,9 +516,7 @@ public class ReflectionUtilis {
     
                     boolean match = true;
                     for (int i = 0; i < targetParameterTypes.length; i++) {
-                        Class<?> targetType = targetParameterTypes[i];
-                        Class<?> inputType = parameterTypes[i];
-                        if (!inputType.isAssignableFrom(targetType)) {
+                        if (!targetParameterTypes[i].getCanonicalName().equals(parameterTypes[i].getCanonicalName())) {
                             match = false;
                             break;
                         }
@@ -556,8 +548,8 @@ public class ReflectionUtilis {
 
     public static Object getMethodExplicitAndInvokeDirectly(String methodName, Object instance, Class<?>[] parameterTypes, Object... arguments) {
         Object method = getMethodExplicit(methodName, instance, parameterTypes);
+        
         if (method == null) return null;
-
         return invokeMethodDirectly(method, instance, arguments);
     }
 

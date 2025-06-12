@@ -3,8 +3,10 @@ package data.scripts.listeners;
 import com.fs.starfarer.api.Global;
 
 import com.fs.starfarer.api.campaign.BaseCampaignEventListener;
+import com.fs.starfarer.api.campaign.CampaignEventListener;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;
 import com.fs.starfarer.api.campaign.InteractionDialogPlugin;
+import com.fs.starfarer.api.campaign.PlanetAPI;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.characters.*;
@@ -68,7 +70,7 @@ public class DockingListener extends BaseCampaignEventListener {
 
     @Override
     public void reportShownInteractionDialog(InteractionDialogAPI dialog) {
-        if (dialog.getInteractionTarget() == null) return;
+        if (!(dialog.getInteractionTarget() instanceof PlanetAPI)) return;
 
         if ((PresetUtils.haveNexerelin || PresetUtils.haveRAT) && dialog.getPlugin() instanceof RuleBasedInteractionDialogPluginImpl) {
             RuleBasedInteractionDialogPluginImpl newPlugin = new RuleBasedInteractionDialogPluginImpl() {
@@ -85,10 +87,12 @@ public class DockingListener extends BaseCampaignEventListener {
                             Global.getSector().getListenerManager().getListeners(ColonyDecivStorageListener.class).get(0).reportColonyDecivilized(dialog.getInteractionTarget().getMarket(), true);
                             return;
 
+                        case "ratCreateSettlement":
+                            return;
+
                         case "ratVisitSettlement":
                             reportPlayerOpenedMarket(((FrontiersData)Global.getSector().getMemoryWithoutUpdate().get("$rat_frontiers_data")).getActiveSettlement().getSettlementEntity().getMarket());
                             return;
-
                         default:
                             return;
                     }
