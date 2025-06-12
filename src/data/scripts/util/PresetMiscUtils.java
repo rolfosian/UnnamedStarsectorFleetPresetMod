@@ -9,37 +9,6 @@ import com.fs.starfarer.api.Global;
 
 public class PresetMiscUtils {
     private static final Logger logger = Global.getLogger(PresetMiscUtils.class);
-    
-    public static void clickAt(float x, float y) {
-        try {
-            Robot robot = new Robot();
-            robot.mouseMove(Math.round(x), Math.round(y));
-            robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-            robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-        } catch (AWTException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public static void pressKey(int keyCode) {
-        try {
-            Robot robot = new Robot();
-            robot.keyPress(keyCode);
-            robot.keyRelease(keyCode);
-        } catch (AWTException e) {
-            e.printStackTrace();
-        }
-    }
-    public static List<Integer> range(int num) {
-        List<Integer> result = new ArrayList<>();
-        for (int i = 0; i < num; i++) {
-            result.add(i);
-        }
-        return result;
-    }
-    public static double calculatePercentage(double rY, double percentage) {
-        return rY / 100 * percentage;
-    }
 
     public static LinkedHashMap<String, String> sortByKeyAlphanumerically(HashMap<String, String> input, boolean ascending) {
         List<String> keys = new ArrayList<>(input.keySet());

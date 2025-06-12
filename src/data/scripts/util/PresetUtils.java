@@ -143,6 +143,22 @@ public class PresetUtils {
         }
     }
 
+    public static class VariantWrapper {
+        public ShipVariantAPI variant;
+        public int index;
+        public FleetPreset preset;
+
+        public VariantWrapper(ShipVariantAPI variant, int index, FleetPreset preset) {
+            this.variant = variant;
+            this.index = index;
+            this.preset = preset;
+        }
+
+        public void updateVariant() {
+            this.preset.updateVariant(this.index, this.variant);
+        }
+    }
+
     public static class FleetMemberWrapper {
         public final FleetPreset preset;
         public final FleetMemberAPI member;
@@ -224,6 +240,7 @@ public class PresetUtils {
             this.preset.campaignFleet.getFleetData().removeFleetMember(this.member);
             this.preset.shipIds.remove(this.index);
             this.preset.variantsMap.remove(this.index);
+            this.preset.variantWrappers.remove(this.index);
             this.preset.fleetMembers.remove(this.index);
             this.preset.officersMap.remove(this.index);
             this.preset.updateIndexesAfterMemberRemoved(index);
@@ -243,6 +260,15 @@ public class PresetUtils {
         return campaignFleet;
     }
 
+    // for after game save. i dont know why we need to do this but we do
+    public static void updatePresetVariants() {
+        for (FleetPreset preset : getFleetPresets().values()) {
+            for (VariantWrapper variantWrapper : preset.variantWrappers.values()) {
+                variantWrapper.updateVariant();
+            }
+        }
+    }
+
     public static class FleetPreset {
         public final String name;
         public List<String> shipIds = new ArrayList<>(); // this is redundant since refactoring but i cant be btohered changing related logic
@@ -250,6 +276,7 @@ public class PresetUtils {
         public Map<Integer, OfficerVariantPair> officersMap = new HashMap<>();
         public List<FleetMemberWrapper> fleetMembers = new ArrayList<>();
         public CampaignFleetAPI campaignFleet;
+        public Map<Integer, VariantWrapper> variantWrappers = new HashMap<>();
 
         public FleetPreset(String name, List<FleetMemberAPI> fleetMembers) {
             this.name = name;
@@ -265,12 +292,14 @@ public class PresetUtils {
                 FleetMemberAPI member = fleetMembers.get(i);
 
                 String hullId = member.getHullId();
+
                 ShipVariantAPI variant = member.getVariant();
-                PersonAPI captain = member.getCaptain();
-    
+                variantWrappers.put(i, new VariantWrapper(variant, i, this));
+
                 this.shipIds.add(hullId);
                 this.variantsMap.put(i, variant);
     
+                PersonAPI captain = member.getCaptain();
                 if (captain != null) {
                     officersMap.put(i, new OfficerVariantPair(captain, variant, i));
                 }
@@ -310,6 +339,7 @@ public class PresetUtils {
             this.campaignFleet.getFleetData().removeFleetMember(this.fleetMembers.get(index).member);
             this.fleetMembers.set(index, newWrappedMember);
             this.variantsMap.put(index, newMember.getVariant());
+            this.variantWrappers.put(index, new VariantWrapper(newMember.getVariant(), index, this));
             this.officersMap.put(index, new OfficerVariantPair(newMember.getCaptain(), newMember.getVariant(), index));
 
             this.campaignFleet.getFleetData().addFleetMember(this.fleetMembers.get(index).member);
@@ -327,6 +357,7 @@ public class PresetUtils {
         public void updateIndexesAfterMemberRemoved(int removedIndex) {
             this.shipIds.remove(removedIndex);
             this.variantsMap.remove(removedIndex);
+            this.variantWrappers.remove(removedIndex);
             this.officersMap.remove(removedIndex);
         
             Map<Integer, ShipVariantAPI> updatedVariantsMap = new HashMap<>();
@@ -389,6 +420,7 @@ public class PresetUtils {
         public void updateVariant(int index, ShipVariantAPI variant) {
             this.fleetMembers.get(index).member.setVariant(variant, true, true);
             this.variantsMap.put(index, variant);
+            this.variantWrappers.put(index, new VariantWrapper(variant, index, this));
             this.shipIds.set(index, variant.getHullSpec().getHullId());
 
             for (int i = 0; i < this.shipIds.size(); i++) {
@@ -569,9 +601,9 @@ public class PresetUtils {
             if (playerFleetMembers.size() != preset.fleetMembers.size()) {
                 String reason;
                 if (playerFleetMembers.size() > preset.fleetMembers.size()) {
-                    reason =  "Fleet Member was gained";
+                    reason =  "Fleet Member(s) were gained";
                 } else {
-                    reason = "Fleet Member was lost";
+                    reason = "Fleet Member(s) were lost";
                 }
 
                 int sizeDifference = preset.fleetMembers.size() - playerFleetMembers.size();
@@ -593,19 +625,16 @@ public class PresetUtils {
                 if (preset.campaignFleet == null) preset.campaignFleet = createDummyPresetFleet();
                 for (FleetMemberWrapper wrappedMember : preset.fleetMembers) {
                     preset.campaignFleet.getFleetData().removeFleetMember(wrappedMember.member);
-                    getFleetPresetsMembers().get(wrappedMember.id).remove(wrappedMember);
                 }
                 preset.fleetMembers.clear();
 
                 preset.shipIds.clear();
+                preset.variantWrappers.clear();
                 preset.variantsMap.clear();
                 preset.officersMap.clear();
-                Set<FleetPreset> presetsToUpdate = new HashSet<>();
-                presetsToUpdate.add(preset);
 
                 for (int i = 0; i < playerFleetMembers.size(); i++) {
                     FleetMemberAPI member = playerFleetMembers.get(i);
-                    String hullId = member.getHullId();
                     
                     FleetMemberWrapper wrappedMember = new FleetMemberWrapper(preset, member, member.getCaptain(), i);
                     preset.campaignFleet.getFleetData().addFleetMember(wrappedMember.member);
@@ -618,18 +647,19 @@ public class PresetUtils {
                             if (preset.name.equals(presetMember.preset.name)) {
                                 presetMembers.set(j, wrappedMember);
                             } else {
-                                presetMembers.set(j, new FleetMemberWrapper(presetMember.preset, member, member.getCaptain(), presetMember.index));
+                                presetMember.preset.updateWrappedMember(presetMember.index, member);
                             }
-                            presetsToUpdate.add(presetMember.preset);
                         }
+                        
                     } else {
                         getFleetPresetsMembers().put(member.getId(), new ArrayList<>());
                         getFleetPresetsMembers().get(member.getId()).add(wrappedMember);
                     }
                     preset.fleetMembers.add(wrappedMember);
                     
-                    preset.shipIds.add(hullId);
+                    preset.shipIds.add(member.getHullId());
                     preset.variantsMap.put(i, member.getVariant());
+                    preset.variantWrappers.put(i, new VariantWrapper(member.getVariant(), i, preset));
                     
                     if (!isOfficerNought(member.getCaptain())) {
                         preset.officersMap.put(i, new OfficerVariantPair(member.getCaptain(), member.getVariant(), i));
@@ -1313,7 +1343,12 @@ public class PresetUtils {
         return null;
     }
 
+    public static boolean areSameWeaponSlots(Collection<String> slots1, Collection<String> slots2) {
+        return new HashSet<>(slots1).equals(new HashSet<>(slots2));
+    }
+
     // this is because variant1.equals(variant2) doesnt always work, idk why and i dont really care
+    // xstream is mangling half of this shit and i dont know what to do about it
     public static boolean areSameVariant(ShipVariantAPI variant1, ShipVariantAPI variant2) {
         // xstream serializer mangles weapon groups on game save/load or something? so we need to do this
         // List<WeaponGroupSpec> variant1WeaponGroups = variant1.getWeaponGroups();
@@ -1334,23 +1369,29 @@ public class PresetUtils {
         //     }
         // }
 
+        // for (int i = 0; i < weaponSlots1.size(); i++) {
+        //     print(weaponSlots1.get(i), weaponSlots2.get(i));
+        // }
+
         // print("Weapon groups are the same");
         // print("hullId match:", variant1.getHullSpec().getHullId().equals(variant2.getHullSpec().getHullId()));
         // print(variant1.getHullSpec().getHullId(), variant2.getHullSpec().getHullId());
         // print("smods match:", variant1.getSMods().equals(variant2.getSMods()));
         // print("hullmods match:", variant1.getHullMods().equals(variant2.getHullMods()));
         // print("wings match:", variant1.getWings().equals(variant2.getWings()));
+        // print("fittedweaponslots match raw:", areSameWeaponSlots(variant1.getFittedWeaponSlots(), variant2.getFittedWeaponSlots()));
         // print("fittedweaponslots match:", variant1.getFittedWeaponSlots().equals(variant2.getFittedWeaponSlots()));
         // print("smoddedbuiltins match:", variant1.getSModdedBuiltIns().equals(variant2.getSModdedBuiltIns()));
-        // print("fluxcapacitors match:", variant1.getNumFluxCapacitors() == variant2.getNumFluxCapacitors());
-        // print("fluxvents match:", variant1.getNumFluxVents() == variant2.getNumFluxVents());
+        // print("fluxcapacitors match:", variant1.getNumFluxCapacitors() == variant2.getNumFluxCapacitors(), variant1.getNumFluxCapacitors(), variant2.getNumFluxCapacitors());
+        // print("fluxvents match:", variant1.getNumFluxVents() == variant2.getNumFluxVents(), variant1.getNumFluxVents(), variant2.getNumFluxVents());
         // print("-------------------------------------------------------");
 
         return (variant1.getHullSpec().getHullId().equals(variant2.getHullSpec().getHullId())
             && variant1.getSMods().equals(variant2.getSMods())
             && variant1.getHullMods().equals(variant2.getHullMods())
             && variant1.getWings().equals(variant2.getWings())
-            && variant1.getFittedWeaponSlots().equals(variant2.getFittedWeaponSlots())
+            // && variant1.getFittedWeaponSlots().equals(variant2.getFittedWeaponSlots()) // THIS DOESNT WORK AFTER GAME SAVE I DONT FUCKING KNOW WHY
+            && areSameWeaponSlots(variant1.getFittedWeaponSlots(), variant2.getFittedWeaponSlots()) // this inexplicably works though
             && variant1.getSModdedBuiltIns().equals(variant2.getSModdedBuiltIns())
             // && variant1.getWeaponGroups().equals(variant2.getWeaponGroups()) // fuck you xstream
             && variant1.getNumFluxCapacitors() == variant2.getNumFluxCapacitors()

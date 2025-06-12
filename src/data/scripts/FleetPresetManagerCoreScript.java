@@ -74,10 +74,11 @@ public class FleetPresetManagerCoreScript implements EveryFrameScript {
                 }
                 
             } catch (Exception e) {
-                print(e);
+                throw new RuntimeException(e);
             }
             isFirstFrame = false;
         }
+        ClassRefs.findAllClasses();
 
         fleetPanelInjector.advance();
     }

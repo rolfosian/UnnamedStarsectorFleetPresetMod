@@ -132,8 +132,7 @@ public class UtilReflection {
                     (UIPanelAPI) ReflectionUtilis.getMethodAndInvokeDirectly("getInnerPanel", confirmDialog, 0),
                     (UIPanelAPI) confirmDialog);
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new RuntimeException(e);
         }
     }
 

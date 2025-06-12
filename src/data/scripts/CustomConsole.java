@@ -53,10 +53,24 @@ public class CustomConsole {
         private JCheckBox caseSensitiveCheckBox;
     
         private Style infoStyle, warnStyle, errorStyle, defaultStyle;
+
+        private static class TextSegment {
+            int start;
+            int length;
+            Style style;
+        
+            TextSegment(int start, int length, Style style) {
+                this.start = start;
+                this.length = length;
+                this.style = style;
+            }
+        }
+        
+        private final java.util.List<TextSegment> segments = new java.util.ArrayList<>();
     
         private CustomConsoleWindow() {
             setTitle("Log Console");
-            setSize(700, 400);
+            setSize(800, 600);
             setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
             setIconImage(Toolkit.getDefaultToolkit().getImage("graphics/ui/s_icon64.png"));
     
@@ -176,8 +190,9 @@ public class CustomConsole {
                 }
     
                 try {
-                    doc.insertString(doc.getLength(), text, styleToUse);
-                    textPane.setCaretPosition(doc.getLength());
+                    int start = doc.getLength();
+                    doc.insertString(start, text, styleToUse);
+                    segments.add(new TextSegment(start, text.length(), styleToUse));
                 } catch (BadLocationException e) {
                     e.printStackTrace();
                 }
@@ -289,7 +304,9 @@ public class CustomConsole {
 
         private void clearHighlights() {
             try {
-                doc.setCharacterAttributes(0, doc.getLength(), defaultStyle, true);
+                for (TextSegment segment : segments) {
+                    doc.setCharacterAttributes(segment.start, segment.length, segment.style, true);
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }

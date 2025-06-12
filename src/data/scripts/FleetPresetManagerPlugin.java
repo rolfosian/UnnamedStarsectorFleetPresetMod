@@ -34,7 +34,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
     public static void print(Object... args) {
         PresetMiscUtils.print(args);
     }
-    private static final String ver = "0.0.8";
+    private static final String ver = "0.0.9";
 
     // @Override
     // public void onApplicationLoad() {
@@ -69,6 +69,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         sector.addTransientScript(new FleetPresetManagerCoreScript());
         sector.addTransientScript(new OfficerTracker());
         sector.addTransientScript(new FleetMonitor());
+
         sector.addTransientListener(new DockingListener(false));
         sector.getListenerManager().addListener(new ColonyDecivStorageListener(), true);
     }
@@ -91,5 +92,10 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         mem.unset(PresetUtils.FLEETINFOPANEL_KEY); // required or else game catches exception about reflection during load and kicks this stuff from memory
         mem.unset(PresetUtils.COREUI_KEY); // its just smoother this way (its not actually a big deal i just dont like the look of the double loading info)
         mem.unset(PresetUtils.OFFICER_AUTOASSIGN_BUTTON_KEY);
+    }
+
+    @Override
+    public void afterGameSave() {
+        PresetUtils.updatePresetVariants();
     }
 }
