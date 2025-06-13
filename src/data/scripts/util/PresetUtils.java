@@ -1360,27 +1360,23 @@ public class PresetUtils {
     // xstream is mangling half of this shit and i dont know what to do about it
     public static boolean areSameVariant(ShipVariantAPI variant1, ShipVariantAPI variant2) {
         // xstream serializer mangles weapon groups on game save/load or something? so we need to do this
-        // List<WeaponGroupSpec> variant1WeaponGroups = variant1.getWeaponGroups();
-        // List<WeaponGroupSpec> variant2WeaponGroups = variant2.getWeaponGroups();
+        List<WeaponGroupSpec> variant1WeaponGroups = variant1.getWeaponGroups();
+        List<WeaponGroupSpec> variant2WeaponGroups = variant2.getWeaponGroups();
 
         // print("-------------------------------------------------------");
         // print(variant1.getHullSpec().getHullId());
 
-        // if (variant1WeaponGroups.size() != variant2WeaponGroups.size()) return false;
-        // for (int i = 0; i < variant1WeaponGroups.size(); i++) {
-        //     List<String> slots1 = variant1WeaponGroups.get(i).getSlots();
-        //     List<String> slots2 = variant2WeaponGroups.get(i).getSlots();
-        //     // slots1.equals(slots2) doesnt work either, we actually have to go through it and compare each directly
+        if (variant1WeaponGroups.size() != variant2WeaponGroups.size()) return false;
+        for (int i = 0; i < variant1WeaponGroups.size(); i++) {
+            List<String> slots1 = variant1WeaponGroups.get(i).getSlots();
+            List<String> slots2 = variant2WeaponGroups.get(i).getSlots();
+            // slots1.equals(slots2) doesnt work either, we actually have to go through it and compare each directly
 
-        //     if (slots1.size() != slots2.size()) return false;
-        //     for (int j = 0; j < slots1.size(); j++) {
-        //         if (!slots1.get(j).equals(slots2.get(j))) return false;
-        //     }
-        // }
-
-        // for (int i = 0; i < weaponSlots1.size(); i++) {
-        //     print(weaponSlots1.get(i), weaponSlots2.get(i));
-        // }
+            if (slots1.size() != slots2.size()) return false;
+            for (int j = 0; j < slots1.size(); j++) {
+                if (!slots1.get(j).equals(slots2.get(j))) return false;
+            }
+        }
 
         // print("Weapon groups are the same");
         // print("hullId match:", variant1.getHullSpec().getHullId().equals(variant2.getHullSpec().getHullId()));
@@ -1388,8 +1384,8 @@ public class PresetUtils {
         // print("smods match:", variant1.getSMods().equals(variant2.getSMods()));
         // print("hullmods match:", variant1.getHullMods().equals(variant2.getHullMods()));
         // print("wings match:", variant1.getWings().equals(variant2.getWings()));
-        // print("fittedweaponslots match raw:", areSameWeaponSlots(variant1.getFittedWeaponSlots(), variant2.getFittedWeaponSlots()));
-        // print("fittedweaponslots match:", variant1.getFittedWeaponSlots().equals(variant2.getFittedWeaponSlots()));
+        // print("fittedweaponslots match:", areSameWeaponSlots(variant1.getFittedWeaponSlots(), variant2.getFittedWeaponSlots()));
+        // print("fittedweaponslots match raw:", variant1.getFittedWeaponSlots().equals(variant2.getFittedWeaponSlots()));
         // print("smoddedbuiltins match:", variant1.getSModdedBuiltIns().equals(variant2.getSModdedBuiltIns()));
         // print("fluxcapacitors match:", variant1.getNumFluxCapacitors() == variant2.getNumFluxCapacitors(), variant1.getNumFluxCapacitors(), variant2.getNumFluxCapacitors());
         // print("fluxvents match:", variant1.getNumFluxVents() == variant2.getNumFluxVents(), variant1.getNumFluxVents(), variant2.getNumFluxVents());
