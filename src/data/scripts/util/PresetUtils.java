@@ -6,8 +6,6 @@ import java.awt.Color;
 
 import com.fs.starfarer.api.Global;
 
-import com.fs.starfarer.campaign.fleet.CampaignFleet;
-import com.fs.starfarer.campaign.fleet.FleetMember;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.campaign.CargoAPI;
 import com.fs.starfarer.api.campaign.CoreUIAPI;
@@ -166,7 +164,7 @@ public class PresetUtils {
 
         public int index;
         public PersonAPI captainCopy;
-        public PersonAPI captain;
+        // public PersonAPI captain;
         public String captainId;
         public FleetMemberAPI parentMember;
 
@@ -180,7 +178,7 @@ public class PresetUtils {
             this.member.setId(member.getId());
 
             if (captain != null) {
-                this.captain = captain;
+                // this.captain = captain;
                 this.captainId = captain.getId();
 
                 this.captainCopy =  Global.getFactory().createPerson();
@@ -192,7 +190,7 @@ public class PresetUtils {
                 this.member.setCaptain(captainCopy);
 
             } else {
-                this.captain = null;
+                // this.captain = null;
                 this.captainId = null;
             }
 
@@ -203,7 +201,7 @@ public class PresetUtils {
 
         public void updateCaptain(PersonAPI captain) {
             if (captain == null) {
-                this.captain = null;
+                // this.captain = null;
                 this.captainId = null;
                 this.captainCopy = null;
                 this.preset.campaignFleet.getFleetData().getMembersInPriorityOrder().get(this.index).setCaptain(null);
@@ -211,7 +209,7 @@ public class PresetUtils {
                 return;
             }
 
-            this.captain = captain;
+            // this.captain = captain;
             this.captainId = captain.getId();
 
             this.captainCopy = Global.getFactory().createPerson();
@@ -366,6 +364,14 @@ public class PresetUtils {
                 updatedVariantsMap.put(index < removedIndex ? index : index - 1, entry.getValue());
             }
             this.variantsMap = updatedVariantsMap;
+
+            Map<Integer, VariantWrapper> updatedVariantWrappersMap = new HashMap<>();
+            for (Map.Entry<Integer, VariantWrapper> entry : this.variantWrappers.entrySet()) {
+                int index = entry.getKey();
+                updatedVariantWrappersMap.put(index < removedIndex ? index : index - 1, entry.getValue());
+            }
+            this.variantsMap = updatedVariantsMap;
+        
         
             Map<Integer, OfficerVariantPair> updatedOfficersMap = new HashMap<>();
             for (Map.Entry<Integer, OfficerVariantPair> entry : this.officersMap.entrySet()) {
@@ -392,6 +398,7 @@ public class PresetUtils {
             this.fleetMembers.clear();
             this.shipIds.clear();
             this.variantsMap.clear();
+            this.variantWrappers.clear();
             this.officersMap.clear();
 
             for (int i = 0; i < wrappedMembers.size(); i++) {
@@ -405,6 +412,8 @@ public class PresetUtils {
                 
                 this.shipIds.add(hullId);
                 this.variantsMap.put(i, member.member.getVariant());
+                this.variantWrappers.put(i, new VariantWrapper(member.member.getVariant(), i, this));
+
                 
                 if (!isOfficerNought(member.member.getCaptain())) {
                     this.officersMap.put(i, new OfficerVariantPair(member.member.getCaptain(), member.member.getVariant(), i));
@@ -692,17 +701,17 @@ public class PresetUtils {
 
                     if (!areSameVariant(playerFleetMember.getVariant(), member.member.getVariant())) {
                         preset.updateVariant(member.index, playerFleetMember.getVariant());
-                        reasons.add("Fleet Member ship variant changed");
+                        reasons.add("Fleet Member ship variant(s) changed");
                     }
 
                     if (!playerFleetMember.getId().equals(member.id) || !getFleetPresetsMembers().containsKey(member.id)) {
                         preset.updateWrappedMember(member.index, playerFleetMember);
-                        reasons.add("Fleet Member ID changed");
+                        reasons.add("Fleet Member ID(s) changed");
                     }
 
                     if (!isOfficerSameAsPresetMember(playerFleetMember, member)) {
                         preset.updateOfficer(member.index, playerFleetMember.getCaptain());
-                        reasons.add("Officer assignment changed");
+                        reasons.add("Officer assignment(s) changed");
                     }
                 }
 
@@ -1544,10 +1553,31 @@ public class PresetUtils {
 
         ReflectionUtilis.getMethodAndInvokeDirectly("recreateUI", fleetPanel, 1, false);
 
+        // ReflectionUtilis.logFields(fleetPanel);
+
         // for (Object child : UtilReflection.getChildrenRecursive(fleetPanel)) {
             // I DONT KNOW HOW TO RESET THE THING AFTER IT ADVANCES ONCE AFTER REBUILDING TO FIX THE TOOLTIP BULLSHIT AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+            // ReflectionUtilis.logFields(child);
+
+            // Object field = ReflectionUtilis.getFieldAtIndex(child, 1);
+            // if (field instanceof List) {
+                // print()
+                // for (Object o : (List<Object>) field) {
+                    // for (Object child1 : (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", o, 0)) {
+                    //     ReflectionUtilis.logMethods(child1);
+                    // }
+                    // List<Object> lst = new ArrayList<>();
+                    // lst.add(UtilReflection.createInputEventInstance(InputEventClass.MOUSE_EVENT, InputEventType.MOUSE_MOVE, 1, 1, 0, '\0'));
+                    // ReflectionUtilis.getMethodExplicitAndInvokeDirectly("processInput", o, new Class<?>[]{List.class}, lst);
+                    // ReflectionUtilis.logMethods(o);
+                    // ReflectionUtilis.logFields(o);
+                    // break;
+                // }
+            // }
+            
+            // ReflectionUtilis.logMethods(child);
             // List<Object> lst = new ArrayList<>();
-            // lst.add(UtilReflection.createInputEventInstance(InputEventClass.MOUSE_EVENT, InputEventType.MOUSE_MOVE, 1, 1, 1, '\0'));
+            // lst.add(UtilReflection.createInputEventInstance(InputEventClass.MOUSE_EVENT, InputEventType.MOUSE_MOVE, 1, 1, 0, '\0'));
             // ReflectionUtilis.getMethodExplicitAndInvokeDirectly("processInput", child, new Class<?>[]{List.class}, lst);
         // }
     }

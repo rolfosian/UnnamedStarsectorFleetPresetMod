@@ -34,7 +34,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
     public static void print(Object... args) {
         PresetMiscUtils.print(args);
     }
-    private static final String ver = "0.0.9";
+    private static final String ver = "0.0.9a";
 
     // @Override
     // public void onApplicationLoad() {
@@ -53,8 +53,8 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         if (modVer == null || !modVer.equals(ver)) {
             persistentData.put(PresetUtils.PRESETS_MEMORY_KEY, new HashMap<String, FleetPreset>());
             persistentData.put(PresetUtils.PRESET_MEMBERS_KEY, new HashMap<String, List<FleetMemberWrapper>>());
+            persistentData.put(PresetUtils.STORED_PRESET_MEMBERIDS_KEY, new HashMap<String, Set<String>>());
             persistentData.put(PresetUtils.IS_AUTO_UPDATE_KEY, true);
-            persistentData.put(PresetUtils.STORED_PRESET_MEMBERIDS_KEY, new HashMap<>());
             persistentData.put(PresetUtils.KEEPCARGORATIOS_KEY, false);
             persistentData.put("$fleetPresetsManagerVer", ver);
         }
@@ -78,12 +78,12 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
     public void onNewGame() {
         Map<String, Object> persistentData = Global.getSector().getPersistentData();
 
-        persistentData.put("$fleetPresetsManagerVer", ver);
-        persistentData.put(PresetUtils.PRESETS_MEMORY_KEY, new HashMap<String, PresetUtils.FleetPreset>());
+        persistentData.put(PresetUtils.PRESETS_MEMORY_KEY, new HashMap<String, FleetPreset>());
         persistentData.put(PresetUtils.PRESET_MEMBERS_KEY, new HashMap<String, List<FleetMemberWrapper>>());
-        persistentData.put(PresetUtils.STORED_PRESET_MEMBERIDS_KEY, new HashMap<>());
+        persistentData.put(PresetUtils.STORED_PRESET_MEMBERIDS_KEY, new HashMap<String, Set<String>>());
         persistentData.put(PresetUtils.IS_AUTO_UPDATE_KEY, true);
         persistentData.put(PresetUtils.KEEPCARGORATIOS_KEY, false);
+        persistentData.put("$fleetPresetsManagerVer", ver);
     }
 
     @Override
@@ -94,7 +94,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         mem.unset(PresetUtils.OFFICER_AUTOASSIGN_BUTTON_KEY);
     }
 
-    @Override
+    @Override // no idea what save does to variant reference scope but it fucks it up all in kinds of ways, still needs mitigations for Collections.equals even after doing this
     public void afterGameSave() {
         PresetUtils.updatePresetVariants();
     }

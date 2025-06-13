@@ -989,9 +989,11 @@ public class ReflectionUtilis {
 
     public static void logFields(Object instance) {
         try {
+            print("---------------------------------");
+            print("FIELDS FOR:", instance.getClass());
+            print("---------------------------------");
             int i = 0;
             for (Object field : instance.getClass().getDeclaredFields()) {
-                print("---------------------------------------------");
                 String fieldName = (String) getFieldNameHandle.invoke(field);
                 Class<?> fieldType = (Class<?>) getFieldTypeHandle.invoke(field);
                 
@@ -1016,9 +1018,11 @@ public class ReflectionUtilis {
 
     public static void logFields(Class<?> cls) {
         try {
+            print("---------------------------------");
+            print("FIELDS FOR:", cls);
+            print("---------------------------------");
             int i = 0;
             for (Object field : cls.getDeclaredFields()) {
-                print("---------------------------------------------");
                 String fieldName = (String) getFieldNameHandle.invoke(field);
                 Class<?> fieldType = (Class<?>) getFieldTypeHandle.invoke(field);
                 

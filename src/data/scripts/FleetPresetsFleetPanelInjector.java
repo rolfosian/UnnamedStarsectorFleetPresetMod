@@ -49,6 +49,7 @@ public class FleetPresetsFleetPanelInjector {
 
     private boolean injected = false;
     private ButtonAPI autoAssignButton;
+    PositionAPI officerAutoAssignButtonPosition;
     private Button presetFleetsButton;
     private Button storeFleetButton;
     private Button pullAllShipsButton;
@@ -94,6 +95,8 @@ public class FleetPresetsFleetPanelInjector {
         if (injected) {
             if (market != null && CargoPresetUtils.getStorageSubmarket(market) != null) {
                 if (PresetUtils.isPlayerPaidForStorage(CargoPresetUtils.getStorageSubmarket(market).getPlugin())) {
+                    if (pullAllShipsButton == null || storeFleetButton == null) addAuxStorageButtons(playerFleetMembers, officerAutoAssignButtonPosition, fleetInfoPanel, mothballedShips, market);
+
                     if (mothballedShips != null && mothballedShips.size() > 0) {
                         pullAllShipsButton.setEnabled(true);
                     } else {
@@ -145,79 +148,11 @@ public class FleetPresetsFleetPanelInjector {
             autoAssignButton = (ButtonAPI) getAutoAssignButton(fleetInfoPanel);
             Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.OFFICER_AUTOASSIGN_BUTTON_KEY, getAutoAssignButton(fleetInfoPanel));
 
-            PositionAPI officerAutoAssignButtonPosition = autoAssignButton.getPosition();
+            officerAutoAssignButtonPosition = autoAssignButton.getPosition();
             float officerAutoAssignButtonHeight = officerAutoAssignButtonPosition.getHeight();
 
             if (market != null && CargoPresetUtils.getStorageSubmarket(market) != null) {
-                PositionAPI storageButtonPosition = null;
-                UIPanelAPI core = (UIPanelAPI) Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.COREUI_KEY);
-                Object storageButtonObf = getStorageButton(core);
-                ButtonAPI storageButton = (ButtonAPI) storageButtonObf;
-
-                if (storageButton != null) {
-                    storageButtonPosition = storageButton.getPosition();
-
-                    storeFleetButton = UtilReflection.makeButton(
-                        " Store Entire Fleet",
-                        new ActionListener() {
-                            @Override
-                            public void trigger(Object arg0, Object arg1) {
-                                Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
-                                PresetUtils.storeFleetInStorage();
-                            }
-                        },
-                        Misc.getBasePlayerColor(),
-                        Misc.getDarkPlayerColor(),
-                        Alignment.MID,
-                        CutStyle.TOP,
-                        storageButtonPosition.getWidth(),
-                        officerAutoAssignButtonPosition.getHeight(),
-                        null);
-
-                    Position pos = new UIPanel(fleetInfoPanel).add(storeFleetButton);
-                    pos.set(officerAutoAssignButtonPosition);
-                    pos.getInstance().setSize(storageButtonPosition.getWidth()-(storageButtonPosition.getWidth() / 4.8f), officerAutoAssignButtonPosition.getHeight()-6f);
-                    // pos.getInstance().setYAlignOffset(29f).setXAlignOffset(-storageButtonPosition.getWidth()-10f);
-                    pos.getInstance().setYAlignOffset(157f).setXAlignOffset(1352f);
-                    
-                    pullAllShipsButton = UtilReflection.makeButton(
-                        "  Take all ships from storage",
-                        new ActionListener() {
-                            @Override
-                            public void trigger(Object arg0, Object arg1) {
-                                Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
-                                PresetUtils.takeAllShipsFromStorage();
-                            }
-                        },
-                        Misc.getBasePlayerColor(),
-                        Misc.getDarkPlayerColor(),
-                        Alignment.LMID,
-                        CutStyle.TOP,
-                        storageButtonPosition.getWidth(),
-                        officerAutoAssignButtonPosition.getHeight(),
-                        null);
-
-                    pos = new UIPanel(fleetInfoPanel).add(pullAllShipsButton);
-                    pos.set(officerAutoAssignButtonPosition);
-                    pos.getInstance().setSize(storageButtonPosition.getWidth()+30f, officerAutoAssignButtonPosition.getHeight()-6f);
-                    pos.getInstance().setYAlignOffset(157f).setXAlignOffset(1127f);
-
-                    if (!PresetUtils.isPlayerPaidForStorage(CargoPresetUtils.getStorageSubmarket(market).getPlugin())) {
-                        storeFleetButton.setEnabled(false);
-                        pullAllShipsButton.setEnabled(false);
-
-                    } else {
-                        if (playerFleetMembers.size() == 1) {
-                            storeFleetButton.setEnabled(false);
-                        } else if (mothballedShips == null || mothballedShips.size() == 0) {
-                            pullAllShipsButton.setEnabled(false);
-                        }
-                    }
-
-                } else {
-                    storeFleetButton = null;
-                    pullAllShipsButton = null;
-                }
+                addAuxStorageButtons(playerFleetMembers, officerAutoAssignButtonPosition, fleetInfoPanel, mothballedShips, market);
             }
 
             presetFleetsButton = UtilReflection.makeButton(
@@ -313,6 +248,76 @@ public class FleetPresetsFleetPanelInjector {
         }
 
         return (ButtonAPI) ReflectionUtilis.getPrivateVariable(ReflectionUtilis.getFieldName(autoAssignButtonField), fleetInfoPanel);
+    }
 
+    private void addAuxStorageButtons(List<FleetMemberAPI> playerFleetMembers, PositionAPI officerAutoAssignButtonPosition, UIPanelAPI fleetInfoPanel, List<FleetMemberAPI> mothballedShips, MarketAPI market) {
+        PositionAPI storageButtonPosition = null;
+        UIPanelAPI core = (UIPanelAPI) Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.COREUI_KEY);
+        Object storageButtonObf = getStorageButton(core);
+        ButtonAPI storageButton = (ButtonAPI) storageButtonObf;
+
+        if (storageButton != null) {
+            storageButtonPosition = storageButton.getPosition();
+
+            storeFleetButton = UtilReflection.makeButton(
+                " Store Entire Fleet",
+                new ActionListener() {
+                    @Override
+                    public void trigger(Object arg0, Object arg1) {
+                        Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
+                        PresetUtils.storeFleetInStorage();
+                    }
+                },
+                Misc.getBasePlayerColor(),
+                Misc.getDarkPlayerColor(),
+                Alignment.MID,
+                CutStyle.TOP,
+                storageButtonPosition.getWidth(),
+                officerAutoAssignButtonPosition.getHeight(),
+                null);
+
+            Position pos = new UIPanel(fleetInfoPanel).add(storeFleetButton);
+            pos.set(officerAutoAssignButtonPosition);
+            pos.getInstance().setSize(storageButtonPosition.getWidth()-(storageButtonPosition.getWidth() / 4.8f), officerAutoAssignButtonPosition.getHeight()-6f);
+            pos.getInstance().setYAlignOffset(157f).setXAlignOffset(1352f);
+            
+            pullAllShipsButton = UtilReflection.makeButton(
+                "  Take all ships from storage",
+                new ActionListener() {
+                    @Override
+                    public void trigger(Object arg0, Object arg1) {
+                        Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
+                        PresetUtils.takeAllShipsFromStorage();
+                    }
+                },
+                Misc.getBasePlayerColor(),
+                Misc.getDarkPlayerColor(),
+                Alignment.LMID,
+                CutStyle.TOP,
+                storageButtonPosition.getWidth(),
+                officerAutoAssignButtonPosition.getHeight(),
+                null);
+
+            pos = new UIPanel(fleetInfoPanel).add(pullAllShipsButton);
+            pos.set(officerAutoAssignButtonPosition);
+            pos.getInstance().setSize(storageButtonPosition.getWidth()+30f, officerAutoAssignButtonPosition.getHeight()-6f);
+            pos.getInstance().setYAlignOffset(157f).setXAlignOffset(1127f);
+
+            if (!PresetUtils.isPlayerPaidForStorage(CargoPresetUtils.getStorageSubmarket(market).getPlugin())) {
+                storeFleetButton.setEnabled(false);
+                pullAllShipsButton.setEnabled(false);
+
+            } else {
+                if (playerFleetMembers.size() == 1) {
+                    storeFleetButton.setEnabled(false);
+                } else if (mothballedShips == null || mothballedShips.size() == 0) {
+                    pullAllShipsButton.setEnabled(false);
+                }
+            }
+
+        } else {
+            storeFleetButton = null;
+            pullAllShipsButton = null;
+        }
     }
 }

@@ -57,7 +57,6 @@ import org.apache.log4j.Logger;
 import org.lwjgl.input.Keyboard;
 
 public class FleetPresetManagementListener extends ActionListener {
-    public static final Logger logger = Logger.getLogger(FleetPresetManagementListener.class);
     private static void print(Object... args) {
         PresetMiscUtils.print(args);
     }

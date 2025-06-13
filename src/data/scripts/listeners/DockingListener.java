@@ -98,8 +98,9 @@ public class DockingListener extends BaseCampaignEventListener {
                     }
                 }
             };
+            ReflectionUtilis.transplant(dialog.getPlugin(), newPlugin);
             dialog.setPlugin(newPlugin);
-            newPlugin.init(dialog);
+            // newPlugin.init(dialog);
         }
     }
 }
