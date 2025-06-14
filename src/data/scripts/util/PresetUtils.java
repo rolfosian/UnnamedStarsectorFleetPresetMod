@@ -5,7 +5,7 @@ import java.util.stream.Collectors;
 import java.awt.Color;
 
 import com.fs.starfarer.api.Global;
-
+import com.fs.starfarer.api.ModSpecAPI;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.campaign.CargoAPI;
 import com.fs.starfarer.api.campaign.CoreUIAPI;
@@ -43,8 +43,26 @@ public class PresetUtils {
         PresetMiscUtils.print(args);
     }
 
-    public static final boolean haveNexerelin = Global.getSettings().getModManager().isModEnabled("nexerelin");
-    public static final boolean haveRAT = Global.getSettings().getModManager().isModEnabled("assortment_of_things");
+    public static final String nexerelinVersion;
+    public static final String RATVersion;
+    
+    static {
+
+        ModSpecAPI nexerelinModSpec = Global.getSettings().getModManager().getModSpec("nexerelin");
+        if (nexerelinModSpec != null) {
+            nexerelinVersion = nexerelinModSpec.getVersion();
+        } else {
+            nexerelinVersion = null;
+        }
+
+        ModSpecAPI RATModSpec = Global.getSettings().getModManager().getModSpec("assortment_of_things");
+        if (RATModSpec != null) {
+            RATVersion = RATModSpec.getVersion();
+        } else {
+            RATVersion = null;
+        }
+        
+    }
 
     // Persistent data keys
     public static final String PRESETS_MEMORY_KEY = "$playerFleetPresets";
@@ -1385,7 +1403,7 @@ public class PresetUtils {
         // print("hullmods match:", variant1.getHullMods().equals(variant2.getHullMods()));
         // print("wings match:", variant1.getWings().equals(variant2.getWings()));
         // print("fittedweaponslots match:", areSameWeaponSlots(variant1.getFittedWeaponSlots(), variant2.getFittedWeaponSlots()));
-        // print("fittedweaponslots match raw:", variant1.getFittedWeaponSlots().equals(variant2.getFittedWeaponSlots()));
+        // // print("fittedweaponslots match raw:", variant1.getFittedWeaponSlots().equals(variant2.getFittedWeaponSlots()));
         // print("smoddedbuiltins match:", variant1.getSModdedBuiltIns().equals(variant2.getSModdedBuiltIns()));
         // print("fluxcapacitors match:", variant1.getNumFluxCapacitors() == variant2.getNumFluxCapacitors(), variant1.getNumFluxCapacitors(), variant2.getNumFluxCapacitors());
         // print("fluxvents match:", variant1.getNumFluxVents() == variant2.getNumFluxVents(), variant1.getNumFluxVents(), variant2.getNumFluxVents());

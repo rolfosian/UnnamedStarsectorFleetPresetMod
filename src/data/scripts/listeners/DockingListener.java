@@ -3,28 +3,27 @@ package data.scripts.listeners;
 import com.fs.starfarer.api.Global;
 
 import com.fs.starfarer.api.campaign.BaseCampaignEventListener;
-import com.fs.starfarer.api.campaign.CampaignEventListener;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;
 import com.fs.starfarer.api.campaign.InteractionDialogPlugin;
 import com.fs.starfarer.api.campaign.PlanetAPI;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.campaign.rules.MemoryAPI;
-import com.fs.starfarer.api.characters.*;
 import com.fs.starfarer.api.impl.campaign.RuleBasedInteractionDialogPluginImpl;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 
 import data.scripts.ClassRefs;
-import data.scripts.interactions.WrappedCreateSettlementInteraction;
 import data.scripts.util.CargoPresetUtils;
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.PresetUtils.FleetPreset;
 import data.scripts.util.ReflectionUtilis;
 
+import data.scripts.rat_frontiers_interactions.WrappedCreateSettlementInteraction;
+import data.scripts.rat_frontiers_interactions.WrappedSettlementInteraction;
 import assortment_of_things.frontiers.data.FrontiersData;
+import assortment_of_things.frontiers.SettlementData;
 import assortment_of_things.frontiers.interactions.CreateSettlementInteraction;
-
-import data.scripts.listeners.ColonyDecivStorageListener;
+import assortment_of_things.frontiers.interactions.SettlementInteraction;
 
 import java.util.*;
 
@@ -32,6 +31,8 @@ public class DockingListener extends BaseCampaignEventListener {
     private void print(Object... args) {
         PresetMiscUtils.print(args);
     }
+
+    final DockingListener self = this;
 
     public DockingListener(boolean permaRegister) {
         super(permaRegister);
@@ -74,8 +75,10 @@ public class DockingListener extends BaseCampaignEventListener {
     public void reportShownInteractionDialog(InteractionDialogAPI dialog) {
         if (!(dialog.getInteractionTarget() instanceof PlanetAPI)) return;
 
-        if ((PresetUtils.haveNexerelin || PresetUtils.haveRAT) && dialog.getPlugin() instanceof RuleBasedInteractionDialogPluginImpl) {
-            final DockingListener self = this;
+        if (((PresetUtils.nexerelinVersion != null && !PresetMiscUtils.isVersionAfter(PresetUtils.nexerelinVersion, "0.12.0b")) // Backwards compatibility for these mods (up to what point before i do not know and cannot be bothered finding out)
+            || (PresetUtils.RATVersion != null && PresetMiscUtils.isVersionAfter(PresetUtils.RATVersion, "3.0.9"))) 
+            && dialog.getPlugin() instanceof RuleBasedInteractionDialogPluginImpl) {
+            
             RuleBasedInteractionDialogPluginImpl newPlugin = new RuleBasedInteractionDialogPluginImpl() {
                 @Override
                 public void optionSelected(String arg0, Object arg1) {
@@ -87,7 +90,7 @@ public class DockingListener extends BaseCampaignEventListener {
                             return;
                         
                         case "nex_outpostDismantleConfirm":
-                            Global.getSector().getListenerManager().getListeners(ColonyDecivStorageListener.class).get(0).reportColonyDecivilized(dialog.getInteractionTarget().getMarket(), true);
+                            Global.getSector().getListenerManager().getListeners(ColonyAbandonListener.class).get(0).reportPlayerAbandonedColony(dialog.getInteractionTarget().getMarket());
                             return;
 
                         case "ratCreateSettlement":
@@ -98,8 +101,16 @@ public class DockingListener extends BaseCampaignEventListener {
                             return;
 
                         case "ratVisitSettlement":
-                            reportPlayerOpenedMarket(((FrontiersData)Global.getSector().getMemoryWithoutUpdate().get("$rat_frontiers_data")).getActiveSettlement().getSettlementEntity().getMarket());
+                            SettlementData settlementData = ((FrontiersData)Global.getSector().getMemoryWithoutUpdate().get("$rat_frontiers_data")).getActiveSettlement();
+                            reportPlayerOpenedMarket(settlementData.getSettlementEntity().getMarket());
+
+                            WrappedSettlementInteraction newNewPlugin_ = new WrappedSettlementInteraction((SettlementInteraction)Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin());
+                            ReflectionUtilis.transplant(Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin(), newNewPlugin_);
+                            newNewPlugin_.setData(settlementData); // we have to do this because the transplant doesn't carry the data field over for some reason idk kotlin
+
+                            Global.getSector().getCampaignUI().getCurrentInteractionDialog().setPlugin(newNewPlugin_);
                             return;
+
                         default:
                             return;
                     }
@@ -107,7 +118,6 @@ public class DockingListener extends BaseCampaignEventListener {
             };
             ReflectionUtilis.transplant(dialog.getPlugin(), newPlugin);
             dialog.setPlugin(newPlugin);
-            // newPlugin.init(dialog);
         }
     }
 }

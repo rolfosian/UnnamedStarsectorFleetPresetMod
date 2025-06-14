@@ -37,7 +37,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
     public static void print(Object... args) {
         PresetMiscUtils.print(args);
     }
-    private static final String ver = "0.0.9b";
+    private static final String ver = "0.0.9c";
 
     // @Override
     // public void onApplicationLoad() {
@@ -68,13 +68,13 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         if (activePreset != null &&(boolean)persistentData.get(PresetUtils.IS_AUTO_UPDATE_KEY)) {
             sector.getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, activePreset);
         }
+        PresetUtils.updatePresetVariants(); // HAVE TO DO IT HERE TOO NOW FOR NO REASON??? SCOPE ABSOLUTELY MANGLED EVEN MORE DUE TO NEW CLASSES IN THE CODEBASE?? WTF???
 
         sector.addTransientScript(new FleetPresetManagerCoreScript());
         sector.addTransientScript(new OfficerTracker());
         sector.addTransientScript(new FleetMonitor());
 
         sector.addTransientListener(new DockingListener(false));
-
         sector.getListenerManager().addListener(new ColonyDecivStorageListener(), true);
         sector.getListenerManager().addListener(new ColonyAbandonListener(), true);
     }
