@@ -34,6 +34,7 @@ $dependencies = @(
     "../../starsector-core/lwjgl_util.jar",
 
     "../Random-Assortment-of-Things/jars/RandomAssortmentofThings.jar"
+    "../Lunalib/jars/LunaLib.jar"
 
 )
 

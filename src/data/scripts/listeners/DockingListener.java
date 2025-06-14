@@ -14,6 +14,7 @@ import com.fs.starfarer.api.impl.campaign.RuleBasedInteractionDialogPluginImpl;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 
 import data.scripts.ClassRefs;
+import data.scripts.interactions.WrappedCreateSettlementInteraction;
 import data.scripts.util.CargoPresetUtils;
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
@@ -21,6 +22,7 @@ import data.scripts.util.PresetUtils.FleetPreset;
 import data.scripts.util.ReflectionUtilis;
 
 import assortment_of_things.frontiers.data.FrontiersData;
+import assortment_of_things.frontiers.interactions.CreateSettlementInteraction;
 
 import data.scripts.listeners.ColonyDecivStorageListener;
 
@@ -73,6 +75,7 @@ public class DockingListener extends BaseCampaignEventListener {
         if (!(dialog.getInteractionTarget() instanceof PlanetAPI)) return;
 
         if ((PresetUtils.haveNexerelin || PresetUtils.haveRAT) && dialog.getPlugin() instanceof RuleBasedInteractionDialogPluginImpl) {
+            final DockingListener self = this;
             RuleBasedInteractionDialogPluginImpl newPlugin = new RuleBasedInteractionDialogPluginImpl() {
                 @Override
                 public void optionSelected(String arg0, Object arg1) {
@@ -88,6 +91,10 @@ public class DockingListener extends BaseCampaignEventListener {
                             return;
 
                         case "ratCreateSettlement":
+                            WrappedCreateSettlementInteraction newNewPlugin = new WrappedCreateSettlementInteraction((CreateSettlementInteraction)Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin(), self);
+
+                            ReflectionUtilis.transplant(Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin(), newNewPlugin);
+                            Global.getSector().getCampaignUI().getCurrentInteractionDialog().setPlugin(newNewPlugin);
                             return;
 
                         case "ratVisitSettlement":
