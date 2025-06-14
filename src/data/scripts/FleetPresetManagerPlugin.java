@@ -34,14 +34,14 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
     public static void print(Object... args) {
         PresetMiscUtils.print(args);
     }
-    private static final String ver = "0.0.9a";
+    private static final String ver = "0.0.9b";
 
-    @Override
-    public void onApplicationLoad() {
-        CustomConsoleAppender consoleAppender = new CustomConsoleAppender();
-        consoleAppender.setLayout(new PatternLayout("%d{HH:mm:ss} %-5p - %m%n"));
-        Logger.getRootLogger().addAppender(consoleAppender);
-    }
+    // @Override
+    // public void onApplicationLoad() {
+    //     CustomConsoleAppender consoleAppender = new CustomConsoleAppender();
+    //     consoleAppender.setLayout(new PatternLayout("%d{HH:mm:ss} %-5p - %m%n"));
+    //     Logger.getRootLogger().addAppender(consoleAppender);
+    // }
     
     @Override
     public void onGameLoad(boolean newGame) {
