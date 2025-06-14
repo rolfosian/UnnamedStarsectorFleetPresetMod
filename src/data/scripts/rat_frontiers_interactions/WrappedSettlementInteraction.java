@@ -28,6 +28,8 @@ public class WrappedSettlementInteraction extends RATInteractionPlugin {
     private InteractionDialogPlugin previousPlugin;
     private boolean dontReAddLargePlanet = false;
 
+    final WrappedSettlementInteraction self = this;
+
     public WrappedSettlementInteraction(SettlementInteraction wrapped) {
         this.wrapped = wrapped;
     }
@@ -54,15 +56,19 @@ public class WrappedSettlementInteraction extends RATInteractionPlugin {
         
                 @Override
                 public void advance(float arg0) {
+                    
                     if (isAbandoned()) {
                         Global.getSector().getListenerManager().getListeners(ColonyAbandonListener.class).get(0).reportPlayerAbandonedColony(wrapped.getData().getSettlementEntity().getMarket());
-                        Global.getSector().removeScript(this);
                         isDone = true;
                         return;
                     }
-        
+                    
                     if (Global.getSector().getCampaignUI().getCurrentInteractionDialog() == null) {
-                        Global.getSector().removeScript(this);
+                        isDone = true;
+                        return;
+                    }
+
+                    if (dialog.getPlugin() != self) {
                         isDone = true;
                         return;
                     }
