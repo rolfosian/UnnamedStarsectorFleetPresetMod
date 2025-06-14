@@ -6,11 +6,11 @@ package data.scripts;
 import com.fs.starfarer.api.Global;
 
 import com.fs.starfarer.api.BaseModPlugin;
+import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.campaign.CampaignEventListener;
 import com.fs.starfarer.api.campaign.SectorAPI;
-import com.fs.starfarer.api.EveryFrameScript;
-import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.campaign.rules.MemoryAPI;
+import com.fs.starfarer.api.fleet.FleetMemberAPI;
 
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
@@ -18,12 +18,15 @@ import data.scripts.util.ReflectionUtilis;
 import data.scripts.util.PresetUtils.FleetPreset;
 import data.scripts.util.PresetUtils.FleetMemberWrapper;
 import data.scripts.util.UtilReflection;
-import data.scripts.CustomConsole.CustomConsoleAppender;
-import data.scripts.FleetPresetManagerCoreScript;
+
+import data.scripts.listeners.ColonyAbandonListener;
 import data.scripts.listeners.ColonyDecivStorageListener;
 import data.scripts.listeners.DockingListener;
 import data.scripts.listeners.FleetMonitor;
 import data.scripts.listeners.OfficerTracker;
+
+import data.scripts.CustomConsole.CustomConsoleAppender;
+import data.scripts.FleetPresetManagerCoreScript;
 
 import java.util.*;
 
@@ -71,7 +74,9 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         sector.addTransientScript(new FleetMonitor());
 
         sector.addTransientListener(new DockingListener(false));
+
         sector.getListenerManager().addListener(new ColonyDecivStorageListener(), true);
+        sector.getListenerManager().addListener(new ColonyAbandonListener(), true);
     }
 
     @Override
