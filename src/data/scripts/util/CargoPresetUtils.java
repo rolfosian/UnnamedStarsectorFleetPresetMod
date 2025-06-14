@@ -18,10 +18,10 @@ public class CargoPresetUtils {
     }
 
     public static SubmarketAPI getStorageSubmarket(MarketAPI market) {
-        SubmarketAPI settlementStorage = market.getSubmarket("rat_settlement_storage");
-        if (settlementStorage != null) return settlementStorage;
+        SubmarketAPI storage = market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
+        if (storage != null) return storage;
         
-        return market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
+        return market.getSubmarket("rat_settlement_storage");
     }
 
     public static boolean playerKnowsHullmod(String modId) {

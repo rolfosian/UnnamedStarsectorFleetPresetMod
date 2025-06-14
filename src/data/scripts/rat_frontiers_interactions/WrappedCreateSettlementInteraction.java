@@ -10,9 +10,10 @@ import java.util.*;
 
 import data.scripts.listeners.DockingListener;
 import data.scripts.util.PresetMiscUtils;
-
+import data.scripts.util.ReflectionUtilis;
 import assortment_of_things.frontiers.data.SiteData;
 import assortment_of_things.frontiers.interactions.CreateSettlementInteraction;
+import assortment_of_things.frontiers.interactions.SettlementInteraction;
 import assortment_of_things.misc.RATInteractionPlugin;
 import assortment_of_things.misc.RATSettings;
 import lunalib.lunaSettings.LunaSettings;
@@ -46,6 +47,11 @@ public class WrappedCreateSettlementInteraction extends RATInteractionPlugin {
         wrapped.optionSelected(optionText, optionData);
         if (optionText.equals("Descend towards the settlement")) {
             listener.reportPlayerOpenedMarket(Global.getSector().getCampaignUI().getCurrentInteractionDialog().getInteractionTarget().getMarket());
+
+            WrappedSettlementInteraction newNewPlugin_ = new WrappedSettlementInteraction((SettlementInteraction)Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin());
+            ReflectionUtilis.transplant(Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin(), newNewPlugin_);
+
+            Global.getSector().getCampaignUI().getCurrentInteractionDialog().setPlugin(newNewPlugin_);
         }
     }
     

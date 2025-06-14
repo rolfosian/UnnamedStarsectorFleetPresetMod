@@ -14,7 +14,6 @@ import data.scripts.util.ReflectionUtilis;
 import assortment_of_things.frontiers.data.FrontiersData;
 import assortment_of_things.frontiers.SettlementData;
 import assortment_of_things.frontiers.interactions.SettlementInteraction;
-import assortment_of_things.frontiers.interactions.panels.SettlementManagementScreen;
 import assortment_of_things.misc.RATInteractionPlugin;
 
 // SettlementInteraction is final, we cant inherit so have to do this and transplant
@@ -46,23 +45,24 @@ public class WrappedSettlementInteraction extends RATInteractionPlugin {
     public void optionSelected(String arg0, Object arg1) {
         
         if (arg0.equals("Manage Settlement")) {
-            SettlementManagementScreen screen = new SettlementManagementScreen(data, wrapped);
             Global.getSector().addTransientScript(new EveryFrameScript() {
                 private boolean isDone = false;
         
                 private boolean isAbandoned() {
-                    return !Global.getSector().getIntelManager().getIntel(screen.getData().getIntel().getClass()).contains(screen.getData().getIntel());
+                    return !Global.getSector().getIntelManager().getIntel(wrapped.getData().getIntel().getClass()).contains(wrapped.getData().getIntel());
                 }
         
                 @Override
                 public void advance(float arg0) {
                     if (isAbandoned()) {
-                        Global.getSector().getListenerManager().getListeners(ColonyAbandonListener.class).get(0).reportPlayerAbandonedColony(dialog.getInteractionTarget().getMarket());
+                        Global.getSector().getListenerManager().getListeners(ColonyAbandonListener.class).get(0).reportPlayerAbandonedColony(wrapped.getData().getSettlementEntity().getMarket());
+                        Global.getSector().removeScript(this);
                         isDone = true;
                         return;
                     }
         
                     if (Global.getSector().getCampaignUI().getCurrentInteractionDialog() == null) {
+                        Global.getSector().removeScript(this);
                         isDone = true;
                         return;
                     }
@@ -78,11 +78,8 @@ public class WrappedSettlementInteraction extends RATInteractionPlugin {
                     return true;
                 }
             });
-            dialog.showCustomVisualDialog(600f, 400f, screen);
-            
-        } else {
-            wrapped.optionSelected(arg0, arg1);
         }
+        wrapped.optionSelected(arg0, arg1);
     }
 
     public void populateOptions() {

@@ -37,7 +37,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
     public static void print(Object... args) {
         PresetMiscUtils.print(args);
     }
-    private static final String ver = "0.0.9c";
+    private static final String ver = "0.0.9d";
 
     // @Override
     // public void onApplicationLoad() {

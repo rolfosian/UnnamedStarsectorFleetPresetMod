@@ -106,7 +106,6 @@ public class DockingListener extends BaseCampaignEventListener {
 
                             WrappedSettlementInteraction newNewPlugin_ = new WrappedSettlementInteraction((SettlementInteraction)Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin());
                             ReflectionUtilis.transplant(Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin(), newNewPlugin_);
-                            newNewPlugin_.setData(settlementData); // we have to do this because the transplant doesn't carry the data field over for some reason idk kotlin
 
                             Global.getSector().getCampaignUI().getCurrentInteractionDialog().setPlugin(newNewPlugin_);
                             return;
