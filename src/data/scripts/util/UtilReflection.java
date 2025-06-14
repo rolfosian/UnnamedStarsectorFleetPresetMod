@@ -70,8 +70,8 @@ public class UtilReflection {
             eventType,
             x,
             y,
-            0, // LMB
-            '\0' // unused?
+            val, // keyboard key or mouse button
+            char_ // char is only appicable for keyboard keys afaik
         }); 
     }
 

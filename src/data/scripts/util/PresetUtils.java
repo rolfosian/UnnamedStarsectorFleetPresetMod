@@ -1660,39 +1660,6 @@ public class PresetUtils {
             .collect(Collectors.toList());
     }
 
-    public static LinkedHashMap<String, String> getFleetPresetsMapForTable_STRINGSONLY(boolean ascendingNames, boolean ascendingShips) {
-        HashMap<String, String> map = new HashMap<>();
-        HullSize[] shipOrder;
-        if (ascendingShips) {
-            shipOrder = SIZE_ORDER_ASCENDING;
-        } else {
-            shipOrder = SIZE_ORDER_DESCENDING;
-        }
-    
-        Map<String, FleetPreset> presets = getFleetPresets();
-        for (Map.Entry<String, FleetPreset> entry : presets.entrySet()) {
-            String fleetPresetName = entry.getKey();
-            FleetPreset fleetPreset = entry.getValue();
-        
-            Map<String, Integer> shipCountMap = new LinkedHashMap<>();
-            Map<String, HullSize> shipHullSizes = new HashMap<>();
-            Map<String, ShipHullSpecAPI> shipHullSpecs = new HashMap<>();
-
-            for (Map.Entry<Integer, ShipVariantAPI> variantsEntry : fleetPreset.variantsMap.entrySet()) {
-                ShipVariantAPI variant = variantsEntry.getValue();
-
-                String name = variant.getHullSpec().getHullName();
-                shipCountMap.put(name, shipCountMap.getOrDefault(name, 0) + 1);
-                shipHullSizes.put(name, variant.getHullSize());
-                shipHullSpecs.put(name, variant.getHullSpec());
-            }
-
-            String ships = createShipCountString(shipCountMap, shipHullSizes, shipHullSpecs, shipOrder);
-            map.put(fleetPresetName, ships);
-        }
-        return PresetMiscUtils.sortByKeyAlphanumerically(map, ascendingNames);
-    }
-
     public static LinkedHashMap<String, FleetPreset> getFleetPresetsMapForTable(boolean ascendingNames, boolean ascendingShips) {
         Map<String, FleetPreset> presets = getFleetPresets();
         LinkedHashMap<String, FleetPreset> sortedMap = new LinkedHashMap<>();
