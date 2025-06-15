@@ -24,6 +24,7 @@ import data.scripts.util.CargoPresetUtils;
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.PresetUtils.FleetMemberWrapper;
+import data.scripts.util.PresetUtils.FleetPreset;
 import data.scripts.util.PresetUtils.RunningMembers;
 import data.scripts.util.ReflectionUtilis;
 import data.scripts.util.ReflectionUtilis.ListenerFactory.ActionListener;
@@ -43,23 +44,47 @@ public class FleetPresetsFleetPanelInjector {
 
     private static Object fleetInfoPanelField;
     private static Object autoAssignButtonField;
+    private boolean injected = false;
 
     /** Keep track of the last known fleet info panel to track when it changes */
     private UIPanelAPI fleetInfoPanelRef;
 
-    private boolean injected = false;
+
     private ButtonAPI autoAssignButton;
     PositionAPI officerAutoAssignButtonPosition;
+
     private Button presetFleetsButton;
     private Button storeFleetButton;
     private Button pullAllShipsButton;
 
-    private List<FleetMemberAPI> runningMembers; //we dont need the RunningMembers class for this because we don't care about the officer assignments here
+    private Label currentPresetLabelHeader;
+    private Label currentPresetLabel;
+
+    private RunningMembersList runningMembers; // we dont need the RunningMembers class for this because we don't care about the officer assignments here
     Map<String, Set<String>> storedMemberIds;
     private Map<String, List<FleetMemberWrapper>> presetMembers;
 
+    private class RunningMembersList extends ArrayList<FleetMemberAPI> {
+        public RunningMembersList(List<FleetMemberAPI> members) {
+            this.addAll(members);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (!(obj instanceof List)) return false;
+            List<FleetMemberAPI> membersToCompare = (List<FleetMemberAPI>) obj;
+            if (membersToCompare.size() != this.size()) return false;
+
+            for (int i = 0; i < membersToCompare.size(); i++) {
+                if (!membersToCompare.get(i).getId().equals(this.get(i).getId())) return false;
+            }
+
+            return true;
+        }
+    }
+
     public FleetPresetsFleetPanelInjector() {
-        this.runningMembers = Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder();
+        this.runningMembers = new RunningMembersList(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
         this.storedMemberIds = PresetUtils.getStoredFleetPresetsMemberIds();
         this.presetMembers = (Map<String, List<FleetMemberWrapper>>) Global.getSector().getPersistentData().get(PresetUtils.PRESET_MEMBERS_KEY);
     }
@@ -84,6 +109,8 @@ public class FleetPresetsFleetPanelInjector {
             presetFleetsButton = null;
             pullAllShipsButton = null;
             storeFleetButton = null;
+            currentPresetLabel = null;
+            currentPresetLabelHeader = null;
             Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.FLEETINFOPANEL_KEY);
             return;
         }
@@ -93,6 +120,8 @@ public class FleetPresetsFleetPanelInjector {
         List<FleetMemberAPI> mothballedShips = PresetUtils.getMothBalledShips(market);
 
         if (injected) {
+            setCurrentPresetLabel(fleetInfoPanel, playerFleetMembers);
+
             if (market != null && CargoPresetUtils.getStorageSubmarket(market) != null) {
                 if (PresetUtils.isPlayerPaidForStorage(CargoPresetUtils.getStorageSubmarket(market).getPlugin())) {
                     if (pullAllShipsButton == null || storeFleetButton == null) addAuxStorageButtons(playerFleetMembers, officerAutoAssignButtonPosition, fleetInfoPanel, mothballedShips, market);
@@ -110,15 +139,17 @@ public class FleetPresetsFleetPanelInjector {
                         for (FleetMemberAPI runningMember : runningMembers) {
                             if (!playerFleetMembers.contains(runningMember)) {
                                 
-                                if (mothballedShips != null && !mothballedShips.contains(runningMember)) {
-                                    // member was sold or scuttled
-                                    PresetUtils.cleanUpPerishedPresetMembers();
-                                } else if (mothballedShips != null && mothballedShips.contains(runningMember) && PresetUtils.getFleetPresetsMembers().get(runningMember.getId()) != null) {
+                                if (mothballedShips != null && mothballedShips.contains(runningMember) && PresetUtils.getFleetPresetsMembers().get(runningMember.getId()) != null) {
                                     // member was stored
                                     if (storedMemberIds.get(market.getName()) == null) {
                                         storedMemberIds.put(market.getName(), new HashSet<>());
                                     }
                                     storedMemberIds.get(market.getName()).add(runningMember.getId());
+
+                                } else if (PresetUtils.getFleetPresetsMembers().get(runningMember.getId()) != null) {
+                                    // member was sold or scuttled
+                                    PresetUtils.cleanUpPerishedPresetMembers();
+
                                 }
                             }
                         }
@@ -131,15 +162,15 @@ public class FleetPresetsFleetPanelInjector {
                             if (storedMemberIds.get(market.getName()).isEmpty()) storedMemberIds.remove(market.getName());
                         }
                     }
-                } else {
-                    // add logic for if sizes are the same but composition is different (order does not matter)
+                // } else if (!runningMembers.equals(playerFleetMembers)) {
+
                 }
             }
             if (playerFleetMembers.size() == 1 && storeFleetButton != null) {
                 storeFleetButton.setEnabled(false);
             }
         }
-        runningMembers = playerFleetMembers;
+        runningMembers = new RunningMembersList(playerFleetMembers);
 
         if (!injected) {
             injected = true;
@@ -166,10 +197,46 @@ public class FleetPresetsFleetPanelInjector {
                     officerAutoAssignButtonPosition.getHeight(),
                     Keyboard.KEY_A);
             Position pos = new UIPanel(fleetInfoPanel).add(presetFleetsButton);
+
+            setCurrentPresetLabel(fleetInfoPanel, playerFleetMembers);
             
             pos.set(officerAutoAssignButtonPosition);
             pos.getInstance().setYAlignOffset(-officerAutoAssignButtonHeight * 10f);
             PresetUtils.updateFleetPresetStats(playerFleetMembers);
+        }
+    }
+
+    private void setCurrentPresetLabel(UIPanelAPI fleetInfoPanel, List<FleetMemberAPI> playerFleetMembers) {
+        FleetPreset preset = PresetUtils.getPresetOfMembers(playerFleetMembers);
+        if (preset != null) {
+            if (currentPresetLabel == null) {
+                LabelAPI labbel = Global.getSettings().createLabel("Current Fleet Is Preset", Fonts.ORBITRON_12);
+                labbel.setColor(Global.getSettings().getBrightPlayerColor());
+                labbel.setAlignment(Alignment.MID);
+                currentPresetLabelHeader = new Label(labbel);
+                
+                Position labelPos = new UIPanel(fleetInfoPanel).add(currentPresetLabelHeader);
+                labelPos.set(officerAutoAssignButtonPosition);
+                labelPos.getInstance().setYAlignOffset(-officerAutoAssignButtonPosition.getHeight()*11.5f).setXAlignOffset(-5f);
+                
+                labbel = Global.getSettings().createLabel(preset.getName(), Fonts.ORBITRON_16);
+                labbel.setColor(Global.getSettings().getBrightPlayerColor());
+                labbel.setAlignment(Alignment.MID);
+                currentPresetLabel = new Label(labbel);
+
+                labelPos = new UIPanel(fleetInfoPanel).add(currentPresetLabel);
+                labelPos.set(officerAutoAssignButtonPosition);
+                labelPos.getInstance().setYAlignOffset(-officerAutoAssignButtonPosition.getHeight()*12.5f).setXAlignOffset(-5f);
+
+            } else {
+                currentPresetLabel.getInstance().setText(preset.getName());
+            }
+
+        } else if (currentPresetLabel != null) {
+            new UIPanel(fleetInfoPanel).remove(currentPresetLabelHeader);
+            new UIPanel(fleetInfoPanel).remove(currentPresetLabel);
+            currentPresetLabelHeader = null;
+            currentPresetLabel = null;
         }
     }
 
