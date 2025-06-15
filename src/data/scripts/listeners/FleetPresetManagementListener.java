@@ -453,6 +453,10 @@ public class FleetPresetManagementListener extends ActionListener {
         @Override
         public void processInput(List<InputEventAPI> arg0) {
             for (InputEventAPI event : arg0) {
+                if (event.isMouseMoveEvent()) {
+                    print(event.getEventValue(), event.getEventChar(), event.getEventClass(), event.getEventType());
+                }
+
                 if (event.isKeyDownEvent()) {
                     if (Keyboard.isKeyDown(Keyboard.KEY_RETURN) || Keyboard.isKeyDown(Keyboard.KEY_NUMPADENTER)) {
                         event.consume();
@@ -602,7 +606,7 @@ public class FleetPresetManagementListener extends ActionListener {
         private void processRow(UIPanelAPI row, String rowName, int id, PresetUtils.FleetPreset fleetpreset) {
             PositionAPI rowPos = row.getPosition();
             
-            TableRowListener rowListener = new TableRowListener(row, rowPos, rowName, id, fleetpreset.fleetMembers);
+            TableRowListener rowListener = new TableRowListener(row, rowPos, rowName, id, fleetpreset.getFleetMembers());
             CustomPanelAPI rowOverlayPanel = Global.getSettings().createCustom(NAME_COLUMN_WIDTH, 29f, rowListener);
             TooltipMakerAPI rowOverlayTooltipMaker = rowOverlayPanel.createUIElement(NAME_COLUMN_WIDTH, 29f, false);
 
@@ -699,16 +703,16 @@ public class FleetPresetManagementListener extends ActionListener {
                     }
                 }
                 // selectedPresetNamePara.setText(String.format(selectedPresetNameParaFormat, selectedPresetName));
-                // addShipList(currentTableMap.get(selectedPresetName).fleetMembers);
+                // addShipList(currentTableMap.get(selectedPresetName).getFleetMembers());
                 if (neededMembers != null) {
                     if (mangledFleet != null) {
                         mangledFleet.despawn();
                         mangledFleet = null;
                     }
-                    mangledFleet = PresetUtils.mangleFleet(neededMembers, currentTableMap.get(selectedPresetName).campaignFleet);
+                    mangledFleet = PresetUtils.mangleFleet(neededMembers, currentTableMap.get(selectedPresetName).getCampaignFleet());
                     addShipList(mangledFleet);
                 } else {
-                    addShipList(currentTableMap.get(selectedPresetName).campaignFleet);
+                    addShipList(currentTableMap.get(selectedPresetName).getCampaignFleet());
                     // Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.EXTRANEOUS_MEMBERS_KEY);
                 }
 

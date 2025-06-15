@@ -43,16 +43,16 @@ public class OfficerTracker implements EveryFrameScript {
     
             Map<String, FleetPreset> presets = PresetUtils.getFleetPresets();
             for (FleetPreset preset : presets.values()) {
-                for (int i = 0; i < preset.fleetMembers.size(); i++) {
-                    OfficerVariantPair pair = preset.officersMap.get(i);
+                for (int i = 0; i < preset.getFleetMembers().size(); i++) {
+                    OfficerVariantPair pair = preset.getOfficersMap().get(i);
     
-                    if (pair != null && !PresetUtils.isOfficerNought(pair.officer)) {
-                        if (pair.officer.isAICore()) continue;
+                    if (pair != null && !PresetUtils.isOfficerNought(pair.getOfficer())) {
+                        if (pair.getOfficer().isAICore()) continue;
 
-                        int currentOfficerLevel = currentOfficers.get(pair.officer.getId()).getStats().getLevel();
+                        int currentOfficerLevel = currentOfficers.get(pair.getOfficer().getId()).getStats().getLevel();
 
-                        preset.fleetMembers.get(i).captainCopy.getStats().setLevel(currentOfficerLevel);
-                        preset.campaignFleet.getFleetData().getMembersInPriorityOrder().get(i).getCaptain().getStats().setLevel(currentOfficerLevel);
+                        preset.getFleetMembers().get(i).getCaptainCopy().getStats().setLevel(currentOfficerLevel);
+                        preset.getCampaignFleet().getFleetData().getMembersInPriorityOrder().get(i).getCaptain().getStats().setLevel(currentOfficerLevel);
                     }  
                 }
             }
