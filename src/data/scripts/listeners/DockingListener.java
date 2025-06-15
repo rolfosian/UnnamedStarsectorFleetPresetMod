@@ -1,7 +1,7 @@
 package data.scripts.listeners;
 
 import com.fs.starfarer.api.Global;
-
+import com.fs.starfarer.api.campaign.CampaignEventListener;
 import com.fs.starfarer.api.campaign.BaseCampaignEventListener;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;
 import com.fs.starfarer.api.campaign.InteractionDialogPlugin;
@@ -50,7 +50,6 @@ public class DockingListener extends BaseCampaignEventListener {
 
     @Override
     public void reportPlayerOpenedMarket(MarketAPI market) {
-        // print(market.getName());
         MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
         mem.set(PLAYERCURRENTMARKET_KEY, market);
         mem.unset(PresetUtils.UNDOCKED_PRESET_KEY);
@@ -61,6 +60,7 @@ public class DockingListener extends BaseCampaignEventListener {
         MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
         mem.unset(PLAYERCURRENTMARKET_KEY);
         mem.unset(PresetUtils.ISPLAYERPAIDFORSTORAGE_KEY);
+        
         PresetUtils.addMessagesToCampaignUI();
 
         FleetPreset preset = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
@@ -79,6 +79,7 @@ public class DockingListener extends BaseCampaignEventListener {
             || (PresetUtils.RATVersion != null && PresetMiscUtils.isVersionAfter(PresetUtils.RATVersion, "3.0.9"))) 
             && dialog.getPlugin() instanceof RuleBasedInteractionDialogPluginImpl) {
             
+            MarketAPI originalMarket = dialog.getInteractionTarget().getMarket();
             RuleBasedInteractionDialogPluginImpl newPlugin = new RuleBasedInteractionDialogPluginImpl() {
                 @Override
                 public void optionSelected(String arg0, Object arg1) {
@@ -86,6 +87,7 @@ public class DockingListener extends BaseCampaignEventListener {
 
                     switch(String.valueOf(arg1)) {
                         case "nex_outpostBuildStart":
+                            reportPlayerClosedMarket(originalMarket);
                             reportPlayerOpenedMarket(dialog.getInteractionTarget().getMarket());
                             return;
                         
@@ -102,10 +104,12 @@ public class DockingListener extends BaseCampaignEventListener {
 
                         case "ratVisitSettlement":
                             SettlementData settlementData = ((FrontiersData)Global.getSector().getMemoryWithoutUpdate().get("$rat_frontiers_data")).getActiveSettlement();
+                            reportPlayerClosedMarket(originalMarket);
                             reportPlayerOpenedMarket(settlementData.getSettlementEntity().getMarket());
 
-                            WrappedSettlementInteraction newNewPlugin_ = new WrappedSettlementInteraction((SettlementInteraction)Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin());
+                            WrappedSettlementInteraction newNewPlugin_ = new WrappedSettlementInteraction((SettlementInteraction)Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin(), self);
                             ReflectionUtilis.transplant(Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin(), newNewPlugin_);
+                            newNewPlugin_.setData(settlementData); // just in case
 
                             Global.getSector().getCampaignUI().getCurrentInteractionDialog().setPlugin(newNewPlugin_);
                             return;

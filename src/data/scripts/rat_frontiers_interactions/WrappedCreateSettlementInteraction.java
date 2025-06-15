@@ -24,7 +24,7 @@ public class WrappedCreateSettlementInteraction extends RATInteractionPlugin {
         PresetMiscUtils.print(args);
     }
 
-    private final DockingListener listener;
+    private final DockingListener dockingListener;
     private final CreateSettlementInteraction wrapped;
 
     // just in case
@@ -32,9 +32,9 @@ public class WrappedCreateSettlementInteraction extends RATInteractionPlugin {
     private SiteData selectedSite = null;
     private float cost = 350000f * LunaSettings.getFloat("assortment_of_things", "rat_frontiersCostMult");
 
-    public WrappedCreateSettlementInteraction(CreateSettlementInteraction wrapped, DockingListener listener) {
+    public WrappedCreateSettlementInteraction(CreateSettlementInteraction wrapped, DockingListener dockingListener) {
         this.wrapped = wrapped;
-        this.listener = listener;
+        this.dockingListener = dockingListener;
     }
 
     @Override
@@ -46,9 +46,10 @@ public class WrappedCreateSettlementInteraction extends RATInteractionPlugin {
     public void optionSelected(String optionText, Object optionData) {
         wrapped.optionSelected(optionText, optionData);
         if (optionText.equals("Descend towards the settlement")) {
-            listener.reportPlayerOpenedMarket(Global.getSector().getCampaignUI().getCurrentInteractionDialog().getInteractionTarget().getMarket());
+            dockingListener.reportPlayerClosedMarket(((SettlementInteraction)Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin()).getData().getPrimaryPlanet().getMarket());
+            dockingListener.reportPlayerOpenedMarket(Global.getSector().getCampaignUI().getCurrentInteractionDialog().getInteractionTarget().getMarket());
 
-            WrappedSettlementInteraction newNewPlugin_ = new WrappedSettlementInteraction((SettlementInteraction)Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin());
+            WrappedSettlementInteraction newNewPlugin_ = new WrappedSettlementInteraction((SettlementInteraction)Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin(), dockingListener);
             ReflectionUtilis.transplant(Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin(), newNewPlugin_);
 
             Global.getSector().getCampaignUI().getCurrentInteractionDialog().setPlugin(newNewPlugin_);
