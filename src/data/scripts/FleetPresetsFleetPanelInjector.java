@@ -201,7 +201,7 @@ public class FleetPresetsFleetPanelInjector {
             setCurrentPresetLabel(fleetInfoPanel, playerFleetMembers);
             
             pos.set(officerAutoAssignButtonPosition);
-            pos.getInstance().setYAlignOffset(-officerAutoAssignButtonHeight * 10f);
+            pos.getInstance().setYAlignOffset(-officerAutoAssignButtonHeight * 12f);
             PresetUtils.updateFleetPresetStats(playerFleetMembers);
         }
     }
@@ -217,7 +217,7 @@ public class FleetPresetsFleetPanelInjector {
                 
                 Position labelPos = new UIPanel(fleetInfoPanel).add(currentPresetLabelHeader);
                 labelPos.set(officerAutoAssignButtonPosition);
-                labelPos.getInstance().setYAlignOffset(-officerAutoAssignButtonPosition.getHeight()*11.5f).setXAlignOffset(-5f);
+                labelPos.getInstance().setYAlignOffset(-officerAutoAssignButtonPosition.getHeight()*13.5f).setXAlignOffset(-5f);
                 
                 labbel = Global.getSettings().createLabel(preset.getName(), Fonts.ORBITRON_16);
                 labbel.setColor(Global.getSettings().getBrightPlayerColor());
@@ -226,7 +226,7 @@ public class FleetPresetsFleetPanelInjector {
 
                 labelPos = new UIPanel(fleetInfoPanel).add(currentPresetLabel);
                 labelPos.set(officerAutoAssignButtonPosition);
-                labelPos.getInstance().setYAlignOffset(-officerAutoAssignButtonPosition.getHeight()*12.5f).setXAlignOffset(-5f);
+                labelPos.getInstance().setYAlignOffset(-officerAutoAssignButtonPosition.getHeight()*14.5f).setXAlignOffset(-5f);
 
             } else {
                 currentPresetLabel.getInstance().setText(preset.getName());

@@ -122,14 +122,6 @@ public class PresetUtils {
         });
     }
 
-    public static class RunningMembers extends HashMap<FleetMemberAPI, PersonAPI> {
-        public RunningMembers(List<FleetMemberAPI> fleetMembers) {
-            for (FleetMemberAPI fleetMember : fleetMembers) {
-                this.put(fleetMember, fleetMember.getCaptain());
-            }
-        }
-    }
-
     public static void sortShips(List<ShipVariantAPI> ships, HullSize[] order) {
         ships.sort((a, b) -> {
             HullSize sizeA = a.getHullSize();
@@ -145,6 +137,50 @@ public class PresetUtils {
             int indexB = Arrays.asList(order).indexOf(sizeB);
             return Integer.compare(indexA, indexB);
         });
+    }
+
+    public static String[] getFleetType(List<FleetMemberAPI> fleetMembers) {
+        int carriers = 0;
+        int combats = 0;
+        int civilians = 0; 
+        int explorationShips = 0;
+
+        for (FleetMemberAPI member : fleetMembers) {
+            if (member.getVariant().getHullSpec().isCarrier()) {
+                carriers++;
+            } else if (member.getVariant().getHullSpec().isCivilianNonCarrier()) {
+                civilians++;
+            } else if (!member.getVariant().getHullSpec().isCivilianNonCarrier()) {
+                combats++;
+            }
+
+            if (member.getVariant().hasHullMod("hiressensors") || member.getVariant().hasHullMod("surveying_equipment")) {
+                explorationShips++;
+            }
+        }
+        int max = Math.max(Math.max(carriers, combats), Math.max(civilians, explorationShips));
+
+        String type = "Mixed Fleet";
+        if (max == explorationShips) type = "Exploration";
+        if (max == carriers) type = "Carrier";
+        if (max == combats) type = "Combat";
+        if (max == civilians) type = "Salvage/Trade";
+
+        String iconPath = "graphics/icons/skills/leadership2.png";
+        if (max == explorationShips) iconPath = "graphics/icons/skills/sensors.png";
+        if (max == carriers) iconPath = "graphics/icons/skills/carrier_command.png";
+        if (max == combats) iconPath = "graphics/icons/skills/strike_commander.png";
+        if (max == civilians) iconPath = "graphics/icons/skills/industrial_planning.png";
+
+        return new String[] {iconPath, type};
+    }
+
+    public static class RunningMembers extends HashMap<FleetMemberAPI, PersonAPI> {
+        public RunningMembers(List<FleetMemberAPI> fleetMembers) {
+            for (FleetMemberAPI fleetMember : fleetMembers) {
+                this.put(fleetMember, fleetMember.getCaptain());
+            }
+        }
     }
 
     public static class OfficerVariantPair {
@@ -1599,29 +1635,32 @@ public class PresetUtils {
         // ReflectionUtilis.logFields(fleetPanel);
 
         // for (Object child : UtilReflection.getChildrenRecursive(fleetPanel)) {
-            // I DONT KNOW HOW TO RESET THE THING AFTER IT ADVANCES ONCE AFTER REBUILDING TO FIX THE TOOLTIP BULLSHIT AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-            // ReflectionUtilis.logFields(child);
+        //     // I DONT KNOW HOW TO RESET THE THING AFTER IT ADVANCES ONCE AFTER REBUILDING TO FIX THE TOOLTIP BULLSHIT AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+        //     // ReflectionUtilis.logFields(child);
 
-            // Object field = ReflectionUtilis.getFieldAtIndex(child, 1);
-            // if (field instanceof List) {
-                // print()
-                // for (Object o : (List<Object>) field) {
-                    // for (Object child1 : (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", o, 0)) {
-                    //     ReflectionUtilis.logMethods(child1);
-                    // }
-                    // List<Object> lst = new ArrayList<>();
-                    // lst.add(UtilReflection.createInputEventInstance(InputEventClass.MOUSE_EVENT, InputEventType.MOUSE_MOVE, 1, 1, 0, '\0'));
-                    // ReflectionUtilis.getMethodExplicitAndInvokeDirectly("processInput", o, new Class<?>[]{List.class}, lst);
-                    // ReflectionUtilis.logMethods(o);
-                    // ReflectionUtilis.logFields(o);
-                    // break;
-                // }
-            // }
+        //     Object field = ReflectionUtilis.getFieldAtIndex(child, 1);
+        //     if (field instanceof List) {
+        //         for (Object o : (List<Object>) field) {
+        //             for (Object child1 : (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", o, 0)) {
+        //                 ReflectionUtilis.logMethods(child1);
+        //             }
+        //             List<Object> lst = new ArrayList<>();
+        //             lst.add(UtilReflection.createInputEventInstance(InputEventClass.MOUSE_EVENT, InputEventType.MOUSE_MOVE, -1, -1, -1, '\0'));
+        //             lst.add(UtilReflection.createInputEventInstance(InputEventClass.MOUSE_EVENT, InputEventType.MOUSE_MOVE, -1, -1, -1, '\0'));
+        //             lst.add(UtilReflection.createInputEventInstance(InputEventClass.MOUSE_EVENT, InputEventType.MOUSE_MOVE, -1, -1, -1, '\0'));
+        //             ReflectionUtilis.getMethodExplicitAndInvokeDirectly("processInput", o, new Class<?>[]{List.class}, lst);
+        //             // ReflectionUtilis.logMethods(o);
+        //             // ReflectionUtilis.logFields(o);
+        //             break;
+        //         }
+        //     }
             
-            // ReflectionUtilis.logMethods(child);
-            // List<Object> lst = new ArrayList<>();
-            // lst.add(UtilReflection.createInputEventInstance(InputEventClass.MOUSE_EVENT, InputEventType.MOUSE_MOVE, 1, 1, 0, '\0'));
-            // ReflectionUtilis.getMethodExplicitAndInvokeDirectly("processInput", child, new Class<?>[]{List.class}, lst);
+        //     // ReflectionUtilis.logMethods(child);
+        //     List<Object> lst = new ArrayList<>();
+        //     lst.add(UtilReflection.createInputEventInstance(InputEventClass.MOUSE_EVENT, InputEventType.MOUSE_MOVE, 1, 1, -1, '\0'));
+        //     lst.add(UtilReflection.createInputEventInstance(InputEventClass.MOUSE_EVENT, InputEventType.MOUSE_MOVE, 1, 1, -1, '\0'));
+        //     lst.add(UtilReflection.createInputEventInstance(InputEventClass.MOUSE_EVENT, InputEventType.MOUSE_MOVE, 1, 1, -1, '\0'));
+        //     ReflectionUtilis.getMethodExplicitAndInvokeDirectly("processInput", child, new Class<?>[]{List.class}, lst);
         // }
     }
 

@@ -25,7 +25,7 @@ public class ReflectionUtilis {
         }
         logger.info(sb.toString());
     }
-    
+
     // Code taken and modified from Grand Colonies and Ashes of the Domain
     private static final MethodHandles.Lookup lookup = MethodHandles.lookup();
 
@@ -548,7 +548,6 @@ public class ReflectionUtilis {
 
     public static Object getMethodExplicitAndInvokeDirectly(String methodName, Object instance, Class<?>[] parameterTypes, Object... arguments) {
         Object method = getMethodExplicit(methodName, instance, parameterTypes);
-        
         if (method == null) return null;
         return invokeMethodDirectly(method, instance, arguments);
     }
@@ -950,6 +949,17 @@ public class ReflectionUtilis {
         }
     }
 
+    public static void logField(String fieldName, Class<?> fieldType, Object field, int i, Object instance) throws Throwable {
+        setFieldAccessibleHandle.invoke(field, true);
+        
+        if (List.class.isAssignableFrom(fieldType) || Map.class.isAssignableFrom(fieldType)
+        || Set.class.isAssignableFrom(fieldType) || Collection.class.isAssignableFrom(fieldType)) {
+            print(getGenericTypeHandle.invoke(field), fieldName, i, getFieldHandle.invoke(field, instance));
+        } else {
+            print(fieldType.getCanonicalName(), fieldName, i, getFieldHandle.invoke(field, instance));
+        }
+    }
+
     public static boolean isNativeJavaClass(Class<?> clazz) {
         if (clazz == null || clazz.getPackage() == null) return false;
         String pkg = clazz.getPackage().getName();
@@ -993,23 +1003,27 @@ public class ReflectionUtilis {
             print("FIELDS FOR:", instance.getClass());
             print("---------------------------------");
             int i = 0;
-            for (Object field : instance.getClass().getDeclaredFields()) {
-                String fieldName = (String) getFieldNameHandle.invoke(field);
-                Class<?> fieldType = (Class<?>) getFieldTypeHandle.invoke(field);
-                
-                if (fieldType.isPrimitive()) {
-                    print(fieldType.getCanonicalName() + " " + fieldName + " " + i);
+            Class<?> currentClass = instance.getClass();
+            while (currentClass != null) {
+                for (Object field : currentClass.getDeclaredFields()) {
+                    String fieldName = (String) getFieldNameHandle.invoke(field);
+                    Class<?> fieldType = (Class<?>) getFieldTypeHandle.invoke(field);
+                    
+                    if (fieldType.isPrimitive()) {
+                        print(fieldType.getCanonicalName() + " " + fieldName + " " + i);
+                        i++;
+                        continue;
+                    } else {
+                        logField(fieldName, fieldType, field, i, instance);
+                    }
+                    try {
+                        ReflectionUtilis.logConstructorParams(fieldType.getCanonicalName());
+                    } catch (Exception e) {
+                        print(e);
+                    }
                     i++;
-                    continue;
-                } else {
-                    logField(fieldName, fieldType, field, i);
                 }
-                try {
-                    ReflectionUtilis.logConstructorParams(fieldType.getCanonicalName());
-                } catch (Exception e) {
-                    print(e);
-                }
-                i++;
+                currentClass = currentClass.getSuperclass();
             }
         } catch (Throwable e) {
             logger.info("Error logging fields: ", e);
@@ -1022,23 +1036,27 @@ public class ReflectionUtilis {
             print("FIELDS FOR:", cls);
             print("---------------------------------");
             int i = 0;
-            for (Object field : cls.getDeclaredFields()) {
-                String fieldName = (String) getFieldNameHandle.invoke(field);
-                Class<?> fieldType = (Class<?>) getFieldTypeHandle.invoke(field);
-                
-                if (fieldType.isPrimitive()) {
-                    print(fieldType.getCanonicalName() + " " + fieldName + " " + i);
+            Class<?> currentClass = cls;
+            while (currentClass != null) {
+                for (Object field : currentClass.getDeclaredFields()) {
+                    String fieldName = (String) getFieldNameHandle.invoke(field);
+                    Class<?> fieldType = (Class<?>) getFieldTypeHandle.invoke(field);
+                    
+                    if (fieldType.isPrimitive()) {
+                        print(fieldType.getCanonicalName() + " " + fieldName + " " + i);
+                        i++;
+                        continue;
+                    } else {
+                        logField(fieldName, fieldType, field, i);
+                    }
+                    try {
+                        ReflectionUtilis.logConstructorParams(fieldType.getCanonicalName());
+                    } catch (Exception e) {
+                        print(e);
+                    }
                     i++;
-                    continue;
-                } else {
-                    logField(fieldName, fieldType, field, i);
                 }
-                try {
-                    ReflectionUtilis.logConstructorParams(fieldType.getCanonicalName());
-                } catch (Exception e) {
-                    print(e);
-                }
-                i++;
+                currentClass = currentClass.getSuperclass();
             }
         } catch (Throwable e) {
             logger.info("Error logging fields: ", e);

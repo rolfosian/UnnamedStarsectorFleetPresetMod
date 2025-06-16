@@ -27,6 +27,7 @@ import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.TextFieldAPI;
 
 import com.fs.starfarer.api.input.InputEventAPI;
+import com.fs.starfarer.api.input.InputEventClass;
 import com.fs.starfarer.api.input.InputEventType;
 
 import com.fs.starfarer.api.util.Misc;
@@ -140,6 +141,7 @@ public class FleetPresetManagementListener extends ActionListener {
         this.selectedRowIndex = -1;
         this.currentPresetsNum = 0;
 
+        this.overlordPanel = null;
         this.overlordPanelPos = null;
         this.buttonsPanel = null;
 
@@ -177,6 +179,7 @@ public class FleetPresetManagementListener extends ActionListener {
     private int currentPresetsNum = 0;
 
     private PositionAPI overlordPanelPos = null;
+    private UIPanelAPI overlordPanel = null;
     private CustomPanelAPI buttonsPanel = null;
     private Map<String, ButtonAPI> theButtons = new HashMap<>();
     private ButtonAPI masterCancelButton = null;
@@ -259,6 +262,7 @@ public class FleetPresetManagementListener extends ActionListener {
         master.panel.addComponent(canvasPanel).rightOfTop(buttonsPanel, 10f);
 
         tablePlugin.setRoot(tableMasterPanel);
+        overlordPanel = master.panel;
         overlordPanelPos = master.panel.getPosition();
     }
     
@@ -335,16 +339,16 @@ public class FleetPresetManagementListener extends ActionListener {
     private void openSaveDialog() {
 
         SaveListener saveListener = new SaveListener(false, true);
-        BaseCustomUIPanelPlugin textPanelPlugin = new BaseCustomUIPanelPlugin() {
-            @Override 
-            public void processInput(List<InputEventAPI> events) {
-                for (InputEventAPI event : events) {
-                    if (event.isKeyDownEvent() && (Keyboard.isKeyDown(Keyboard.KEY_RETURN) || Keyboard.isKeyDown(Keyboard.KEY_NUMPADENTER))) {
-                        // PresetMiscUtils.pressKey(Keyboard.KEY_RETURN); // THIS DOESNT EVEN WORK - THE TEXTFIELD CONSUMES THE EVENT BEFORE IT GETS HERE...
-                    }
-                }
-            }
-        };
+        BaseCustomUIPanelPlugin textPanelPlugin = null; // new BaseCustomUIPanelPlugin() {
+        //     @Override 
+        //     public void processInput(List<InputEventAPI> events) {
+        //         for (InputEventAPI event : events) {
+        //             if (event.isKeyDownEvent() && (Keyboard.isKeyDown(Keyboard.KEY_RETURN) || Keyboard.isKeyDown(Keyboard.KEY_NUMPADENTER))) {
+        //                 // PresetMiscUtils.pressKey(Keyboard.KEY_RETURN); // THIS DOESNT EVEN WORK - THE TEXTFIELD CONSUMES THE EVENT BEFORE IT GETS HERE...
+        //             }
+        //         }
+        //     }
+        // };
 
         CustomPanelAPI textFieldPanel = Global.getSettings().createCustom(CONFIRM_DIALOG_WIDTH / 2 / 6, CONFIRM_DIALOG_HEIGHT / 2 / 12, textPanelPlugin);
         TooltipMakerAPI textFieldTooltipMaker = textFieldPanel.createUIElement(CONFIRM_DIALOG_WIDTH / 2 / 5, CONFIRM_DIALOG_HEIGHT / 2 / 10, false);
@@ -360,7 +364,23 @@ public class FleetPresetManagementListener extends ActionListener {
             CONFIRM_DIALOG_HEIGHT / 2,
             saveListener);
 
-        // PositionAPI subPos = subData.panel.getPosition();
+        // String[] fleetType = PresetUtils.getFleetType(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
+
+        // CustomPanelAPI imgTooltipPanel = Global.getSettings().createCustom(64f, 64f, new BaseCustomUIPanelPlugin() {
+        //     @Override
+        //     public void buttonPressed(Object buttonId) {
+        //         saveNameField.setText(fleetType[1]);
+        //     }
+        // });
+
+        // TooltipMakerAPI imgTooltip = imgTooltipPanel.createUIElement(64f, 64f, false);
+        // imgTooltip.addImage(fleetType[0], 0f);
+        // imgTooltipPanel.addUIElement(imgTooltip);
+        // ButtonAPI button = imgTooltip.addButton("", "", null, null, Alignment.MID, CutStyle.NONE, 64f, 64f, 0f);
+        // button.getPosition().setYAlignOffset(64f);
+
+        // subData.panel.addComponent(imgTooltipPanel).inTL(0f, 0f);
+
         subData.panel.addComponent(textFieldPanel).inTL(0f, 0f).setXAlignOffset(CONFIRM_DIALOG_WIDTH / 2 / 2 / 2).setYAlignOffset(-CONFIRM_DIALOG_HEIGHT / 2 / 2 / 2);
         saveNameField.grabFocus();
     }
@@ -453,10 +473,6 @@ public class FleetPresetManagementListener extends ActionListener {
         @Override
         public void processInput(List<InputEventAPI> arg0) {
             for (InputEventAPI event : arg0) {
-                if (event.isMouseMoveEvent()) {
-                    print(event.getEventValue(), event.getEventChar(), event.getEventClass(), event.getEventType());
-                }
-
                 if (event.isKeyDownEvent()) {
                     if (Keyboard.isKeyDown(Keyboard.KEY_RETURN) || Keyboard.isKeyDown(Keyboard.KEY_NUMPADENTER)) {
                         event.consume();
