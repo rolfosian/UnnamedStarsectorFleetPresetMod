@@ -10,6 +10,7 @@ import java.lang.invoke.MethodType;
 import java.lang.invoke.CallSite;
 import java.lang.invoke.LambdaMetafactory;
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.VarHandle;
 
 import java.awt.Color;
 import java.util.*;
@@ -43,7 +44,8 @@ public class ReflectionUtilis {
     private static final MethodHandle getFieldHandle;
     private static final MethodHandle getFieldNameHandle;
     private static final MethodHandle setFieldAccessibleHandle;
-    
+    private static final MethodHandle getFieldModifiersHandle;
+
     private static final MethodHandle getMethodNameHandle;
     private static final MethodHandle invokeMethodHandle;
     private static final MethodHandle setMethodAccessable;
@@ -77,6 +79,7 @@ public class ReflectionUtilis {
             getFieldHandle = lookup.findVirtual(fieldClass, "get", MethodType.methodType(Object.class, Object.class));
             getFieldNameHandle = lookup.findVirtual(fieldClass, "getName", MethodType.methodType(String.class));
             getFieldTypeHandle = lookup.findVirtual(fieldClass, "getType", MethodType.methodType(Class.class));
+            getFieldModifiersHandle = lookup.findVirtual(fieldClass, "getModifiers", MethodType.methodType(int.class));
             setFieldAccessibleHandle = lookup.findVirtual(fieldClass, "setAccessible", MethodType.methodType(void.class, boolean.class));
 
             getMethodNameHandle = lookup.findVirtual(methodClass, "getName", MethodType.methodType(String.class));
@@ -232,18 +235,61 @@ public class ReflectionUtilis {
         }
     }
 
+    public static boolean hasFieldOfType(Class<?> cls, Class<?> fieldType) throws Throwable {
+        for (Object field : cls.getDeclaredFields()) {
+            if (((Class<?>)getFieldTypeHandle.invoke(field)).equals(fieldType)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static int getFieldModifiers(Object field) throws Throwable {
+        return (int)getFieldModifiersHandle.invoke(field);
+    }
+
+    public static boolean isFieldFinal(int modifiers) throws Throwable {
+        return (modifiers & 0x00000010) != 0;
+    }
+
+    public static boolean isFieldStatic(int modifiers) {
+        return (modifiers & 0x00000010) != 0;
+    }
+
+    public static boolean isFieldStaticAndFinal(int modifiers) throws Throwable {
+        return ((modifiers & 0x0008) != 0) && ((modifiers & 0x00000010) != 0) ;
+    }
+
     public static void transplant(Object original, Object template) {
         try {
             Class<?> currentClass = original.getClass();
             while ((currentClass = currentClass.getSuperclass()) != null) {
+
                 for (Object field : currentClass.getDeclaredFields()) {
+                    int mods = getFieldModifiers(field);
+                    if (isFieldFinal(mods)) continue;
+
                     String fieldName = (String) getFieldNameHandle.invoke(field);
-                    setPrivateVariableFromSuperclass(fieldName, template, getPrivateVariableFromSuperClass(fieldName, original));
+                    Object variable = getPrivateVariableFromSuperClass(fieldName, original);
+                    if (variable == original) {
+                        setPrivateVariableFromSuperclass(fieldName, template, template);
+                    } else {
+                        setPrivateVariableFromSuperclass(fieldName, template, variable);
+                    }
                 }
             }
     
             for (Object field : original.getClass().getDeclaredFields()) {
-                setPrivateVariable(field, template, getPrivateVariable((String)getFieldNameHandle.invoke(field), original));
+                int mods = getFieldModifiers(field);
+                if (isFieldFinal(mods)) continue;
+
+                Object variable = getPrivateVariable((String)getFieldNameHandle.invoke(field), original);
+                if (variable == original) {
+                    setPrivateVariable(field, template, template);
+                } else {
+                    setPrivateVariable(field, template, variable);
+                }
+                
             }
             return;
         } catch (Throwable e) {
@@ -951,7 +997,7 @@ public class ReflectionUtilis {
 
     public static void logField(String fieldName, Class<?> fieldType, Object field, int i, Object instance) throws Throwable {
         setFieldAccessibleHandle.invoke(field, true);
-        
+
         if (List.class.isAssignableFrom(fieldType) || Map.class.isAssignableFrom(fieldType)
         || Set.class.isAssignableFrom(fieldType) || Collection.class.isAssignableFrom(fieldType)) {
             print(getGenericTypeHandle.invoke(field), fieldName, i, getFieldHandle.invoke(field, instance));

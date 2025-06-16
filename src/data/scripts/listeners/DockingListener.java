@@ -5,10 +5,12 @@ import com.fs.starfarer.api.campaign.CampaignEventListener;
 import com.fs.starfarer.api.campaign.BaseCampaignEventListener;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;
 import com.fs.starfarer.api.campaign.InteractionDialogPlugin;
+import com.fs.starfarer.api.campaign.OrbitalStationAPI;
 import com.fs.starfarer.api.campaign.PlanetAPI;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.combat.EngagementResultAPI;
+import com.fs.starfarer.api.impl.campaign.FleetInteractionDialogPluginImpl;
 import com.fs.starfarer.api.impl.campaign.RuleBasedInteractionDialogPluginImpl;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 
@@ -17,14 +19,18 @@ import data.scripts.util.CargoPresetUtils;
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.PresetUtils.FleetPreset;
+import data.scripts.util.PresetUtils.RunningMembers;
 import data.scripts.util.ReflectionUtilis;
 
 import data.scripts.rat_frontiers_interactions.WrappedCreateSettlementInteraction;
 import data.scripts.rat_frontiers_interactions.WrappedSettlementInteraction;
+
 import assortment_of_things.frontiers.data.FrontiersData;
 import assortment_of_things.frontiers.SettlementData;
 import assortment_of_things.frontiers.interactions.CreateSettlementInteraction;
 import assortment_of_things.frontiers.interactions.SettlementInteraction;
+
+import exerelin.campaign.battle.NexFleetInteractionDialogPluginImpl;
 
 import java.util.*;
 
@@ -34,6 +40,8 @@ public class DockingListener extends BaseCampaignEventListener {
     }
 
     final DockingListener self = this;
+
+    private boolean isBattle = false;
 
     public DockingListener(boolean permaRegister) {
         super(permaRegister);
@@ -72,21 +80,21 @@ public class DockingListener extends BaseCampaignEventListener {
         }
     }
 
-    @Override
-    public void reportPlayerEngagement(EngagementResultAPI result) {
-        if (getPlayerCurrentMarket() != null) {
-            MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
-            mem.unset(PLAYERCURRENTMARKET_KEY);
-            mem.unset(PresetUtils.ISPLAYERPAIDFORSTORAGE_KEY);
-        }
-    }
+    // @Override
+    // public void reportPlayerEngagement(EngagementResultAPI result) {
+    //     if (getPlayerCurrentMarket() != null) {
+    //         MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
+    //         mem.unset(PLAYERCURRENTMARKET_KEY);
+    //         mem.unset(PresetUtils.ISPLAYERPAIDFORSTORAGE_KEY);
+    //     }
+    // }
 
     @Override
     public void reportShownInteractionDialog(InteractionDialogAPI dialog) {
-        if (!(dialog.getInteractionTarget() instanceof PlanetAPI)) return;
+        if (dialog.getInteractionTarget() == null || dialog.getInteractionTarget().getMarket() == null || CargoPresetUtils.getStorageSubmarket(dialog.getInteractionTarget().getMarket()) == null) return;
 
         if (((PresetUtils.nexerelinVersion != null && !PresetMiscUtils.isVersionAfter(PresetUtils.nexerelinVersion, "0.12.0b")) // Backwards compatibility for these mods (up to what point before i do not know and cannot be bothered finding out)
-            || (PresetUtils.RATVersion != null && PresetMiscUtils.isVersionAfter(PresetUtils.RATVersion, "3.0.9"))) 
+            || (PresetUtils.RATVersion != null && !PresetMiscUtils.isVersionAfter(PresetUtils.RATVersion, "3.0.9"))) 
             && dialog.getPlugin() instanceof RuleBasedInteractionDialogPluginImpl) {
             
             MarketAPI originalMarket = dialog.getInteractionTarget().getMarket();
@@ -126,6 +134,70 @@ public class DockingListener extends BaseCampaignEventListener {
                             Global.getSector().getCampaignUI().getCurrentInteractionDialog().setPlugin(newNewPlugin_);
                             return;
 
+                        case "mktRaidConfirm":
+                            reportPlayerClosedMarket(originalMarket);
+                            return;
+                        
+                        case "mktBombardConfirm":
+                            reportPlayerClosedMarket(originalMarket);
+                            return;
+
+                        case "nex_mktInvadeConfirm":
+                            reportPlayerClosedMarket(originalMarket);
+                            return;
+
+                        case "mktEngage":
+                            InteractionDialogPlugin plugin = Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin();
+                            RunningMembers runningMembers = new RunningMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
+
+                            if (plugin.getClass().equals(FleetInteractionDialogPluginImpl.class)) {
+                                
+                                FleetInteractionDialogPluginImpl newNewPlugin__ = new FleetInteractionDialogPluginImpl() {
+                                    
+
+                                    @Override
+                                    public void optionSelected(String arg0, Object arg1) {
+                                        if (String.valueOf(arg1).equals("CONTINUE_INTO_BATTLE")) {
+                                            isBattle = true;
+                                            reportPlayerClosedMarket(originalMarket);
+                                        }
+
+                                        super.optionSelected(arg0, arg1);
+
+                                        if (isBattle && (String.valueOf(arg1).equals("RECOVERY_CONTINUE") || String.valueOf(arg1).equals("LEAVE"))) {
+                                            isBattle = false;
+                                            reportShownInteractionDialog(Global.getSector().getCampaignUI().getCurrentInteractionDialog());
+                                            PresetUtils.checkFleetAgainstPreset(runningMembers);
+                                        }
+                                    }
+                                };
+
+                                ReflectionUtilis.transplant(Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin(), newNewPlugin__);
+                                Global.getSector().getCampaignUI().getCurrentInteractionDialog().setPlugin(newNewPlugin__);
+
+                            } else if (plugin.getClass().equals(NexFleetInteractionDialogPluginImpl.class)) {
+
+                                FleetInteractionDialogPluginImpl newNewPlugin__ = new NexFleetInteractionDialogPluginImpl() {
+                                    @Override
+                                    public void optionSelected(String arg0, Object arg1) {
+                                        if (String.valueOf(arg1).equals("CONTINUE_INTO_BATTLE")) {
+                                            isBattle = true;
+                                            reportPlayerClosedMarket(originalMarket);
+                                        }
+
+                                        super.optionSelected(arg0, arg1);
+
+                                        if (isBattle && (String.valueOf(arg1).equals("RECOVERY_CONTINUE") || String.valueOf(arg1).equals("LEAVE"))) {
+                                            isBattle = false;
+                                            reportShownInteractionDialog(Global.getSector().getCampaignUI().getCurrentInteractionDialog());
+                                            PresetUtils.checkFleetAgainstPreset(runningMembers);
+                                        }
+                                    }
+                                };
+
+                                ReflectionUtilis.transplant(Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin(), newNewPlugin__);
+                                Global.getSector().getCampaignUI().getCurrentInteractionDialog().setPlugin(newNewPlugin__);
+                            }
                         default:
                             return;
                     }
