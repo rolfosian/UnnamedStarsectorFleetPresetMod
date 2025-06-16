@@ -8,6 +8,7 @@ import com.fs.starfarer.api.campaign.InteractionDialogPlugin;
 import com.fs.starfarer.api.campaign.PlanetAPI;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.campaign.rules.MemoryAPI;
+import com.fs.starfarer.api.combat.EngagementResultAPI;
 import com.fs.starfarer.api.impl.campaign.RuleBasedInteractionDialogPluginImpl;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 
@@ -72,6 +73,15 @@ public class DockingListener extends BaseCampaignEventListener {
     }
 
     @Override
+    public void reportPlayerEngagement(EngagementResultAPI result) {
+        if (getPlayerCurrentMarket() != null) {
+            MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
+            mem.unset(PLAYERCURRENTMARKET_KEY);
+            mem.unset(PresetUtils.ISPLAYERPAIDFORSTORAGE_KEY);
+        }
+    }
+
+    @Override
     public void reportShownInteractionDialog(InteractionDialogAPI dialog) {
         if (!(dialog.getInteractionTarget() instanceof PlanetAPI)) return;
 
@@ -80,6 +90,8 @@ public class DockingListener extends BaseCampaignEventListener {
             && dialog.getPlugin() instanceof RuleBasedInteractionDialogPluginImpl) {
             
             MarketAPI originalMarket = dialog.getInteractionTarget().getMarket();
+            RuleBasedInteractionDialogPluginImpl oldPlugin = (RuleBasedInteractionDialogPluginImpl) dialog.getPlugin();
+
             RuleBasedInteractionDialogPluginImpl newPlugin = new RuleBasedInteractionDialogPluginImpl() {
                 @Override
                 public void optionSelected(String arg0, Object arg1) {
@@ -119,7 +131,7 @@ public class DockingListener extends BaseCampaignEventListener {
                     }
                 }
             };
-            ReflectionUtilis.transplant(dialog.getPlugin(), newPlugin);
+            ReflectionUtilis.transplant(oldPlugin, newPlugin);
             dialog.setPlugin(newPlugin);
         }
     }

@@ -29,7 +29,6 @@ public class WrappedSettlementInteraction extends RATInteractionPlugin {
     private SettlementData data;
     private InteractionDialogPlugin previousPlugin;
     private boolean dontReAddLargePlanet = false;
-    private boolean isAbandoned = false;
     private boolean checkingAbandon = false;
 
     final WrappedSettlementInteraction self = this;
