@@ -93,10 +93,10 @@ public class DockingListener extends BaseCampaignEventListener {
     public void reportShownInteractionDialog(InteractionDialogAPI dialog) {
         if (dialog.getInteractionTarget() == null || dialog.getInteractionTarget().getMarket() == null || CargoPresetUtils.getStorageSubmarket(dialog.getInteractionTarget().getMarket()) == null) return;
 
-        if (((PresetUtils.nexerelinVersion != null && !PresetMiscUtils.isVersionAfter(PresetUtils.nexerelinVersion, "0.12.0b")) // Backwards compatibility for these mods (up to what point before i do not know and cannot be bothered finding out)
-            || (PresetUtils.RATVersion != null && !PresetMiscUtils.isVersionAfter(PresetUtils.RATVersion, "3.0.9"))) 
-            && dialog.getPlugin() instanceof RuleBasedInteractionDialogPluginImpl) {
-            
+        // if (((PresetUtils.nexerelinVersion != null && !PresetMiscUtils.isVersionAfter(PresetUtils.nexerelinVersion, "0.12.0b")) // Backwards compatibility for these mods (up to what point before i do not know and cannot be bothered finding out)
+        //     || (PresetUtils.RATVersion != null && !PresetMiscUtils.isVersionAfter(PresetUtils.RATVersion, "3.0.9"))) 
+            // && dialog.getPlugin() instanceof RuleBasedInteractionDialogPluginImpl) {
+        if (dialog.getPlugin() instanceof RuleBasedInteractionDialogPluginImpl) {
             MarketAPI originalMarket = dialog.getInteractionTarget().getMarket();
             RuleBasedInteractionDialogPluginImpl oldPlugin = (RuleBasedInteractionDialogPluginImpl) dialog.getPlugin();
 
