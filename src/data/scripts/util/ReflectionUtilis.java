@@ -147,6 +147,10 @@ public class ReflectionUtilis {
                     actualSamMethodType
                 );
 
+                actualSamMethodType = MethodType.methodType(void.class, Object.class, Object.class);
+                implSignature = MethodType.methodType(void.class, Object.class, Object.class);
+                implementationMethodHandle = lookup.findVirtual(ActionListenerProxy.class, "actionPerformed", implSignature);
+
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -324,6 +328,15 @@ public class ReflectionUtilis {
         }
     }
 
+    public static Object getPrivateVariable(Object field, Object instanceToGetFrom) {
+        try {
+            setFieldAccessibleHandle.invoke(field, true);
+            return getFieldHandle.invoke(field, instanceToGetFrom);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static Object getPrivateVariable(String fieldName, Object instanceToGetFrom) {
         try {
             Class<?> instances = instanceToGetFrom.getClass();
@@ -380,7 +393,9 @@ public class ReflectionUtilis {
         try {
             setFieldAccessibleHandle.invoke(field, true);
             setFieldHandle.invoke(field, instanceToModify, newValue);
-        } catch (Throwable ignored) {}
+        } catch (Throwable e) {
+            print(e);
+        }
     }
 
     public static void setPrivateVariableFromSuperclass(String fieldName, Object instanceToModify, Object newValue) {
@@ -552,6 +567,20 @@ public class ReflectionUtilis {
         return null;
     }
 
+    public static Object getMethod(String methodName, Class<?> cls, int paramCount) {
+        for (Object method : cls.getMethods()) {
+            try {
+                if (((String)getMethodNameHandle.invoke(method)).equals(methodName) && 
+                    ((Object[])getParameterTypesHandle.invoke(method)).length == paramCount) {
+                    return method;
+                }
+            } catch (Throwable e) {
+                print(e);
+            }
+        }
+        return null;
+    }
+
     public static Object getMethodExplicit(String methodName, Object instance, Class<?>[] parameterTypes) {
         for (Object method : instance.getClass().getMethods()) {
             try {
@@ -601,6 +630,14 @@ public class ReflectionUtilis {
     public static Object invokeMethodDirectly(Object method, Object instance, Object... arguments) {
         try {
             return invokeMethodHandle.invoke(method, instance, arguments);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Object invokeMethodDirectly(Object method, Object instance) {
+        try {
+            return invokeMethodHandle.invoke(method, instance);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
