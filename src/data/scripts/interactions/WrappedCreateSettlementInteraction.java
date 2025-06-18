@@ -1,4 +1,4 @@
-package data.scripts.rat_frontiers_interactions;
+package data.scripts.interactions;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;

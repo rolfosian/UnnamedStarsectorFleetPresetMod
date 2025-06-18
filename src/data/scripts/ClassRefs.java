@@ -60,8 +60,13 @@ public class ClassRefs {
         FleetEncounterContextPlugin.class,
         boolean.class // is before or after engagement? idk
     };
+    public static Object visualPanelGetChildrenNonCopyMethod;
+
     /** Obfuscated ButtonAPI class */
     public static Class<?> buttonClass;
+    public static Object buttonListenerActionPerformedMethod;
+    public static Object buttonGetListenerMethod;
+    public static Object buttonSetListenerMethod;
 
     /** Obfuscated InputEvent class */
     public static Class<?> inputEventClass;
@@ -70,7 +75,7 @@ public class ClassRefs {
         InputEventType.class, // type of input
         int.class, // x
         int.class, // y
-        int.class, // key/mouse button
+        int.class, // key/mouse button, is -1 for mouse move
         char.class // unused for mouse afaik
     };
 
@@ -89,8 +94,9 @@ public class ClassRefs {
 
                 VisualPanelAPI visualPanel = dialog.getVisualPanel();
                 visualPanel.showFleetInfo("", Global.getSector().getPlayerFleet(), null, null);
+                visualPanelGetChildrenNonCopyMethod = ReflectionUtilis.getMethod("getChildrenNonCopy", visualPanel, 0);
         
-                for (Object child : (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", visualPanel, 0)) {
+                for (Object child : (List<Object>) ReflectionUtilis.invokeMethodDirectly(visualPanelGetChildrenNonCopyMethod, visualPanel)) {
                     if (UIPanelAPI.class.isAssignableFrom(child.getClass()) && ReflectionUtilis.doInstantiationParamsMatch(child.getClass().getCanonicalName(), visualPanelFleetInfoClassParamTypes)) {
                         visualPanelFleetInfoClass = child.getClass(); // found it
                         dialog.dismiss();
@@ -102,15 +108,7 @@ public class ClassRefs {
             }
         });
 
-        Global.getSector().getCampaignUI().showInteractionDialogFromCargo(new InteractionDialogPlugin() {
-            public void advance(float arg0) { return; }
-            public void backFromEngagement(EngagementResultAPI arg0) { return; }
-            public Object getContext() { return ""; }
-            public Map<String, MemoryAPI> getMemoryMap() { return new HashMap<>(); }
-            public void init(InteractionDialogAPI arg0) { return; }
-            public void optionMousedOver(String arg0, Object arg1) { return; }
-            public void optionSelected(String arg0, Object arg1) { return; }
-        }, null, new CampaignUIAPI.DismissDialogDelegate() {
+        Global.getSector().getCampaignUI().showInteractionDialogFromCargo(new DummyInteractionDialogPlugin(), null, new CampaignUIAPI.DismissDialogDelegate() {
             public void dialogDismissed() {}
         });
     }
@@ -142,6 +140,8 @@ public class ClassRefs {
         for (Object child : (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", coreUI, 0)) {
             if (ButtonAPI.class.isAssignableFrom(child.getClass()) && !child.getClass().getSimpleName().equals("ButtonAPI")) {
                 buttonClass = child.getClass();
+                buttonGetListenerMethod = ReflectionUtilis.getMethod("getListener", buttonClass, 0);
+                buttonSetListenerMethod = ReflectionUtilis.getMethod("setListener", buttonClass, 1);
                 return;
             }
         }
@@ -150,21 +150,17 @@ public class ClassRefs {
     public static void findConfirmDialogClass() {
         CampaignUIAPI campaignUI = Global.getSector().getCampaignUI();
         // If we don't know the confirmation dialog class, try to create a confirmation dialog in order to access it
-        try {
-            boolean isPaused = Global.getSector().isPaused();
-            if (confirmDialogClass == null && campaignUI.showConfirmDialog("", "", "", null, null)) {
-                Object screenPanel = ReflectionUtilis.getPrivateVariable("screenPanel", campaignUI);
-                List<Object> children = (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", screenPanel, 0);
-                // the confirm dialog will be the last child
-                Object panel = children.get(children.size() - 1);
-                confirmDialogClass = panel.getClass();
-                // we have the class, dismiss the dialog
+        boolean isPaused = Global.getSector().isPaused();
+        if (confirmDialogClass == null && campaignUI.showConfirmDialog("", "", "", null, null)) {
+            Object screenPanel = ReflectionUtilis.getPrivateVariable("screenPanel", campaignUI);
+            List<Object> children = (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", screenPanel, 0);
+            // the confirm dialog will be the last child
+            Object panel = children.get(children.size() - 1);
+            confirmDialogClass = panel.getClass();
+            // we have the class, dismiss the dialog
 
-                ReflectionUtilis.getMethodAndInvokeDirectly("dismiss", panel, 1, 0);
-                Global.getSector().setPaused(isPaused);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+            ReflectionUtilis.getMethodAndInvokeDirectly("dismiss", panel, 1, 0);
+            Global.getSector().setPaused(isPaused);
         }
     }
 
@@ -174,7 +170,7 @@ public class ClassRefs {
             Object field = campaignUI.getClass().getDeclaredField("screenPanel");
             uiPanelClass = ReflectionUtilis.getFieldType(field);
         } catch (Exception e) {
-            e.printStackTrace();
+            print(e);
         }
     }
 
@@ -201,6 +197,7 @@ public class ClassRefs {
     /** [witness] needs to implement the action listener interface */
     public static void findActionListenerInterface(Object witness) {
         actionListenerInterface = findInterfaceByMethod(witness.getClass().getInterfaces(), "actionPerformed");
+        buttonListenerActionPerformedMethod = actionListenerInterface.getDeclaredMethods()[0];
     }
 
     /** [witness] needs to implement the dialog dismissed interface */
@@ -277,5 +274,15 @@ public class ClassRefs {
         }
 
         throw new RuntimeException("Interface with only method " + methodName + " not found; perhaps invalid witness used?");
+    }
+
+    public static class DummyInteractionDialogPlugin implements InteractionDialogPlugin {
+        public void advance(float arg0) { return; }
+        public void backFromEngagement(EngagementResultAPI arg0) { return; }
+        public Object getContext() { return ""; }
+        public Map<String, MemoryAPI> getMemoryMap() { return new HashMap<>(); }
+        public void init(InteractionDialogAPI arg0) { return; }
+        public void optionMousedOver(String arg0, Object arg1) { return; }
+        public void optionSelected(String arg0, Object arg1) { return; }
     }
 }

@@ -21,9 +21,10 @@ import data.scripts.util.PresetUtils;
 import data.scripts.util.PresetUtils.FleetPreset;
 import data.scripts.util.PresetUtils.RunningMembers;
 import data.scripts.util.ReflectionUtilis;
+import data.scripts.util.UtilReflection.OptionPanelListener;
 
-import data.scripts.rat_frontiers_interactions.WrappedCreateSettlementInteraction;
-import data.scripts.rat_frontiers_interactions.WrappedSettlementInteraction;
+import data.scripts.interactions.WrappedCreateSettlementInteraction;
+import data.scripts.interactions.WrappedSettlementInteraction;
 
 import assortment_of_things.frontiers.data.FrontiersData;
 import assortment_of_things.frontiers.SettlementData;
@@ -64,6 +65,15 @@ public class DockingListener extends BaseCampaignEventListener {
         mem.unset(PresetUtils.UNDOCKED_PRESET_KEY);
     }
 
+    private void setUndockedPreset() {
+        FleetPreset preset = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
+        if (preset != null) {
+            Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, preset);
+        } else {
+            Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
+        }
+    }
+
     @Override
     public void reportPlayerClosedMarket(MarketAPI market) {
         MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
@@ -71,13 +81,7 @@ public class DockingListener extends BaseCampaignEventListener {
         mem.unset(PresetUtils.ISPLAYERPAIDFORSTORAGE_KEY);
         
         PresetUtils.addMessagesToCampaignUI();
-
-        FleetPreset preset = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
-        if (preset != null) {
-            mem.set(PresetUtils.UNDOCKED_PRESET_KEY, preset);
-        } else {
-            mem.unset(PresetUtils.UNDOCKED_PRESET_KEY);
-        }
+        setUndockedPreset();
     }
 
     // @Override
@@ -92,10 +96,17 @@ public class DockingListener extends BaseCampaignEventListener {
     @Override
     public void reportShownInteractionDialog(InteractionDialogAPI dialog) {
         if (dialog.getInteractionTarget() == null || dialog.getInteractionTarget().getMarket() == null || CargoPresetUtils.getStorageSubmarket(dialog.getInteractionTarget().getMarket()) == null) return;
+        // new OptionPanelListener(dialog) {
+        //     @Override
+        //     public void onOptionSelected(Object optionData) {
+        //             print(optionData);
+        //     }
+        // };
 
         // if (((PresetUtils.nexerelinVersion != null && !PresetMiscUtils.isVersionAfter(PresetUtils.nexerelinVersion, "0.12.0b")) // Backwards compatibility for these mods (up to what point before i do not know and cannot be bothered finding out)
         //     || (PresetUtils.RATVersion != null && !PresetMiscUtils.isVersionAfter(PresetUtils.RATVersion, "3.0.9"))) 
             // && dialog.getPlugin() instanceof RuleBasedInteractionDialogPluginImpl) {
+        
         if (dialog.getPlugin() instanceof RuleBasedInteractionDialogPluginImpl) {
             MarketAPI originalMarket = dialog.getInteractionTarget().getMarket();
             RuleBasedInteractionDialogPluginImpl oldPlugin = (RuleBasedInteractionDialogPluginImpl) dialog.getPlugin();
@@ -146,6 +157,7 @@ public class DockingListener extends BaseCampaignEventListener {
                             reportPlayerClosedMarket(originalMarket);
                             return;
 
+                        // engage replaces the plugin with a fleet interaction plugin
                         case "mktEngage":
                             InteractionDialogPlugin plugin = Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin();
                             RunningMembers runningMembers = new RunningMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
@@ -153,8 +165,6 @@ public class DockingListener extends BaseCampaignEventListener {
                             if (plugin.getClass().equals(FleetInteractionDialogPluginImpl.class)) {
                                 
                                 FleetInteractionDialogPluginImpl newNewPlugin__ = new FleetInteractionDialogPluginImpl() {
-                                    
-
                                     @Override
                                     public void optionSelected(String arg0, Object arg1) {
                                         if (String.valueOf(arg1).equals("CONTINUE_INTO_BATTLE")) {
@@ -175,7 +185,7 @@ public class DockingListener extends BaseCampaignEventListener {
                                 ReflectionUtilis.transplant(Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin(), newNewPlugin__);
                                 Global.getSector().getCampaignUI().getCurrentInteractionDialog().setPlugin(newNewPlugin__);
 
-                            } else if (plugin.getClass().equals(NexFleetInteractionDialogPluginImpl.class)) {
+                            } else if (PresetUtils.nexerelinVersion != null && plugin.getClass().equals(NexFleetInteractionDialogPluginImpl.class)) {
 
                                 FleetInteractionDialogPluginImpl newNewPlugin__ = new NexFleetInteractionDialogPluginImpl() {
                                     @Override

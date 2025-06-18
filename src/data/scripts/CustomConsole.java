@@ -180,7 +180,7 @@ public class CustomConsole {
         public void appendText(String text) {
             SwingUtilities.invokeLater(() -> {
                 Style styleToUse = defaultStyle;
-    
+        
                 if (text.contains("ERROR")) {
                     styleToUse = errorStyle;
                 } else if (text.contains("WARN")) {
@@ -188,16 +188,23 @@ public class CustomConsole {
                 } else if (text.contains("INFO")) {
                     styleToUse = infoStyle;
                 }
-    
+        
                 try {
+                    JScrollBar verticalScrollBar = ((JScrollPane) textPane.getParent().getParent()).getVerticalScrollBar();
+                    boolean atBottom = verticalScrollBar.getValue() + verticalScrollBar.getVisibleAmount() >= verticalScrollBar.getMaximum() - 20;
+        
                     int start = doc.getLength();
                     doc.insertString(start, text, styleToUse);
                     segments.add(new TextSegment(start, text.length(), styleToUse));
+        
+                    if (atBottom) {
+                        textPane.setCaretPosition(doc.getLength());
+                    }
                 } catch (BadLocationException e) {
                     e.printStackTrace();
                 }
             });
-        }
+        }        
 
         private void setupSearchDialog() {
             searchDialog = new JDialog(this, "Search", false);
