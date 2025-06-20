@@ -15,16 +15,14 @@ import com.fs.starfarer.api.impl.campaign.RuleBasedInteractionDialogPluginImpl;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 
 import data.scripts.ClassRefs;
+import data.scripts.interactions.WrappedCreateSettlementInteraction;
+import data.scripts.interactions.WrappedSettlementInteraction;
 import data.scripts.util.CargoPresetUtils;
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.PresetUtils.FleetPreset;
 import data.scripts.util.PresetUtils.RunningMembers;
 import data.scripts.util.ReflectionUtilis;
-
-import data.scripts.interactions.WrappedCreateSettlementInteraction;
-import data.scripts.interactions.WrappedSettlementInteraction;
-
 import assortment_of_things.frontiers.data.FrontiersData;
 import assortment_of_things.frontiers.SettlementData;
 import assortment_of_things.frontiers.interactions.CreateSettlementInteraction;
@@ -94,20 +92,13 @@ public class DockingListener extends BaseCampaignEventListener {
 
     @Override
     public void reportShownInteractionDialog(InteractionDialogAPI dialog) {
-        // if (dialog.getInteractionTarget() == null || dialog.getInteractionTarget().getMarket() == null || CargoPresetUtils.getStorageSubmarket(dialog.getInteractionTarget().getMarket()) == null) return;
-        if (dialog.getInteractionTarget() == null) return;
-        new OptionPanelListener(dialog) {
-            @Override
-            public void onOptionSelected(Object optionData) {
-                    print(optionData);
-            }
-        };
+        if (dialog.getInteractionTarget() == null || dialog.getInteractionTarget().getMarket() == null) return;
 
         // if (((PresetUtils.nexerelinVersion != null && !PresetMiscUtils.isVersionAfter(PresetUtils.nexerelinVersion, "0.12.0b")) // Backwards compatibility for these mods (up to what point before i do not know and cannot be bothered finding out)
         //     || (PresetUtils.RATVersion != null && !PresetMiscUtils.isVersionAfter(PresetUtils.RATVersion, "3.0.9"))) 
             // && dialog.getPlugin() instanceof RuleBasedInteractionDialogPluginImpl) {
         
-        if (dialog.getPlugin() instanceof RuleBasedInteractionDialogPluginImpl && (false)) {
+        if (dialog.getPlugin() instanceof RuleBasedInteractionDialogPluginImpl) {
             MarketAPI originalMarket = dialog.getInteractionTarget().getMarket();
             RuleBasedInteractionDialogPluginImpl oldPlugin = (RuleBasedInteractionDialogPluginImpl) dialog.getPlugin();
 
@@ -128,7 +119,7 @@ public class DockingListener extends BaseCampaignEventListener {
 
                         case "ratCreateSettlement":
                             WrappedCreateSettlementInteraction newNewPlugin = new WrappedCreateSettlementInteraction((CreateSettlementInteraction)Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin(), self);
-
+                            
                             ReflectionUtilis.transplant(Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin(), newNewPlugin);
                             Global.getSector().getCampaignUI().getCurrentInteractionDialog().setPlugin(newNewPlugin);
                             return;
@@ -215,6 +206,13 @@ public class DockingListener extends BaseCampaignEventListener {
             };
             ReflectionUtilis.transplant(oldPlugin, newPlugin);
             dialog.setPlugin(newPlugin);
+
+            // new OptionPanelListener(dialog) {
+            //     @Override
+            //     public void onOptionSelected(Object optionData) {
+            //             print(optionData);
+            //     }
+            // };
         }
     }
 }

@@ -270,8 +270,7 @@ public class ReflectionUtilis {
             while ((currentClass = currentClass.getSuperclass()) != null) {
 
                 for (Object field : currentClass.getDeclaredFields()) {
-                    int mods = getFieldModifiers(field);
-                    if (isFieldFinal(mods)) continue;
+                    if (isFieldFinal(getFieldModifiers(field))) continue;
 
                     String fieldName = (String) getFieldNameHandle.invoke(field);
                     Object variable = getPrivateVariableFromSuperClass(fieldName, original);
@@ -284,22 +283,42 @@ public class ReflectionUtilis {
             }
     
             for (Object field : original.getClass().getDeclaredFields()) {
-                int mods = getFieldModifiers(field);
-                if (isFieldFinal(mods)) continue;
+                if (isFieldFinal(getFieldModifiers(field))) continue;
 
-                Object variable = getPrivateVariable((String)getFieldNameHandle.invoke(field), original);
-                if (variable == original) {
-                    setPrivateVariable(field, template, template);
-                } else {
-                    setPrivateVariable(field, template, variable);
+                Object variable = getPrivateVariable(field, original);
+                try {
+                    if (variable == original) {
+                        setPrivateVariable(field, template, template);
+                    } else {
+                        setPrivateVariable(field, template, variable);
+                    }
+                } catch (Throwable ignored) { // we are transplanting to a wrapper class so its not the class it expected
+                    if (variable == original) {
+                        setPrivateVariableByName((String)getFieldNameHandle.invoke(field), template, template);
+                    } else {
+                        setPrivateVariableByName((String)getFieldNameHandle.invoke(field), template, variable);
+                    }
                 }
-                
+
             }
             return;
         } catch (Throwable e) {
-            print(e);
-            return;
+            throw new RuntimeException(e);
         }
+    }
+
+    public static List<Object> getAllFields(Object instanceToGetFrom) {
+        List<Object> lst = new ArrayList<>();
+        for (Object field : instanceToGetFrom.getClass().getDeclaredFields()) {
+            lst.add(getPrivateVariable(field, instanceToGetFrom));
+        }
+        return lst;
+    }
+
+    public static void setPrivateVariableByName(String fieldName, Object instanceToModify, Object newValue) throws Throwable {
+        Object field = instanceToModify.getClass().getDeclaredField(fieldName);
+        setFieldAccessibleHandle.invoke(field, true);
+        setFieldHandle.invoke(field, instanceToModify, newValue);
     }
 
     public static String getMethodName(Object method) {
@@ -394,7 +413,7 @@ public class ReflectionUtilis {
             setFieldAccessibleHandle.invoke(field, true);
             setFieldHandle.invoke(field, instanceToModify, newValue);
         } catch (Throwable e) {
-            print(e);
+            throw new RuntimeException(e);
         }
     }
 
