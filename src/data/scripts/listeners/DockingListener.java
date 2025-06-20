@@ -209,8 +209,8 @@ public class DockingListener extends BaseCampaignEventListener {
 
             // new OptionPanelListener(dialog) {
             //     @Override
-            //     public void onOptionSelected(Object optionData) {
-            //             print(optionData);
+            //     public void afterOptionSelected(Object optionData) {
+            //         print(optionData, dialog.getOptionPanel().optionHasConfirmDelegate(optionData));
             //     }
             // };
         }
