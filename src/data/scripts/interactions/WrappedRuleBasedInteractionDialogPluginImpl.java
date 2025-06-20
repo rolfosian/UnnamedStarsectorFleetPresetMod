@@ -36,7 +36,7 @@ public class WrappedRuleBasedInteractionDialogPluginImpl extends RuleBasedIntera
         return oldPlugin.getMemoryMap();
     }
 
-    @Override
+    @Override // dont call this it will break it, just setPlugin and leave it at that
     public void init(InteractionDialogAPI arg0) {
         oldPlugin.init(arg0);
     }

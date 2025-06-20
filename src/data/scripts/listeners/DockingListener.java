@@ -21,7 +21,6 @@ import data.scripts.util.PresetUtils;
 import data.scripts.util.PresetUtils.FleetPreset;
 import data.scripts.util.PresetUtils.RunningMembers;
 import data.scripts.util.ReflectionUtilis;
-import data.scripts.util.UtilReflection.OptionPanelListener;
 
 import data.scripts.interactions.WrappedCreateSettlementInteraction;
 import data.scripts.interactions.WrappedSettlementInteraction;
@@ -95,19 +94,20 @@ public class DockingListener extends BaseCampaignEventListener {
 
     @Override
     public void reportShownInteractionDialog(InteractionDialogAPI dialog) {
-        if (dialog.getInteractionTarget() == null || dialog.getInteractionTarget().getMarket() == null || CargoPresetUtils.getStorageSubmarket(dialog.getInteractionTarget().getMarket()) == null) return;
-        // new OptionPanelListener(dialog) {
-        //     @Override
-        //     public void onOptionSelected(Object optionData) {
-        //             print(optionData);
-        //     }
-        // };
+        // if (dialog.getInteractionTarget() == null || dialog.getInteractionTarget().getMarket() == null || CargoPresetUtils.getStorageSubmarket(dialog.getInteractionTarget().getMarket()) == null) return;
+        if (dialog.getInteractionTarget() == null) return;
+        new OptionPanelListener(dialog) {
+            @Override
+            public void onOptionSelected(Object optionData) {
+                    print(optionData);
+            }
+        };
 
         // if (((PresetUtils.nexerelinVersion != null && !PresetMiscUtils.isVersionAfter(PresetUtils.nexerelinVersion, "0.12.0b")) // Backwards compatibility for these mods (up to what point before i do not know and cannot be bothered finding out)
         //     || (PresetUtils.RATVersion != null && !PresetMiscUtils.isVersionAfter(PresetUtils.RATVersion, "3.0.9"))) 
             // && dialog.getPlugin() instanceof RuleBasedInteractionDialogPluginImpl) {
         
-        if (dialog.getPlugin() instanceof RuleBasedInteractionDialogPluginImpl) {
+        if (dialog.getPlugin() instanceof RuleBasedInteractionDialogPluginImpl && (false)) {
             MarketAPI originalMarket = dialog.getInteractionTarget().getMarket();
             RuleBasedInteractionDialogPluginImpl oldPlugin = (RuleBasedInteractionDialogPluginImpl) dialog.getPlugin();
 

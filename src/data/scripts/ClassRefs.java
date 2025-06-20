@@ -41,6 +41,9 @@ public class ClassRefs {
      *  if any core UI is open. */
     public static Class<?> confirmDialogClass;
     public static Class<?>[] confirmDialogClassParamTypes;
+    public static Object confirmDialogGetButtonMethod;
+    public static Object confirmDialogGetInnerPanelMethod;
+
     /** Interface that contains a single method: actionPerformed */
     public static Class<?> actionListenerInterface;
     /** Interface that contains a single method: dialogDismissed */
@@ -61,6 +64,7 @@ public class ClassRefs {
         boolean.class // is before or after engagement? idk
     };
     public static Object visualPanelGetChildrenNonCopyMethod;
+    public static Object optionPanelGetButtonToItemMapMethod;
 
     /** Obfuscated ButtonAPI class */
     public static Class<?> buttonClass;
@@ -95,6 +99,7 @@ public class ClassRefs {
                 VisualPanelAPI visualPanel = dialog.getVisualPanel();
                 visualPanel.showFleetInfo("", Global.getSector().getPlayerFleet(), null, null);
                 visualPanelGetChildrenNonCopyMethod = ReflectionUtilis.getMethod("getChildrenNonCopy", visualPanel, 0);
+                optionPanelGetButtonToItemMapMethod = ReflectionUtilis.getMethod("getButtonToItemMap", dialog.getOptionPanel(), 0);
         
                 for (Object child : (List<Object>) ReflectionUtilis.invokeMethodDirectly(visualPanelGetChildrenNonCopyMethod, visualPanel)) {
                     if (UIPanelAPI.class.isAssignableFrom(child.getClass()) && ReflectionUtilis.doInstantiationParamsMatch(child.getClass().getCanonicalName(), visualPanelFleetInfoClassParamTypes)) {
@@ -156,7 +161,10 @@ public class ClassRefs {
             List<Object> children = (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", screenPanel, 0);
             // the confirm dialog will be the last child
             Object panel = children.get(children.size() - 1);
+
             confirmDialogClass = panel.getClass();
+            confirmDialogGetButtonMethod = ReflectionUtilis.getMethod("getButton", panel, 1);
+            confirmDialogGetInnerPanelMethod = ReflectionUtilis.getMethod("getInnerPanel", panel, 0);
             // we have the class, dismiss the dialog
 
             ReflectionUtilis.getMethodAndInvokeDirectly("dismiss", panel, 1, 0);
