@@ -32,7 +32,6 @@ public abstract class OptionPanelListener {
         PresetMiscUtils.print(args);
     }
 
-    private static boolean haveRAT = Global.getSettings().getModManager().getModSpec("assortment_of_things") != null;
     private static Class<?> proxyListenerClass = new ReflectionUtilis.ListenerFactory.ActionListener() {
         public void trigger(Object arg0, Object arg1) {}
     }.getProxy().getClass();
@@ -130,7 +129,7 @@ public abstract class OptionPanelListener {
                                         setConfirmListener(yesButton, val, newButtons, newOptions);
 
                                     } else {
-                                        // the confirm button is possibly nested
+                                        // the confirm button is possibly nested, such as in the case of "transfer command for this engagement"
                                         Object innerPanel = ReflectionUtilis.getMethodAndInvokeDirectly("getInnerPanel", child, 0);
                                         
                                         if (innerPanel == null) {

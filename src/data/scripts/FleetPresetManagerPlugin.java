@@ -25,7 +25,6 @@ import data.scripts.listeners.DockingListener;
 import data.scripts.listeners.FleetMonitor;
 import data.scripts.listeners.OfficerTracker;
 
-import data.scripts.CustomConsole.CustomConsoleAppender;
 import data.scripts.FleetPresetManagerCoreScript;
 
 import java.util.*;
@@ -38,13 +37,6 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         PresetMiscUtils.print(args);
     }
     private static final String ver = "0.0.9e";
-
-    @Override
-    public void onApplicationLoad() {
-        CustomConsoleAppender consoleAppender = new CustomConsoleAppender();
-        consoleAppender.setLayout(new PatternLayout("%d{HH:mm:ss} %-5p - %m%n"));
-        Logger.getRootLogger().addAppender(consoleAppender);
-    }
     
     @Override
     public void onGameLoad(boolean newGame) {
