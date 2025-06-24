@@ -57,7 +57,6 @@ public abstract class OptionPanelListener {
         this.self = this;
 
         populateOptions();
-        // addScriptForButtonMapRef();
     }
 
     private void reinit(InteractionDialogAPI dialog_) {

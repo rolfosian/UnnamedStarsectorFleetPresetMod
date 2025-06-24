@@ -16,14 +16,14 @@ import com.fs.starfarer.api.impl.campaign.RuleBasedInteractionDialogPluginImpl;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 
 import data.scripts.ClassRefs;
-import data.scripts.interactions.WrappedCreateSettlementInteraction;
-import data.scripts.interactions.WrappedSettlementInteraction;
+
 import data.scripts.util.CargoPresetUtils;
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.PresetUtils.FleetPreset;
 import data.scripts.util.PresetUtils.RunningMembers;
 import data.scripts.util.ReflectionUtilis;
+
 import assortment_of_things.frontiers.data.FrontiersData;
 import assortment_of_things.frontiers.SettlementData;
 import assortment_of_things.frontiers.interactions.CreateSettlementInteraction;
@@ -97,7 +97,7 @@ public class DockingListener extends BaseCampaignEventListener {
         MarketAPI originalMarket = dialog.getInteractionTarget().getMarket();
         boolean isSettlement = false;
 
-        if (originalMarket.getName().endsWith(" Settlement")) {
+        if (originalMarket.getName().endsWith(" Settlement") && !(dialog.getPlugin() instanceof RuleBasedInteractionDialogPluginImpl)) {
             reportPlayerClosedMarket(((FrontiersData)Global.getSector().getMemoryWithoutUpdate().get("$rat_frontiers_data")).getActiveSettlement().getPrimaryPlanet().getMarket());
             reportPlayerOpenedMarket(originalMarket);
             isSettlement = true;

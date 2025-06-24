@@ -29,7 +29,7 @@ public class Label implements Renderable {
         }
         if (createSmallInsigniaMethod == null) {
             try {
-                createSmallInsigniaMethod = ReflectionUtilis.getMethodExplicit("create", inner, new Class<?>[]{String.class, Alignment.class});// inner.getClass().getMethod("createSmallInsigniaLabel", String.class, Alignment.class);
+                createSmallInsigniaMethod = ReflectionUtilis.getMethodExplicit("createSmallInsigniaLabel", inner, new Class<?>[]{String.class, Alignment.class});// inner.getClass().getMethod("createSmallInsigniaLabel", String.class, Alignment.class);
             }
             catch (Exception e) {
                 throw new RuntimeException("LabelAPI's createSmallInsigniaLabel Object not found");

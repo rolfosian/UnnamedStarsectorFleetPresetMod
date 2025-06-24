@@ -8,7 +8,7 @@ import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.combat.EngagementResultAPI;
 import com.fs.starfarer.api.impl.campaign.RuleBasedInteractionDialogPluginImpl;
 
-public class WrappedRuleBasedInteractionDialogPluginImpl extends RuleBasedInteractionDialogPluginImpl {
+public abstract class WrappedRuleBasedInteractionDialogPluginImpl extends RuleBasedInteractionDialogPluginImpl {
     private RuleBasedInteractionDialogPluginImpl oldPlugin;
 
     public WrappedRuleBasedInteractionDialogPluginImpl(RuleBasedInteractionDialogPluginImpl oldPlugin) {
@@ -46,9 +46,14 @@ public class WrappedRuleBasedInteractionDialogPluginImpl extends RuleBasedIntera
         oldPlugin.optionMousedOver(arg0, arg1);
     }
 
+    public abstract void beforeOptionSelected(String arg0, Object arg1);
+    public abstract void afterOptionSelected(String arg0, Object arg1);
+
     @Override
     public void optionSelected(String arg0, Object arg1) {
+        beforeOptionSelected(arg0, arg1);
         oldPlugin.optionSelected(arg0, arg1);
+        afterOptionSelected(arg0, arg1);
     }
 
     @Override

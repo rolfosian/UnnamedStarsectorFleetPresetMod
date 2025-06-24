@@ -44,7 +44,7 @@ public class Button extends UIComponent implements Renderable {
     }
 
     public void setListener(ActionListener listener) {
-        ReflectionUtilis.getMethodAndInvokeDirectly("setListener", inner, 1, listener.getProxy());
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, inner, listener.getProxy());
     }
 
     public void setShortcut(int key, boolean idkWhatThisDoes) {
@@ -52,7 +52,7 @@ public class Button extends UIComponent implements Renderable {
     }
 
     public Object getListener() {
-        return ReflectionUtilis.getMethodAndInvokeDirectly("getListener", inner, 0);
+        return ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, inner);
     }
 
     public void setButtonPressedSound(String soundId) {
