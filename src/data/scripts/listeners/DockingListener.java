@@ -213,12 +213,14 @@ public class DockingListener extends BaseCampaignEventListener {
 
                     case"RECOVERY_CONTINUE":
                         if (isBattle) {
+                            isBattle = false;
                             PresetUtils.checkFleetAgainstPreset(runningMembers);
                         }
                         return;
                         
                     case "LEAVE":
                         if (isBattle) {
+                            isBattle = false;
                             PresetUtils.checkFleetAgainstPreset(runningMembers);
                         }
                         return;
