@@ -1,7 +1,4 @@
-// Code taken and modified from Officer Extension mod
-
 package data.scripts;
-
 
 import com.fs.starfarer.api.Global;
 

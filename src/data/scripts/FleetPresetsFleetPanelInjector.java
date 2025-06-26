@@ -44,14 +44,17 @@ public class FleetPresetsFleetPanelInjector {
 
     private static Object fleetInfoPanelField;
     private static Object autoAssignButtonField;
+    private static Object marketPickerMethod;
+
     private boolean injected = false;
 
     /** Keep track of the last known fleet info panel to track when it changes */
     private UIPanelAPI fleetInfoPanelRef;
-
+    private UIPanel fleetTabLeftPane;
+    private Object fleetTab;
 
     private ButtonAPI autoAssignButton;
-    PositionAPI officerAutoAssignButtonPosition;
+    private PositionAPI officerAutoAssignButtonPosition;
 
     private Button presetFleetsButton;
     private Button storeFleetButton;
@@ -90,11 +93,10 @@ public class FleetPresetsFleetPanelInjector {
     }
 
     private ButtonAPI getStorageButton(UIPanelAPI core) { // This will probably crash the game if you call it without the player docked at a market
-        Object infoPanelParent = ReflectionUtilis.invokeMethod("getParent", fleetInfoPanelRef);
-        Object marketPicker = ReflectionUtilis.getMethodAndInvokeDirectly("getMarketPicker", infoPanelParent, 0);
+        Object marketPicker = ReflectionUtilis.invokeMethodDirectly(ReflectionUtilis.getMethod("getMarketPicker", fleetTab, 0), fleetTab);
         if (marketPicker == null) return null;
 
-        List<ButtonAPI> marketButtons = ((List<ButtonAPI>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", marketPicker, 0));
+        List<ButtonAPI> marketButtons = ((List<ButtonAPI>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.visualPanelGetChildrenNonCopyMethod, marketPicker));
         return marketButtons.get(marketButtons.size() - 1);
     }
 
@@ -111,6 +113,8 @@ public class FleetPresetsFleetPanelInjector {
             storeFleetButton = null;
             currentPresetLabel = null;
             currentPresetLabelHeader = null;
+            fleetTabLeftPane = null;
+            fleetTab = null;
             Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.FLEETINFOPANEL_KEY);
             return;
         }
@@ -124,14 +128,14 @@ public class FleetPresetsFleetPanelInjector {
 
             if (market != null && CargoPresetUtils.getStorageSubmarket(market) != null) {
                 if (PresetUtils.isPlayerPaidForStorage(CargoPresetUtils.getStorageSubmarket(market).getPlugin())) {
-                    if (pullAllShipsButton == null || storeFleetButton == null) addAuxStorageButtons(playerFleetMembers, officerAutoAssignButtonPosition, fleetInfoPanel, mothballedShips, market);
+                    if (pullAllShipsButton == null || storeFleetButton == null) addAuxStorageButtons(playerFleetMembers, officerAutoAssignButtonPosition, mothballedShips, market);
 
                     if (mothballedShips != null && mothballedShips.size() > 0) {
-                        pullAllShipsButton.setEnabled(true);
+                        if (!pullAllShipsButton.isEnabled()) pullAllShipsButton.setEnabled(true);
                     } else {
-                        pullAllShipsButton.setEnabled(false);
+                        if (pullAllShipsButton.isEnabled()) pullAllShipsButton.setEnabled(false);
                     }
-                    storeFleetButton.setEnabled(true);
+                    if (!storeFleetButton.isEnabled() && playerFleetMembers.size() > 1) storeFleetButton.setEnabled(true);
                 }
                 // checking if members are sold so there's no memory leak for wrappedMembers
                 if (runningMembers.size() > playerFleetMembers.size()) {
@@ -166,14 +170,16 @@ public class FleetPresetsFleetPanelInjector {
 
                 }
             }
-            if (playerFleetMembers.size() == 1 && storeFleetButton != null) {
-                storeFleetButton.setEnabled(false);
+            if (storeFleetButton != null && playerFleetMembers.size() < 2) {
+                if (storeFleetButton.isEnabled()) storeFleetButton.setEnabled(false);
             }
         }
         runningMembers = new RunningMembersList(playerFleetMembers);
 
         if (!injected) {
             injected = true;
+            fleetTabLeftPane = new UIPanel(fleetInfoPanel);
+
             Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.FLEETINFOPANEL_KEY, fleetInfoPanel);
 
             autoAssignButton = (ButtonAPI) getAutoAssignButton(fleetInfoPanel);
@@ -183,7 +189,7 @@ public class FleetPresetsFleetPanelInjector {
             float officerAutoAssignButtonHeight = officerAutoAssignButtonPosition.getHeight();
 
             if (market != null && CargoPresetUtils.getStorageSubmarket(market) != null) {
-                addAuxStorageButtons(playerFleetMembers, officerAutoAssignButtonPosition, fleetInfoPanel, mothballedShips, market);
+                addAuxStorageButtons(playerFleetMembers, officerAutoAssignButtonPosition, mothballedShips, market);
             }
 
             presetFleetsButton = UtilReflection.makeButton(
@@ -192,11 +198,11 @@ public class FleetPresetsFleetPanelInjector {
                     Misc.getBasePlayerColor(),
                     Misc.getDarkPlayerColor(),
                     Alignment.LMID,
-                    CutStyle.ALL,
+                    CutStyle.BL_TR,
                     officerAutoAssignButtonPosition.getWidth(),
                     officerAutoAssignButtonPosition.getHeight(),
                     Keyboard.KEY_A);
-            Position pos = new UIPanel(fleetInfoPanel).add(presetFleetsButton);
+            Position pos = fleetTabLeftPane.add(presetFleetsButton);
 
             setCurrentPresetLabel(fleetInfoPanel, playerFleetMembers);
             
@@ -215,7 +221,7 @@ public class FleetPresetsFleetPanelInjector {
                 labbel.setAlignment(Alignment.MID);
                 currentPresetLabelHeader = new Label(labbel);
                 
-                Position labelPos = new UIPanel(fleetInfoPanel).add(currentPresetLabelHeader);
+                Position labelPos = fleetTabLeftPane.add(currentPresetLabelHeader);
                 labelPos.set(officerAutoAssignButtonPosition);
                 labelPos.getInstance().setYAlignOffset(-officerAutoAssignButtonPosition.getHeight()*13.5f).setXAlignOffset(-5f);
                 
@@ -224,7 +230,7 @@ public class FleetPresetsFleetPanelInjector {
                 labbel.setAlignment(Alignment.MID);
                 currentPresetLabel = new Label(labbel);
 
-                labelPos = new UIPanel(fleetInfoPanel).add(currentPresetLabel);
+                labelPos = fleetTabLeftPane.add(currentPresetLabel);
                 labelPos.set(officerAutoAssignButtonPosition);
                 labelPos.getInstance().setYAlignOffset(-officerAutoAssignButtonPosition.getHeight()*14.5f).setXAlignOffset(-5f);
 
@@ -233,8 +239,8 @@ public class FleetPresetsFleetPanelInjector {
             }
 
         } else if (currentPresetLabel != null) {
-            new UIPanel(fleetInfoPanel).remove(currentPresetLabelHeader);
-            new UIPanel(fleetInfoPanel).remove(currentPresetLabel);
+            fleetTabLeftPane.remove(currentPresetLabelHeader);
+            fleetTabLeftPane.remove(currentPresetLabel);
             currentPresetLabelHeader = null;
             currentPresetLabel = null;
         }
@@ -248,9 +254,10 @@ public class FleetPresetsFleetPanelInjector {
         if (core == null) {
             return null;
         }
-        Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.COREUI_KEY, core);
 
-        UIPanelAPI currentTab = (UIPanelAPI) UtilReflection.invokeGetter(core, "getCurrentTab");
+        Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.COREUI_KEY, core);
+        UIPanelAPI currentTab = (UIPanelAPI) ReflectionUtilis.getMethodAndInvokeDirectly("getCurrentTab", core, 0);
+
         // Since the current tab ID is fleet, this *should* give us the fleet tab.
         // We need to find the field corresponding to the info panel. There's no good way to do this,
         // other than to go through every declared field, check that it's a UIPanelAPI, then look for
@@ -285,13 +292,10 @@ public class FleetPresetsFleetPanelInjector {
             throw new RuntimeException("Could not find the fleet info panel for the fleet tab");
         }
 
-        try {
-            return (UIPanelAPI) ReflectionUtilis.getPrivateVariable(ReflectionUtilis.getFieldName(fleetInfoPanelField), currentTab);
-        }
-        catch (Exception e) {
-            print(e);
-            return null;
-        }
+        fleetTab = currentTab;
+
+        return (UIPanelAPI) ReflectionUtilis.getPrivateVariable(ReflectionUtilis.getFieldName(fleetInfoPanelField), currentTab);
+
     }
 
     public ButtonAPI getAutoAssignButton(UIPanelAPI fleetInfoPanel) {
@@ -301,7 +305,6 @@ public class FleetPresetsFleetPanelInjector {
                 if (ButtonAPI.class.isAssignableFrom(ReflectionUtilis.getFieldType(field))) {
                     ButtonAPI button = (ButtonAPI) ReflectionUtilis.getPrivateVariable(ReflectionUtilis.getFieldName(field), fleetInfoPanel);
                     
-
                     if (button != null && new Button(button, null, null).getText().trim().startsWith("Auto-assign")) {
                         autoAssignButtonField = field;
                         break;
@@ -317,7 +320,7 @@ public class FleetPresetsFleetPanelInjector {
         return (ButtonAPI) ReflectionUtilis.getPrivateVariable(ReflectionUtilis.getFieldName(autoAssignButtonField), fleetInfoPanel);
     }
 
-    private void addAuxStorageButtons(List<FleetMemberAPI> playerFleetMembers, PositionAPI officerAutoAssignButtonPosition, UIPanelAPI fleetInfoPanel, List<FleetMemberAPI> mothballedShips, MarketAPI market) {
+    private void addAuxStorageButtons(List<FleetMemberAPI> playerFleetMembers, PositionAPI officerAutoAssignButtonPosition, List<FleetMemberAPI> mothballedShips, MarketAPI market) {
         PositionAPI storageButtonPosition = null;
         UIPanelAPI core = (UIPanelAPI) Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.COREUI_KEY);
         Object storageButtonObf = getStorageButton(core);
@@ -342,8 +345,8 @@ public class FleetPresetsFleetPanelInjector {
                 storageButtonPosition.getWidth(),
                 officerAutoAssignButtonPosition.getHeight(),
                 null);
-
-            Position pos = new UIPanel(fleetInfoPanel).add(storeFleetButton);
+            
+            Position pos = fleetTabLeftPane.add(storeFleetButton);
             pos.set(officerAutoAssignButtonPosition);
             pos.getInstance().setSize(storageButtonPosition.getWidth()-(storageButtonPosition.getWidth() / 4.8f), officerAutoAssignButtonPosition.getHeight()-6f);
             pos.getInstance().setYAlignOffset(157f).setXAlignOffset(1352f);
@@ -365,20 +368,20 @@ public class FleetPresetsFleetPanelInjector {
                 officerAutoAssignButtonPosition.getHeight(),
                 null);
 
-            pos = new UIPanel(fleetInfoPanel).add(pullAllShipsButton);
+            pos = fleetTabLeftPane.add(pullAllShipsButton);
             pos.set(officerAutoAssignButtonPosition);
             pos.getInstance().setSize(storageButtonPosition.getWidth()+30f, officerAutoAssignButtonPosition.getHeight()-6f);
             pos.getInstance().setYAlignOffset(157f).setXAlignOffset(1127f);
 
             if (!PresetUtils.isPlayerPaidForStorage(CargoPresetUtils.getStorageSubmarket(market).getPlugin())) {
-                storeFleetButton.setEnabled(false);
-                pullAllShipsButton.setEnabled(false);
+                if (storeFleetButton.isEnabled()) storeFleetButton.setEnabled(false);
+                if (pullAllShipsButton.isEnabled()) pullAllShipsButton.setEnabled(false);
 
             } else {
                 if (playerFleetMembers.size() == 1) {
-                    storeFleetButton.setEnabled(false);
+                    if (storeFleetButton.isEnabled()) storeFleetButton.setEnabled(false);
                 } else if (mothballedShips == null || mothballedShips.size() == 0) {
-                    pullAllShipsButton.setEnabled(false);
+                    if (pullAllShipsButton.isEnabled()) pullAllShipsButton.setEnabled(false);
                 }
             }
 

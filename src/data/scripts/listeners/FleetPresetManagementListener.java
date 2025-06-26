@@ -4,11 +4,11 @@ import com.fs.starfarer.api.Global;
 
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
-import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.campaign.CargoAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
+import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 
 import com.fs.starfarer.api.ui.CustomPanelAPI;
@@ -82,7 +82,7 @@ public class FleetPresetManagementListener extends ActionListener {
     private static final String CANCEL_TEXT = "Cancel";
 
     private static final String SAVE_DIALOG_HEADER = "Enter Preset Name:";
-    private static final String SAVE_DIALOG_YES_TEXT = "Save preset";
+    private static final String SAVE_DIALOG_YES_TEXT = "Save Preset";
     private static final String DELETE_DIALOG_HEADER_PREFIX = "Are you sure you want to delete ";
     private static final String OVERWRITE_DIALOG_HEADE_PREFIX = "Are you sure you want to overwrite ";
     private static final String OVERWRITE_DIALOG_HEADE_SUFFIX = " with the current fleet?";
@@ -667,7 +667,7 @@ public class FleetPresetManagementListener extends ActionListener {
                     selectedRow = row;
                 } else {
                     row = (UIPanelAPI) tableTipMaker.addRowWithGlow(
-                        c1, 
+                        c1,
                         rowName
                     );
                 } 
@@ -679,8 +679,8 @@ public class FleetPresetManagementListener extends ActionListener {
             tableTipMaker.addTable(BLANK_TABLE_TEXT, 0, 5f);
 
             if (selectedRow != null) {
-                ReflectionUtilis.getMethodAndInvokeDirectly("setItemsSelectable", tablePanel, 1, true);
-                ReflectionUtilis.getMethodAndInvokeDirectly("select", tablePanel, 2, selectedRow, null);
+                ReflectionUtilis.invokeMethodDirectly(ClassRefs.tablePanelsetItemsSelectableMethod, tablePanel, true);
+                ReflectionUtilis.invokeMethodDirectly(ClassRefs.tablePanelSelectMethod, tablePanel, selectedRow, null);
             }
 
             panel.addUIElement(tableTipMaker);
@@ -712,7 +712,7 @@ public class FleetPresetManagementListener extends ActionListener {
                         isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
                     } else if (PresetUtils.isPresetPlayerFleetOfficerAgnostic(selectedPresetName)) {
                         isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet but the officer assignments are different."));
-                        isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
+                        isSelectedPresetAvailablePara.setColor(TEXT_HIGHLIGHT_COLOR);
                     } else {
                         isSelectedPresetAvailablePara.setText(String.format(isSelectedPresetAvailableParaFormat, "only partially available, or unavailable"));
                         isSelectedPresetAvailablePara.setColor(Misc.getNegativeHighlightColor());
@@ -861,7 +861,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
                     
                     // For table headers to sort the table by ascending or descending.
-                    // I couldnt get mouse events to register on the header itself, idk what is blocking them. Above and below worked fine lol
+                    // I couldnt get mouse events to register on the header itself, idk what is blocking them. Above and below worked fine lol. So used offsets instead
                     // if (tableUp && this.id == 0 || (!tableUp && this.id == tableRowListeners.size() - 1)) {
                     //     float yOffsetBottom = rY / 100 * 4;
                     //     float yOffsetTop = rY / 100 * 2.6f;

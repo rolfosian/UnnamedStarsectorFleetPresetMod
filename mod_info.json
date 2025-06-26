@@ -2,10 +2,10 @@
     "id": "fleet_preset_manager",
     "name": "Fleet Presets Manager",
     "author": "rolfos",
-    "version": "0.0.10",
+    "version": "0.0.10a",
     "description": "Save fleet presets and load them from market storage.",
     "gameVersion": "0.98a-RC8",
     "modPlugin": "data.scripts.FleetPresetManagerPlugin",
     "jars": ["./jars/FleetPresetManagerJAR.jar"]
-  }
+}
   

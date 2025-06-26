@@ -40,7 +40,11 @@ public class Button extends UIComponent implements Renderable {
     }
 
     public void setEnabled(boolean enabled) {
-        ReflectionUtilis.getMethodAndInvokeDirectly("setEnabled", inner, 1, enabled);
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetEnabledMethod, inner, enabled);
+    }
+
+    public boolean isEnabled() {
+        return getInstance().isEnabled();
     }
 
     public void setListener(ActionListener listener) {
@@ -48,7 +52,7 @@ public class Button extends UIComponent implements Renderable {
     }
 
     public void setShortcut(int key, boolean idkWhatThisDoes) {
-        ReflectionUtilis.getMethodExplicitAndInvokeDirectly("setShortcut", inner, new Class<?>[]{int.class, boolean.class}, key, idkWhatThisDoes);
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetShortcutMethod, inner, key, idkWhatThisDoes);
     }
 
     public Object getListener() {
@@ -56,53 +60,13 @@ public class Button extends UIComponent implements Renderable {
     }
 
     public void setButtonPressedSound(String soundId) {
-        ReflectionUtilis.getMethodAndInvokeDirectly("setButtonPressedSound", inner, 1, soundId);
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetButtonPressedSoundMethod, inner, soundId);
     }
 
     private static String graphicsObjectGetterName;
     private static String textGetterName;
 
     public String getText() {
-        try {
-            Object renderer = ReflectionUtilis.getMethodAndInvokeDirectly("getRenderer", inner, 0);
-            Object graphicsObject = null;
-            if (graphicsObjectGetterName != null) {
-                graphicsObject = ReflectionUtilis.getMethodAndInvokeDirectly(graphicsObjectGetterName, renderer, 0);
-            }
-            else {
-                for (Object method : renderer.getClass().getDeclaredMethods()) {
-                    Class<?> returnType = ReflectionUtilis.getReturnType(method);
-
-                    if (returnType != null) {
-                        Package pack = returnType.getPackage();
-                        if (pack != null && pack.getName().startsWith("com.fs.graphics")) {
-                            graphicsObjectGetterName = ReflectionUtilis.getMethodName(method);
-                            graphicsObject = ReflectionUtilis.invokeMethodDirectly(method, renderer);
-                        }
-                    }
-                }
-            }
-            if (graphicsObject == null) {
-                throw new RuntimeException("Renderer's graphics object not found");
-            }
-
-            if (textGetterName != null) {
-                return (String) ReflectionUtilis.getMethodAndInvokeDirectly(textGetterName, graphicsObject, 0);
-            }
-            for (Object method : graphicsObject.getClass().getDeclaredMethods()) {
-                if (String.class.isAssignableFrom(ReflectionUtilis.getReturnType(method))) {
-                    textGetterName = ReflectionUtilis.getMethodName(method);
-                    return (String) ReflectionUtilis.invokeMethodDirectly(method, graphicsObject);
-                }
-            }
-            throw new RuntimeException("Text label for button object not found");
-        }
-        catch (RuntimeException e) {
-            throw e;
-        }
-        catch (Exception e) {
-            PresetMiscUtils.print(e);
-            return null;
-        }
+        return getInstance().getText();
     }
 }

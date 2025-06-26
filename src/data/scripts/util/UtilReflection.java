@@ -36,7 +36,6 @@ import org.lwjgl.input.Keyboard;
 
 @SuppressWarnings("unchecked")
 public class UtilReflection {
-    public static final Logger logger = Logger.getLogger(UtilReflection.class);
     public static final void print(Object... args) {
         PresetMiscUtils.print(args);
     }
@@ -61,27 +60,25 @@ public class UtilReflection {
     public static Object createButtonClickEventInstance(PositionAPI buttonPosition) {
         return ReflectionUtilis.instantiateClass(ClassRefs.inputEventClass,
         ClassRefs.inputEventClassParamTypes,
-        new Object[] {
-            InputEventClass.MOUSE_EVENT,
-            InputEventType.MOUSE_DOWN,
-            (int)buttonPosition.getCenterX(),
-            (int)buttonPosition.getCenterY(),
-            0, // LMB
-            '\0' // unused?
-        }); 
+        InputEventClass.MOUSE_EVENT,
+        InputEventType.MOUSE_DOWN,
+        (int)buttonPosition.getCenterX(),
+        (int)buttonPosition.getCenterY(),
+        0, // LMB
+        '\0' // unused?
+        ); 
     }
 
     public static Object createInputEventInstance(InputEventClass eventClass, InputEventType eventType, int x, int y, int val, char char_) {
         return ReflectionUtilis.instantiateClass(ClassRefs.inputEventClass,
         ClassRefs.inputEventClassParamTypes,
-        new Object[] {
-            eventClass,
-            eventType,
-            x,
-            y,
-            val, // keyboard key or mouse button
-            char_ // char is only appicable for keyboard keys afaik
-        }); 
+        eventClass,
+        eventType,
+        x,
+        y,
+        val, // keyboard key or mouse button
+        char_ // char is only appicable for keyboard keys afaik
+        ); 
     }
 
     public static void clickButton(Object button) {
@@ -98,7 +95,7 @@ public class UtilReflection {
     }
     
     private static void collectChildren(Object parent, List<Object> list) {
-        List<Object> children = (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", parent, 0);
+        List<Object> children = (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.visualPanelGetChildrenNonCopyMethod, parent);
 
         if (children != null) {
             for (Object child : children) {
@@ -115,104 +112,36 @@ public class UtilReflection {
             float width,
             float height,
             DialogDismissedListener dialogListener) {
-        try {
-            Object confirmDialog = ReflectionUtilis.instantiateClass(
-                ClassRefs.confirmDialogClass,
-                ClassRefs.confirmDialogClassParamTypes,
-                new Object[] {
-                    width,
-                    height,
-                    getField(Global.getSector().getCampaignUI(), "screenPanel"),
-                    dialogListener.getProxy(),
-                    text,
-                    new String[]{confirmText, cancelText}
-                }
-            );
-            
-            ReflectionUtilis.getMethodAndInvokeDirectly("show", confirmDialog, 2, 0.25f, 0.25f);
 
-            LabelAPI label = (LabelAPI) ReflectionUtilis.getMethodAndInvokeDirectly("getLabel", confirmDialog, 0);
-            Button yes = new Button((ButtonAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetButtonMethod, confirmDialog, 0), null, null);
-            Button no = new Button((ButtonAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetButtonMethod, confirmDialog, 1), null, null);
-            return new ConfirmDialogData(
-                    label,
-                    yes,
-                    no,
-                    (UIPanelAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetInnerPanelMethod, confirmDialog),
-                    (UIPanelAPI) confirmDialog);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        Object confirmDialog = ReflectionUtilis.instantiateClass(
+            ClassRefs.confirmDialogClass,
+            ClassRefs.confirmDialogClassParamTypes,
+            width,
+            height,
+            ReflectionUtilis.getPrivateVariable("screenPanel", Global.getSector().getCampaignUI()),
+            dialogListener.getProxy(),
+            text,
+            new String[]{confirmText, cancelText}
+        );
+        
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogShowMethod, confirmDialog, 0.25f, 0.25f);
+
+        LabelAPI label = (LabelAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetLabelMethod, confirmDialog);
+        Button yes = new Button((ButtonAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetButtonMethod, confirmDialog, 0), null, null);
+        Button no = new Button((ButtonAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetButtonMethod, confirmDialog, 1), null, null);
+        return new ConfirmDialogData(
+                label,
+                yes,
+                no,
+                (UIPanelAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetInnerPanelMethod, confirmDialog),
+                (UIPanelAPI) confirmDialog);
     }
 
     public static UIPanelAPI getCoreUI() {
         CampaignUIAPI campaignUI = Global.getSector().getCampaignUI();
         InteractionDialogAPI dialog = campaignUI.getCurrentInteractionDialog();
 
-        CoreUIAPI core;
-        if (dialog == null) {
-            core = (CoreUIAPI) ReflectionUtilis.getPrivateVariable("core", campaignUI);
-        }
-        else {
-            core = (CoreUIAPI) ReflectionUtilis.getMethodAndInvokeDirectly("getCoreUI", dialog, 0);
-        }
-        return core == null ? null : (UIPanelAPI) core;
-    }
-
-    public static Object getField(Object o, String fieldName) {
-        if (o == null) {
-            return null;
-        }
-        return getFieldExplicitClass(o.getClass(), o, fieldName);
-    }
-
-    public static Object getFieldExplicitClass(Class<?> cls, Object o, String fieldName) {
-        if (o == null) return null;
-        try {
-            return ReflectionUtilis.getPrivateVariable(fieldName, o);
-        } catch (Exception e) {
-            logger.info("Exception for getFieldExplicitClass", e);
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    public static void setField(Object o, String fieldName, Object to) {
-        setFieldExplicitClass(o.getClass(), o, fieldName, to);
-    }
-
-    public static void setFieldExplicitClass(Class<?> cls, Object o, String fieldName, Object to) {
-        if (o == null) return;
-        try {
-            Object field = cls.getDeclaredField(fieldName);
-            ReflectionUtilis.setPrivateVariable(field, o, to);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public static Object invokeGetter(Object o, String methodName, Object... args) {
-        if (o == null) return null;
-        try {
-            Class<?>[] argClasses = new Class<?>[args.length];
-            for (int i = 0; i < args.length; i++) {
-                argClasses[i] = args[i].getClass();
-                // unbox
-                if (argClasses[i] == Integer.class) {
-                    argClasses[i] = int.class;
-                }
-                else if (argClasses[i] == Boolean.class) {
-                    argClasses[i] = boolean.class;
-                }
-                else if (argClasses[i] == Float.class) {
-                    argClasses[i] = float.class;
-                }
-            }
-            return ReflectionUtilis.getMethodAndInvokeDirectly(methodName, o, args.length, args);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+        return dialog == null ? (UIPanelAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.campaignUIGetCoreMethod, campaignUI) : (UIPanelAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.interactionDialogGetCoreUIMethod, dialog);
     }
 
     public static class ConfirmDialogData {

@@ -138,7 +138,7 @@ public abstract class OptionPanelListener {
                                             return;
                                         }
 
-                                        List<Object> innerChildren = (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", innerPanel, 0);
+                                        List<Object> innerChildren = (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.visualPanelGetChildrenNonCopyMethod, innerPanel);
                                         Set<Object> nonButtons = new HashSet<>();
 
                                         if (innerChildren != null) {
@@ -256,7 +256,7 @@ public abstract class OptionPanelListener {
 
     private void handleCommDirectory(Set<Object> innerPanelNonButtons, Set<Object> newButtons, Set<Object> newOptions) {
         for (Object nonButton : innerPanelNonButtons) {
-            for (Object child : (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", nonButton, 0)) {
+            for (Object child : (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.visualPanelGetChildrenNonCopyMethod, nonButton)) {
                 List<Object> lst = (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getItems", child, 0);
                 
                 if (lst != null) {

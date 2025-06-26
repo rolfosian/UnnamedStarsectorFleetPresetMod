@@ -16,6 +16,10 @@ public abstract class WrappedRuleBasedInteractionDialogPluginImpl extends RuleBa
         this.oldPlugin = oldPlugin;
     }
 
+    public RuleBasedInteractionDialogPluginImpl getOldPlugin() {
+        return this.oldPlugin;
+    }
+
     @Override
     public void advance(float arg0) {
         oldPlugin.advance(arg0);
@@ -36,10 +40,10 @@ public abstract class WrappedRuleBasedInteractionDialogPluginImpl extends RuleBa
         return oldPlugin.getMemoryMap();
     }
 
-    @Override // dont call this it will break it, just setPlugin and leave it at that
-    public void init(InteractionDialogAPI arg0) {
-        oldPlugin.init(arg0);
-    }
+    // @Override // dont call this it will break it, just setPlugin and leave it at that
+    // public void init(InteractionDialogAPI arg0) {
+    //     oldPlugin.init(arg0);
+    // }
 
     @Override
     public void optionMousedOver(String arg0, Object arg1) {

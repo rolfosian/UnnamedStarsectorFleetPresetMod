@@ -17,8 +17,10 @@ import com.fs.starfarer.api.combat.EngagementResultAPI;
 import com.fs.starfarer.api.input.InputEventClass;
 import com.fs.starfarer.api.input.InputEventType;
 
-import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
+import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.ButtonAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI;
 
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
@@ -43,6 +45,8 @@ public class ClassRefs {
     public static Class<?>[] confirmDialogClassParamTypes;
     public static Object confirmDialogGetButtonMethod;
     public static Object confirmDialogGetInnerPanelMethod;
+    public static Object confirmDialogShowMethod;
+    public static Object confirmDialogGetLabelMethod;
 
     /** Interface that contains a single method: actionPerformed */
     public static Class<?> actionListenerInterface;
@@ -65,12 +69,21 @@ public class ClassRefs {
     };
     public static Object visualPanelGetChildrenNonCopyMethod;
     public static Object optionPanelGetButtonToItemMapMethod;
+    public static Object interactionDialogGetCoreUIMethod;
 
     /** Obfuscated ButtonAPI class */
     public static Class<?> buttonClass;
     public static Object buttonListenerActionPerformedMethod;
     public static Object buttonGetListenerMethod;
     public static Object buttonSetListenerMethod;
+    public static Object buttonSetEnabledMethod;
+    public static Object buttonSetShortcutMethod;
+    public static Object buttonSetButtonPressedSoundMethod;
+
+    public static Object tablePanelsetItemsSelectableMethod;
+    public static Object tablePanelSelectMethod;
+
+    public static Object campaignUIGetCoreMethod;
 
     /** Obfuscated InputEvent class */
     public static Class<?> inputEventClass;
@@ -95,6 +108,8 @@ public class ClassRefs {
                     dialog.dismiss();
                     return;
                 }
+                if (!(dialog.getPlugin() instanceof DummyInteractionDialogPlugin)) return;
+                interactionDialogGetCoreUIMethod = ReflectionUtilis.getMethod("getCoreUI", dialog, 0);
 
                 VisualPanelAPI visualPanel = dialog.getVisualPanel();
                 visualPanel.showFleetInfo("", Global.getSector().getPlayerFleet(), null, null);
@@ -116,6 +131,14 @@ public class ClassRefs {
         Global.getSector().getCampaignUI().showInteractionDialogFromCargo(new DummyInteractionDialogPlugin(), null, new CampaignUIAPI.DismissDialogDelegate() {
             public void dialogDismissed() {}
         });
+    }
+
+    public static void findTablePanelMethods() {
+        CustomPanelAPI panel = Global.getSettings().createCustom(0f, 0f, null);
+        TooltipMakerAPI tt = panel.createUIElement(0f, 0f, false);
+        Object tablePanel = tt.beginTable(Global.getSettings().getBasePlayerColor(), Global.getSettings().getBasePlayerColor(), Global.getSettings().getBasePlayerColor(), 1f, false, false, new Object[]{"", 1f});
+        tablePanelsetItemsSelectableMethod = ReflectionUtilis.getMethod("setItemsSelectable", tablePanel, 1);
+        tablePanelSelectMethod = ReflectionUtilis.getMethod("select", tablePanel, 2);
     }
 
     public static void findInputEventClass() {
@@ -147,6 +170,9 @@ public class ClassRefs {
                 buttonClass = child.getClass();
                 buttonGetListenerMethod = ReflectionUtilis.getMethod("getListener", buttonClass, 0);
                 buttonSetListenerMethod = ReflectionUtilis.getMethod("setListener", buttonClass, 1);
+                buttonSetEnabledMethod = ReflectionUtilis.getMethod("setEnabled", buttonClass, 1);
+                buttonSetShortcutMethod = ReflectionUtilis.getMethodExplicit("setShortcut", buttonClass, new Class<?>[]{int.class, boolean.class});
+                buttonSetButtonPressedSoundMethod = ReflectionUtilis.getMethod("setButtonPressedSound", buttonClass, 1);
                 return;
             }
         }
@@ -154,6 +180,7 @@ public class ClassRefs {
 
     public static void findConfirmDialogClass() {
         CampaignUIAPI campaignUI = Global.getSector().getCampaignUI();
+
         // If we don't know the confirmation dialog class, try to create a confirmation dialog in order to access it
         boolean isPaused = Global.getSector().isPaused();
         if (confirmDialogClass == null && campaignUI.showConfirmDialog("", "", "", null, null)) {
@@ -165,6 +192,9 @@ public class ClassRefs {
             confirmDialogClass = panel.getClass();
             confirmDialogGetButtonMethod = ReflectionUtilis.getMethod("getButton", panel, 1);
             confirmDialogGetInnerPanelMethod = ReflectionUtilis.getMethod("getInnerPanel", panel, 0);
+            confirmDialogShowMethod = ReflectionUtilis.getMethod("show", panel, 2);
+            confirmDialogGetLabelMethod = ReflectionUtilis.getMethod("getLabel", panel, 0);;
+
             // we have the class, dismiss the dialog
 
             ReflectionUtilis.getMethodAndInvokeDirectly("dismiss", panel, 1, 0);
@@ -196,7 +226,6 @@ public class ClassRefs {
                 }
             }
         }
-
         if (renderableUIElementInterface == null) {
             throw new RuntimeException("``Renderable'' interface not found; perhaps invalid witness used?");
         }
@@ -215,8 +244,14 @@ public class ClassRefs {
 
     public static void findAllClasses() {
         if (foundAllClasses) return;
-
         CampaignUIAPI campaignUI = Global.getSector().getCampaignUI();
+        
+        if (campaignUIGetCoreMethod == null) {
+            campaignUIGetCoreMethod = ReflectionUtilis.getMethod("getCore", campaignUI, 0);
+        }
+        if (tablePanelSelectMethod == null) {
+            findTablePanelMethods();
+        }
         if (confirmDialogClass == null) {
             findConfirmDialogClass();
         }
@@ -230,9 +265,8 @@ public class ClassRefs {
             findUIPanelClass();
         }
         if (renderableUIElementInterface == null) {
-            findRenderableUIElementInterface(UtilReflection.getField(campaignUI, "screenPanel"));
+            findRenderableUIElementInterface(ReflectionUtilis.getPrivateVariable("screenPanel", campaignUI));
         }
-
         if (visualPanelFleetInfoClass == null) {
             findFleetInfoClass();
         }
@@ -243,8 +277,9 @@ public class ClassRefs {
             findInputEventClass();
         }
 
-
-        if (confirmDialogClass != null
+        if (campaignUIGetCoreMethod != null
+                &&tablePanelSelectMethod != null
+                && confirmDialogClass != null
                 && dialogDismissedInterface != null
                 && actionListenerInterface != null
                 && uiPanelClass != null
@@ -284,7 +319,7 @@ public class ClassRefs {
         throw new RuntimeException("Interface with only method " + methodName + " not found; perhaps invalid witness used?");
     }
 
-    public static class DummyInteractionDialogPlugin implements InteractionDialogPlugin {
+    private static class DummyInteractionDialogPlugin implements InteractionDialogPlugin {
         public void advance(float arg0) { return; }
         public void backFromEngagement(EngagementResultAPI arg0) { return; }
         public Object getContext() { return ""; }

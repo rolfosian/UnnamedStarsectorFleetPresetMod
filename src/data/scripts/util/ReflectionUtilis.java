@@ -625,6 +625,31 @@ public class ReflectionUtilis {
         return null;
     }
 
+    public static Object getMethodExplicit(String methodName, Class<?> cls, Class<?>[] parameterTypes) {
+        for (Object method : cls.getMethods()) {
+            try {
+                if (((String) getMethodNameHandle.invoke(method)).equals(methodName)) {
+                    Class<?>[] targetParameterTypes = (Class<?>[]) getParameterTypesHandle.invoke(method);
+                    if (targetParameterTypes.length != parameterTypes.length)
+                        continue;
+    
+                    boolean match = true;
+                    for (int i = 0; i < targetParameterTypes.length; i++) {
+                        if (!targetParameterTypes[i].getCanonicalName().equals(parameterTypes[i].getCanonicalName())) {
+                            match = false;
+                            break;
+                        }
+                    }
+    
+                    if (match) return method;
+                }
+            } catch (Throwable e) {
+                print(e);
+            }
+        }
+        return null;
+    }
+
     public static Object invokeMethod(String methodName, Object instance, Object... arguments) {
         try {
             Object method = instance.getClass().getMethod(methodName);
@@ -1111,13 +1136,13 @@ public class ReflectionUtilis {
                     String fieldName = (String) getFieldNameHandle.invoke(field);
                     Class<?> fieldType = (Class<?>) getFieldTypeHandle.invoke(field);
                     
-                    if (fieldType.isPrimitive()) {
-                        print(fieldType.getCanonicalName() + " " + fieldName + " " + i);
-                        i++;
-                        continue;
-                    } else {
+                    // if (fieldType.isPrimitive() || (fieldType.isArray() && fieldType.getComponentType().isPrimitive())) {
+                    //     print(fieldType.getCanonicalName() + " " + fieldName + " " + i);
+                    //     i++;
+                    //     continue;
+                    // } else {
                         logField(fieldName, fieldType, field, i, instance);
-                    }
+                    // }
                     try {
                         ReflectionUtilis.logConstructorParams(fieldType.getCanonicalName());
                     } catch (Exception e) {
@@ -1144,7 +1169,7 @@ public class ReflectionUtilis {
                     String fieldName = (String) getFieldNameHandle.invoke(field);
                     Class<?> fieldType = (Class<?>) getFieldTypeHandle.invoke(field);
                     
-                    if (fieldType.isPrimitive()) {
+                    if (fieldType.isPrimitive() || (fieldType.isArray() && fieldType.getComponentType().isPrimitive())) {
                         print(fieldType.getCanonicalName() + " " + fieldName + " " + i);
                         i++;
                         continue;
