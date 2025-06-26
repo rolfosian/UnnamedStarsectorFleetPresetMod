@@ -251,13 +251,7 @@ public class PresetUtils {
 
             if (captain != null) {
                 this.captainId = captain.getId();
-
-                this.captainCopy =  Global.getFactory().createPerson();
-                captainCopy.setPortraitSprite(captain.getPortraitSprite());
-                captainCopy.setFaction(Global.getSector().getPlayerFaction().getId());
-                captainCopy.setStats(captain.getStats());
-                captainCopy.setName(captain.getName());
-                captainCopy.setId(captain.getId());
+                this.captainCopy =  createCaptainCopy(captain);
                 this.member.setCaptain(captainCopy);
 
             } else {
@@ -267,6 +261,16 @@ public class PresetUtils {
             this.index = index;
             this.parentMember = member;
             this.preset = preset;
+        }
+
+        public static PersonAPI createCaptainCopy(PersonAPI captain) {
+            PersonAPI captainCopy = Global.getFactory().createPerson();
+            captainCopy.setPortraitSprite(captain.getPortraitSprite());
+            captainCopy.setFaction(Global.getSector().getPlayerFaction().getId());
+            captainCopy.setStats(captain.getStats());
+            captainCopy.setName(captain.getName());
+            captainCopy.setId(captain.getId());
+            return captainCopy;
         }
 
         public void updateCaptain(PersonAPI captain) {
@@ -1233,7 +1237,7 @@ public class PresetUtils {
                 mangledFleet.getFleetData().addFleetMember(members.get(i));
 
                 if (members.get(i).getCaptain().getId().equals(Global.getSector().getPlayerPerson().getId())) {
-                    mangledFleet.setCommander(indexedMembers.get(i).getCaptain());
+                    mangledFleet.setCommander(FleetMemberWrapper.createCaptainCopy(members.get(i).getCaptain()));
                     mangledFleet.getFleetData().setFlagship(members.get(i));
                 }
             }
