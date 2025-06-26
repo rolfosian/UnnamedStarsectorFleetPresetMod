@@ -194,11 +194,21 @@ public class PresetUtils {
             this.index = index;
         }
 
-        public PersonAPI getOfficer() {return this.officer;}
-        public ShipVariantAPI getVariant() {return this.variant;}
-        public int getIndex() {return this.index;}
+        public PersonAPI getOfficer() {
+            return this.officer;
+        }
 
-        public void setVariant(ShipVariantAPI newVariant) {this.variant = newVariant;}
+        public ShipVariantAPI getVariant() {
+            return this.variant;
+        }
+
+        public int getIndex() {
+            return this.index;
+        }
+
+        public void setVariant(ShipVariantAPI newVariant) {
+            this.variant = newVariant;
+        }
     }
 
     public static class VariantWrapper {
@@ -306,15 +316,37 @@ public class PresetUtils {
             this.captainCopy = null;
         }
 
-        public FleetPreset getPreset() {return this.preset;}
-        public int getIndex() {return this.index;}
-        public String getId() {return this.id;}
-        public FleetMemberAPI getMember() {return this.member;}
-        public String getCaptainId() {return this.captainId;}
-        public PersonAPI getCaptainCopy() {return this.captainCopy;}
-        public FleetMemberAPI getParentMember() {return this.parentMember;}
+        public FleetPreset getPreset() {
+            return this.preset;
+        }
 
-        public void setIndex(int i) {this.index = i;}
+        public int getIndex() {
+            return this.index;
+        }
+
+        public String getId() {
+            return this.id;
+        }
+
+        public FleetMemberAPI getMember() {
+            return this.member;
+        }
+
+        public String getCaptainId() {
+            return this.captainId;
+        }
+
+        public PersonAPI getCaptainCopy() {
+            return this.captainCopy;
+        }
+
+        public FleetMemberAPI getParentMember() {
+            return this.parentMember;
+        }
+
+        public void setIndex(int i) {
+            this.index = i;
+        }
     }
 
     public static CampaignFleetAPI createDummyPresetFleet() {
@@ -528,15 +560,37 @@ public class PresetUtils {
             Global.getSector().getCampaignUI().addMessage("The fleet composition has changed and the " + this.name + " fleet preset has been updated.", Misc.getBasePlayerColor());
         }
 
-        public String getName() {return this.name;}
-        public List<String> getShipIds() {return this.shipIds;}
-        public Map<Integer, ShipVariantAPI> getVariantsMap() {return this.variantsMap;}
-        public Map<Integer, OfficerVariantPair> getOfficersMap() {return this.officersMap;}
-        public List<FleetMemberWrapper> getFleetMembers() {return this.fleetMembers;}
-        public CampaignFleetAPI getCampaignFleet() {return this.campaignFleet;}
-        public Map<Integer, VariantWrapper> getVariantWrappers() {return this.variantWrappers;}
+        public String getName() {
+            return this.name;
+        }
 
-        public void setCampaignFleet(CampaignFleetAPI newFleet) {this.campaignFleet = newFleet;}
+        public List<String> getShipIds() {
+            return this.shipIds;
+        }
+
+        public Map<Integer, ShipVariantAPI> getVariantsMap() {
+            return this.variantsMap;
+        }
+
+        public Map<Integer, OfficerVariantPair> getOfficersMap() {
+            return this.officersMap;
+        }
+
+        public List<FleetMemberWrapper> getFleetMembers() {
+            return this.fleetMembers;
+        }
+
+        public CampaignFleetAPI getCampaignFleet() {
+            return this.campaignFleet;
+        }
+
+        public Map<Integer, VariantWrapper> getVariantWrappers() {
+            return this.variantWrappers;
+        }
+
+        public void setCampaignFleet(CampaignFleetAPI newFleet) {
+            this.campaignFleet = newFleet;
+        }
     }
 
     // if preset member perished while preset was not active or auto update was disabled we need to remove it from the cache to save a few kb of memory xd
