@@ -710,14 +710,6 @@ public class PresetUtils {
                     memberToUpdate.getPreset().getCampaignFleet().getFleetData().getMembersInPriorityOrder().get(memberToUpdate.getIndex()).getStatus().setHullFraction(playerMemberHullFraction);
                     memberToUpdate.getMember().getStatus().setHullFraction(playerMemberHullFraction);
                 }
-
-                if (!isOfficerNought(memberToUpdate.getCaptainCopy())) {
-                    PersonAPI fleetMemberCaptain = memberToUpdate.getPreset().getCampaignFleet().getFleetData().getMembersInPriorityOrder().get(memberToUpdate.getIndex()).getCaptain();
-                    if (fleetMemberCaptain.getStats().getLevel() != playerMember.getCaptain().getStats().getLevel()) {
-                        memberToUpdate.getCaptainCopy().setStats(playerMember.getCaptain().getStats());
-                        fleetMemberCaptain.setStats(playerMember.getCaptain().getStats());
-                    }
-                }
             }
         }
     }
