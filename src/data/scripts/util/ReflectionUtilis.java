@@ -35,9 +35,7 @@ public class ReflectionUtilis {
     private static final Class<?> methodClass;
     private static final Class<?> typeClass;
     private static final Class<?> typeArrayClass;
-    private static final Class<?> parameterizedTypeClass;
     private static final Class<?> constructorClass;
-    private static final Class<?> constructorArrayClass;
 
     private static final MethodHandle getFieldTypeHandle;
     private static final MethodHandle setFieldHandle;
@@ -52,17 +50,16 @@ public class ReflectionUtilis {
     private static final MethodHandle getModifiersHandle;
     private static final MethodHandle getParameterTypesHandle;
     private static final MethodHandle getReturnTypeHandle;
+    private static final MethodHandle getGenericReturnTypeHandle;
     
     private static final MethodHandle getGenericTypeHandle;
-    private static final MethodHandle getRawTypeHandle;
-    private static final MethodHandle getTypeNameHandle;
-    private static final MethodHandle getActualTypeArgumentsHandle;
     private static final MethodHandle getGenericParameterTypesHandle;
     
     private static final MethodHandle setConstructorAccessibleHandle;
-    private static final MethodHandle getDeclaredConstructorsHandle;
     private static final MethodHandle getConstructorParameterTypesHandle;
     private static final MethodHandle constructorNewInstanceHandle;
+    private static final MethodHandle getConstructorDeclaringClassHandle;
+    private static final MethodHandle getConstructorGenericParameterTypesHandle;
 
     static {
         try {
@@ -71,9 +68,7 @@ public class ReflectionUtilis {
             methodClass = Class.forName("java.lang.reflect.Method", false, Class.class.getClassLoader());
             typeClass = Class.forName("java.lang.reflect.Type", false, Class.class.getClassLoader());
             typeArrayClass = Class.forName("[Ljava.lang.reflect.Type;", false, Class.class.getClassLoader());
-            parameterizedTypeClass = Class.forName("java.lang.reflect.ParameterizedType", false, Class.class.getClassLoader());
             constructorClass = Class.forName("java.lang.reflect.Constructor", false, Class.class.getClassLoader());
-            constructorArrayClass = Class.forName("[Ljava.lang.reflect.Constructor;", false, Class.class.getClassLoader());
 
             setFieldHandle = lookup.findVirtual(fieldClass, "set", MethodType.methodType(void.class, Object.class, Object.class));
             getFieldHandle = lookup.findVirtual(fieldClass, "get", MethodType.methodType(Object.class, Object.class));
@@ -88,17 +83,16 @@ public class ReflectionUtilis {
             getModifiersHandle = lookup.findVirtual(methodClass, "getModifiers", MethodType.methodType(int.class));
             getParameterTypesHandle = lookup.findVirtual(methodClass, "getParameterTypes", MethodType.methodType(Class[].class));
             getReturnTypeHandle = lookup.findVirtual(methodClass, "getReturnType", MethodType.methodType(Class.class));
+            getGenericReturnTypeHandle = lookup.findVirtual(methodClass, "getGenericReturnType", MethodType.methodType(typeClass));
 
             getGenericTypeHandle = lookup.findVirtual(fieldClass, "getGenericType", MethodType.methodType(typeClass));
-            getRawTypeHandle = lookup.findVirtual(parameterizedTypeClass, "getRawType", MethodType.methodType(typeClass));
-            getTypeNameHandle = lookup.findVirtual(typeClass, "getTypeName", MethodType.methodType(String.class));
-            getActualTypeArgumentsHandle = lookup.findVirtual(parameterizedTypeClass, "getActualTypeArguments", MethodType.methodType(typeArrayClass)); // this throws dont bother
-            getGenericParameterTypesHandle = lookup.findVirtual(methodClass, "getGenericParameterTypes", MethodType.methodType(typeArrayClass)); // this one does not throw, use this one and cast to Object[]. for constructor params like List, Map etc you will have to log the methods of the class and look for 'Public'
+            getGenericParameterTypesHandle = lookup.findVirtual(methodClass, "getGenericParameterTypes", MethodType.methodType(typeArrayClass));
 
             setConstructorAccessibleHandle = lookup.findVirtual(constructorClass, "setAccessible", MethodType.methodType(void.class, boolean.class));
             getConstructorParameterTypesHandle = lookup.findVirtual(constructorClass, "getParameterTypes", MethodType.methodType(Class[].class));
             constructorNewInstanceHandle = lookup.findVirtual(constructorClass, "newInstance", MethodType.methodType(Object.class, Object[].class));
-            getDeclaredConstructorsHandle = lookup.findVirtual(Class.class, "getDeclaredConstructors", MethodType.methodType(constructorArrayClass));
+            getConstructorDeclaringClassHandle = lookup.findVirtual(constructorClass, "getDeclaringClass", MethodType.methodType(Class.class));
+            getConstructorGenericParameterTypesHandle = lookup.findVirtual(constructorClass, "getGenericParameterTypes", MethodType.methodType(typeArrayClass));
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -252,25 +246,13 @@ public class ReflectionUtilis {
         return (int)getFieldModifiersHandle.invoke(field);
     }
 
-    public static boolean isFieldFinal(int modifiers) throws Throwable {
-        return (modifiers & 0x00000010) != 0;
-    }
-
-    public static boolean isFieldStatic(int modifiers) {
-        return (modifiers & 0x00000010) != 0;
-    }
-
-    public static boolean isFieldStaticAndFinal(int modifiers) throws Throwable {
-        return ((modifiers & 0x0008) != 0) && ((modifiers & 0x00000010) != 0) ;
-    }
-
     public static void transplant(Object original, Object template) {
         try {
             Class<?> currentClass = original.getClass();
             while ((currentClass = currentClass.getSuperclass()) != null) {
 
                 for (Object field : currentClass.getDeclaredFields()) {
-                    if (isFieldFinal(getFieldModifiers(field))) continue;
+                    if (isFinal(getFieldModifiers(field))) continue;
 
                     String fieldName = (String) getFieldNameHandle.invoke(field);
                     Object variable = getPrivateVariableFromSuperClass(fieldName, original);
@@ -281,25 +263,25 @@ public class ReflectionUtilis {
                     }
                 }
             }
-    
+
+            boolean isExactClass = original.getClass().equals(template.getClass());
             for (Object field : original.getClass().getDeclaredFields()) {
-                if (isFieldFinal(getFieldModifiers(field))) continue;
+                if (isFinal(getFieldModifiers(field))) continue;
 
                 Object variable = getPrivateVariable(field, original);
-                try {
+                if (isExactClass) {
                     if (variable == original) {
                         setPrivateVariable(field, template, template);
                     } else {
                         setPrivateVariable(field, template, variable);
                     }
-                } catch (Throwable ignored) { // we are transplanting to a wrapper class so its not the class it expected
+                } else {
                     if (variable == original) {
                         setPrivateVariableByName((String)getFieldNameHandle.invoke(field), template, template);
                     } else {
                         setPrivateVariableByName((String)getFieldNameHandle.invoke(field), template, variable);
                     }
                 }
-
             }
             return;
         } catch (Throwable e) {
@@ -522,15 +504,40 @@ public class ReflectionUtilis {
 
     public static void logMethod(Object method) throws Throwable {
         String methodName = (String) getMethodNameHandle.invoke(method);
-        Class<?> returnType = (Class<?>) getReturnTypeHandle.invoke(method);
+        Object genericReturnType = getGenericReturnTypeHandle.invoke(method);
         Object[] paramTypes = (Object[]) getGenericParameterTypesHandle.invoke(method);
+        int modifiers = (int) getModifiersHandle.invoke(method);
+        String static_ = isStatic(modifiers) ? " static " : " ";
+        String final_ = isFinal(modifiers) ? "final " : "";
 
         StringBuilder paramString = new StringBuilder();
         for (Object paramType : paramTypes) {
             if (paramString.length() > 0) paramString.append(", ");
             paramString.append(String.valueOf(paramType));
         }
-        logger.info(returnType.getSimpleName() + " " + methodName + "(" + paramString.toString() + ")");
+        logger.info(getVisibility(modifiers) + static_ + final_ + String.valueOf(genericReturnType) + " " + methodName + "(" + paramString.toString() + ")");
+    }
+
+    public static void logConstructor(Object constructor, Class<?> cls) throws Throwable {
+        Object[] paramTypes = (Object[]) getConstructorGenericParameterTypesHandle.invoke(constructor);
+
+        StringBuilder paramString = new StringBuilder();
+        for (Object paramType : paramTypes) {
+            if (paramString.length() > 0) paramString.append(", ");
+            paramString.append(String.valueOf(paramType));
+        }
+        logger.info("public " + cls.getSimpleName() + "(" + paramString.toString() + ")");
+    }
+
+    public static void logConstructors(Class<?> cls) {
+        try {
+            Object[] ctors = cls.getDeclaredConstructors();
+            for (Object ctor : ctors) {
+                logConstructor(ctor, cls);
+            }
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static void logMethods(Object instance) {
@@ -538,7 +545,8 @@ public class ReflectionUtilis {
         print("METHODS FOR:", instance.getClass());
         print("---------------------------------");
         try {
-            for (Object method : instance.getClass().getMethods()) {
+            logConstructors(instance.getClass());
+            for (Object method : instance.getClass().getDeclaredMethods()) {
                 logMethod(method);
             }
         } catch (Throwable e) {
@@ -552,7 +560,8 @@ public class ReflectionUtilis {
         print("METHODS FOR:", cls);
         print("---------------------------------");
         try {
-            for (Object method : cls.getMethods()) {
+            logConstructors(cls);
+            for (Object method : cls.getDeclaredMethods()) {
                 logMethod(method);
             }
         } catch (Throwable e) {
@@ -564,7 +573,7 @@ public class ReflectionUtilis {
     public static HashMap<String, Object> getMethods(Object instance) {
         HashMap<String, Object> methods = new HashMap<>();
         try {
-            for (Object method : instance.getClass().getMethods()) {
+            for (Object method : instance.getClass().getDeclaredMethods()) {
                 String methodName = (String) getMethodNameHandle.invoke(method);
                 methods.put(methodName, method);
             }
@@ -742,24 +751,8 @@ public class ReflectionUtilis {
         }
     }
 
-    public static Object[] getConstructorParams(String canonicalName) {
-        try {
-            Class<?> clazz = Class.forName(canonicalName);
-            return clazz.getDeclaredConstructors();
-        } catch (Throwable e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static void logConstructorParams(String canonicalName) {
-        Object[] ctors = getConstructorParams(canonicalName);
-        for (Object ctor : ctors) {
-            print(ctor);
-        }
-    }
-
-    public static boolean doInstantiationParamsMatch(String canonicalName, Class<?>[] targetParams) {
-        Object[] ctors = getConstructorParams(canonicalName);
+    public static boolean doInstantiationParamsMatch(Class<?> cls, Class<?>[] targetParams) {
+        Object[] ctors = cls.getDeclaredConstructors();
         for (Object ctor : ctors) {
             try {
                 Class<?>[] ctorParams = (Class<?>[]) getConstructorParameterTypesHandle.invoke(ctor);
@@ -1144,7 +1137,7 @@ public class ReflectionUtilis {
                         logField(fieldName, fieldType, field, i, instance);
                     // }
                     try {
-                        ReflectionUtilis.logConstructorParams(fieldType.getCanonicalName());
+                        ReflectionUtilis.logConstructors(fieldType);
                     } catch (Exception e) {
                         print(e);
                     }
@@ -1177,7 +1170,7 @@ public class ReflectionUtilis {
                         logField(fieldName, fieldType, field, i);
                     }
                     try {
-                        ReflectionUtilis.logConstructorParams(fieldType.getCanonicalName());
+                        ReflectionUtilis.logConstructors(fieldType);
                     } catch (Exception e) {
                         print(e);
                     }
@@ -1211,7 +1204,7 @@ public class ReflectionUtilis {
                 }
     
                 try {
-                    ReflectionUtilis.logConstructorParams(fieldType.getCanonicalName());
+                    ReflectionUtilis.logConstructors(fieldType);
                 } catch (Exception e) {
                     print(e);
                 }
@@ -1221,5 +1214,32 @@ public class ReflectionUtilis {
         } catch (Throwable e) {
             logger.info("Error logging fields: ", e);
         }
+    }
+
+    public static boolean isPublic(int modifiers) {
+        return (modifiers & 1) != 0;
+    }
+
+    public static boolean isStatic(int modifiers) {
+        return (modifiers & 8) != 0;
+    }
+
+    public static boolean isFinal(int modifiers) {
+        return (modifiers & 16) != 0;
+    }
+
+    public static boolean isPrivate(int modifiers) {
+        return (modifiers & 2) != 0;
+    }
+
+    public static boolean isProtected(int modifiers) {
+        return (modifiers & 4) != 0;
+    }
+
+    public static String getVisibility(int modifiers) {
+        if (isPublic(modifiers)) return "public";
+        if (isPrivate(modifiers)) return "private";
+        if (isProtected(modifiers)) return "protected";
+        return "package-private";
     }
 }

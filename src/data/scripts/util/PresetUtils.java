@@ -265,11 +265,16 @@ public class PresetUtils {
 
         public static PersonAPI createCaptainCopy(PersonAPI captain) {
             PersonAPI captainCopy = Global.getFactory().createPerson();
-            captainCopy.setPortraitSprite(captain.getPortraitSprite());
+            captainCopy.setPersonality(captain.getPersonalityAPI().getId());
+            captainCopy.setRankId(captain.getRankId());
             captainCopy.setFaction(Global.getSector().getPlayerFaction().getId());
             captainCopy.setStats(captain.getStats());
             captainCopy.setName(captain.getName());
+            captainCopy.setPortraitSprite(captain.getPortraitSprite());
             captainCopy.setId(captain.getId());
+            if (captain.isAICore()) {
+                captainCopy.setAICoreId(captain.getAICoreId());
+            }
             return captainCopy;
         }
 
@@ -285,17 +290,7 @@ public class PresetUtils {
             // this.captain = captain;
             this.captainId = captain.getId();
 
-            this.captainCopy = Global.getFactory().createPerson();
-            this.captainCopy.setPersonality(captain.getPersonalityAPI().getId());
-            this.captainCopy.setRankId(captain.getRankId());
-            this.captainCopy.setFaction(Global.getSector().getPlayerFaction().getId());
-            this.captainCopy.getStats().setLevel(captain.getStats().getLevel());
-            this.captainCopy.setName(captain.getName());
-            this.captainCopy.setPortraitSprite(captain.getPortraitSprite());
-            this.captainCopy.setId(captain.getId());
-            if (captain.isAICore()) {
-                this.captainCopy.setAICoreId(captain.getAICoreId());
-            }
+            this.captainCopy = createCaptainCopy(captain);
 
             this.member.setCaptain(captainCopy);
             this.preset.getCampaignFleet().getFleetData().getMembersInPriorityOrder().get(this.index).setCaptain(captainCopy);
@@ -383,12 +378,7 @@ public class PresetUtils {
 
         public FleetPreset(String name, List<FleetMemberAPI> fleetMembers) {
             this.name = name;
-            this.campaignFleet = Global.getFactory().createEmptyFleet(Global.getSector().getPlayerFaction(), true);
-            this.campaignFleet.setHidden(true);
-            this.campaignFleet.setNoAutoDespawn(true);
-            this.campaignFleet.setDoNotAdvanceAI(true);
-            this.campaignFleet.setInflated(true);
-            this.campaignFleet.setNoFactionInName(true);
+            this.campaignFleet = createDummyPresetFleet();
 
             Map<String, List<FleetMemberWrapper>> presetsMembers = getFleetPresetsMembers();
             for (int i = 0; i < fleetMembers.size(); i++) {
@@ -1167,8 +1157,10 @@ public class PresetUtils {
     public static Map<FleetMemberWrapper, FleetMemberAPI> getIdAgnosticRequiredMembers(MarketAPI market, String presetName) {
         if (market == null) return null;
         if (CargoPresetUtils.getStorageSubmarket(market) == null) return null;
+
         FleetPreset preset = getFleetPresets().get(presetName);
         if (preset == null) return null;
+        
         Map<String, List<FleetMemberWrapper>> neededShips = findNeededShipsWrappedNonIdMatching(preset, Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
         if (neededShips.isEmpty()) return null;
 
@@ -1198,6 +1190,7 @@ public class PresetUtils {
     public static boolean isMemberWrappedInPresets(FleetMemberAPI memberToCheck) {
         Map<String, List<FleetMemberWrapper>> presetMembers = getFleetPresetsMembers();
         if (presetMembers.get(memberToCheck.getId()) == null) return false;
+
         for (FleetMemberWrapper wrappedMember : presetMembers.get(memberToCheck.getId())) {
             if (wrappedMember.getId().equals(memberToCheck.getId())) return true;
         }
@@ -1205,12 +1198,7 @@ public class PresetUtils {
     }
 
     public static CampaignFleetAPI mangleFleet(Map<FleetMemberWrapper, FleetMemberAPI> neededMembers, CampaignFleetAPI fleetToBeMangled) {
-        CampaignFleetAPI mangledFleet = Global.getFactory().createEmptyFleet(Global.getSector().getPlayerFaction(), true);
-        mangledFleet.setHidden(true);
-        mangledFleet.setNoAutoDespawn(true);
-        mangledFleet.setDoNotAdvanceAI(true);
-        mangledFleet.setInflated(true);
-        mangledFleet.setNoFactionInName(true);
+        CampaignFleetAPI mangledFleet = createDummyPresetFleet();
         
         List<FleetMemberAPI> members = fleetToBeMangled.getFleetData().getMembersInPriorityOrder();
         Map<Integer, FleetMemberAPI> indexedMembers = new HashMap<>();

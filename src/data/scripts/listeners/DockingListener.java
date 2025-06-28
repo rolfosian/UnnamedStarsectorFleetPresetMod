@@ -123,13 +123,13 @@ public class DockingListener extends BaseCampaignEventListener {
                         return;
 
                     case "ratVisitSettlement":
-                        this.settlement = ((FrontiersData)Global.getSector().getMemoryWithoutUpdate().get("$rat_frontiers_data")).getActiveSettlement();
+                        if (this.settlement == null) this.settlement = ((FrontiersData)Global.getSector().getMemoryWithoutUpdate().get("$rat_frontiers_data")).getActiveSettlement();
                         reportPlayerClosedMarket(originalMarket);
                         reportPlayerOpenedMarket(this.settlement.getSettlementEntity().getMarket()); // ((SettlementData)settlement)
                         return;
                     
                     case "Descend towards the settlement":
-                        this.settlement = ((FrontiersData)Global.getSector().getMemoryWithoutUpdate().get("$rat_frontiers_data")).getActiveSettlement();
+                        if (this.settlement == null) this.settlement = ((FrontiersData)Global.getSector().getMemoryWithoutUpdate().get("$rat_frontiers_data")).getActiveSettlement();
                         reportPlayerClosedMarket(originalMarket);
                         reportPlayerOpenedMarket(this.settlement.getSettlementEntity().getMarket());
                         return;

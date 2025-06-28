@@ -117,7 +117,7 @@ public class ClassRefs {
                 optionPanelGetButtonToItemMapMethod = ReflectionUtilis.getMethod("getButtonToItemMap", dialog.getOptionPanel(), 0);
         
                 for (Object child : (List<Object>) ReflectionUtilis.invokeMethodDirectly(visualPanelGetChildrenNonCopyMethod, visualPanel)) {
-                    if (UIPanelAPI.class.isAssignableFrom(child.getClass()) && ReflectionUtilis.doInstantiationParamsMatch(child.getClass().getCanonicalName(), visualPanelFleetInfoClassParamTypes)) {
+                    if (UIPanelAPI.class.isAssignableFrom(child.getClass()) && ReflectionUtilis.doInstantiationParamsMatch(child.getClass(), visualPanelFleetInfoClassParamTypes)) {
                         visualPanelFleetInfoClass = child.getClass(); // found it
                         dialog.dismiss();
                         Global.getSector().removeListener(this);
@@ -151,7 +151,7 @@ public class ClassRefs {
                 for (Object method : child.getClass().getDeclaredMethods()) {
                     if (ReflectionUtilis.getMethodName(method).equals("buttonPressed")) {
                         for (Class<?> paramType : ReflectionUtilis.getMethodParamTypes(method)) {
-                            if (ReflectionUtilis.doInstantiationParamsMatch(paramType.getCanonicalName(), inputEventClassParamTypes)) {
+                            if (ReflectionUtilis.doInstantiationParamsMatch(paramType, inputEventClassParamTypes)) {
                                 inputEventClass = paramType;
                                 return;
                             }
