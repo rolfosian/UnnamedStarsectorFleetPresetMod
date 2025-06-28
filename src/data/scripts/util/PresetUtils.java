@@ -87,6 +87,18 @@ public class PresetUtils {
     public static final String RESTOREMESSAGE_FAIL_SUFFIX = " in storage to load for preset: ";
     public static final String OFFICER_NULL_PORTRAIT_PATH = "graphics/portraits/portrait_generic_grayscale.png";
 
+    public static final String[][] FLEET_TYPES = {
+        {"Stealth", "graphics/icons/skills/phase_corps.png"},
+        {"Carrier", "graphics/icons/skills/carrier_command.png"},
+        {"Combat", "graphics/icons/skills/strike_commander.png"},
+        {"Automated", "graphics/icons/cargo/ai_core_alpha.png"},
+        {"Exploration", "graphics/icons/skills/sensors.png"},
+        {"Invasion" , "graphics/icons/cargo/heavyweapons.png"},
+        {"Colonizer", "graphics/icons/skills/planetary_ops.png"},
+        {"Salvage", "graphics/icons/skills/salvaging.png"},
+        {"Trade", "graphics/icons/skills/recovery_ops.png"}
+    };
+
     private static final HullSize[] SIZE_ORDER_DESCENDING = {
         HullSize.CAPITAL_SHIP,
         HullSize.DEFAULT,
@@ -103,6 +115,15 @@ public class PresetUtils {
         HullSize.DEFAULT,
         HullSize.CAPITAL_SHIP
     };
+
+    public static int getDeploymentPointsMinusCivilian() {
+        int points = 0;
+        for (FleetMemberAPI member : Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder()) {
+            if (member.getVariant().getHullSpec().isCivilianNonCarrier()) continue;
+            points += member.getDeploymentPointsCost();
+        }
+        return points;
+    }
 
     // sorts while shunting civilian members to the bottom
     public static void sortFleetMembers(List<FleetMemberAPI> fleetMembers, HullSize[] order) {
@@ -139,41 +160,7 @@ public class PresetUtils {
         });
     }
 
-    public static String[] getFleetType(List<FleetMemberAPI> fleetMembers) {
-        int carriers = 0;
-        int combats = 0;
-        int civilians = 0; 
-        int explorationShips = 0;
 
-        for (FleetMemberAPI member : fleetMembers) {
-            if (member.getVariant().getHullSpec().isCarrier()) {
-                carriers++;
-            } else if (member.getVariant().getHullSpec().isCivilianNonCarrier()) {
-                civilians++;
-            } else if (!member.getVariant().getHullSpec().isCivilianNonCarrier()) {
-                combats++;
-            }
-
-            if (member.getVariant().hasHullMod("hiressensors") || member.getVariant().hasHullMod("surveying_equipment")) {
-                explorationShips++;
-            }
-        }
-        int max = Math.max(Math.max(carriers, combats), Math.max(civilians, explorationShips));
-
-        String type = "Mixed Fleet";
-        if (max == explorationShips) type = "Exploration";
-        if (max == carriers) type = "Carrier";
-        if (max == combats) type = "Combat";
-        if (max == civilians) type = "Salvage/Trade";
-
-        String iconPath = "graphics/icons/skills/leadership2.png";
-        if (max == explorationShips) iconPath = "graphics/icons/skills/sensors.png";
-        if (max == carriers) iconPath = "graphics/icons/skills/carrier_command.png";
-        if (max == combats) iconPath = "graphics/icons/skills/strike_commander.png";
-        if (max == civilians) iconPath = "graphics/icons/skills/industrial_planning.png";
-
-        return new String[] {iconPath, type};
-    }
 
     public static class RunningMembers extends HashMap<FleetMemberAPI, PersonAPI> {
         public RunningMembers(List<FleetMemberAPI> fleetMembers) {

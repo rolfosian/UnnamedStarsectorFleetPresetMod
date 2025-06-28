@@ -347,7 +347,7 @@ public class FleetPresetManagementListener extends ActionListener {
         //                 // PresetMiscUtils.pressKey(Keyboard.KEY_RETURN); // THIS DOESNT EVEN WORK - THE TEXTFIELD CONSUMES THE EVENT BEFORE IT GETS HERE...
         //             }
         //         }
-        //     }
+        //     };
         // };
 
         CustomPanelAPI textFieldPanel = Global.getSettings().createCustom(CONFIRM_DIALOG_WIDTH / 2 / 6, CONFIRM_DIALOG_HEIGHT / 2 / 12, textPanelPlugin);
@@ -364,24 +364,61 @@ public class FleetPresetManagementListener extends ActionListener {
             CONFIRM_DIALOG_HEIGHT / 2,
             saveListener);
 
-        // String[] fleetType = PresetUtils.getFleetType(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
+        float yOffset = 0f;
+        float xOffset = 0f;
+        int column = 0;
+        int row = 0;
+        for (String[] pair : PresetUtils.FLEET_TYPES) {
+            String fleetType = pair[0];
+            String icon = pair[1];
 
-        // CustomPanelAPI imgTooltipPanel = Global.getSettings().createCustom(64f, 64f, new BaseCustomUIPanelPlugin() {
-        //     @Override
-        //     public void buttonPressed(Object buttonId) {
-        //         saveNameField.setText(fleetType[1]);
-        //     }
-        // });
+            CustomPanelAPI imgTooltipPanel = Global.getSettings().createCustom(40f, 40f, new BaseCustomUIPanelPlugin() {
+                @Override
+                public void buttonPressed(Object buttonId) {
+                    if (saveNameField.getText().equals(fleetType)) {
+                        saveNameField.setText("");
+                        saveNameField.grabFocus();
+                    } else {
+                        saveNameField.setText(fleetType);
+                        saveNameField.grabFocus();
+                    }
+                }
+            });
+    
+            TooltipMakerAPI imgTooltip = imgTooltipPanel.createUIElement(40f, 40f, false);
+            imgTooltip.addImage(icon, 40f, 40f, 0f);
+            imgTooltipPanel.addUIElement(imgTooltip);
+            ButtonAPI button = imgTooltip.addButton("", "", Global.getSettings().getBasePlayerColor(), Global.getSettings().getBasePlayerColor(), Alignment.MID, CutStyle.NONE, 40f, 40f, 0f);
+            button.setOpacity(0.15f);
+            button.getPosition().setYAlignOffset(40f);
 
-        // TooltipMakerAPI imgTooltip = imgTooltipPanel.createUIElement(64f, 64f, false);
-        // imgTooltip.addImage(fleetType[0], 0f);
-        // imgTooltipPanel.addUIElement(imgTooltip);
-        // ButtonAPI button = imgTooltip.addButton("", "", null, null, Alignment.MID, CutStyle.NONE, 64f, 64f, 0f);
-        // button.getPosition().setYAlignOffset(64f);
+            xOffset = subData.panel.getPosition().getWidth() - 67f - (column * 45f);
+            // yOffset = ((CONFIRM_DIALOG_HEIGHT / 2 / 2 / 2) + 5f) + (row > 0 ? row * 45f : 0f);
+            yOffset = 35f + (row > 0 ? row * 45f : 0f);
+            
+            subData.panel.addComponent(imgTooltipPanel).inTL(xOffset, yOffset);
 
-        // subData.panel.addComponent(imgTooltipPanel).inTL(0f, 0f);
+            column++;
+            if (column >= 3) {
+                column = 0;
+                row++;
+            }
+        }
+        // subData.textLabel.setColor(Global.getSettings().getBrightPlayerColor());
 
-        subData.panel.addComponent(textFieldPanel).inTL(0f, 0f).setXAlignOffset(CONFIRM_DIALOG_WIDTH / 2 / 2 / 2).setYAlignOffset(-CONFIRM_DIALOG_HEIGHT / 2 / 2 / 2);
+        LabelAPI labbel = Global.getSettings().createLabel("Deployment Pts (Non civilian)", Fonts.ORBITRON_12);
+        labbel.setColor(Global.getSettings().getBrightPlayerColor());
+        labbel.setAlignment(Alignment.MID);
+        // subData.panel.addComponent((UIComponentAPI)labbel).inTL(CONFIRM_DIALOG_WIDTH / 2 / 1.35f, 5f);
+        
+        LabelAPI ptsLabbel = Global.getSettings().createLabel(String.valueOf(PresetUtils.getDeploymentPointsMinusCivilian()), Fonts.ORBITRON_16);
+        ptsLabbel.setColor(Misc.getHighlightColor());
+        ptsLabbel.setAlignment(Alignment.MID);
+
+        subData.panel.addComponent((UIComponentAPI)labbel).inTL(10f, subData.panel.getPosition().getHeight() - (ptsLabbel.computeTextHeight(ptsLabbel.getText()) + labbel.computeTextHeight(labbel.getText()) + 30f));
+        subData.panel.addComponent((UIComponentAPI)ptsLabbel).belowLeft((UIComponentAPI)labbel, 5f);
+
+        subData.panel.addComponent(textFieldPanel).inTL(0f, 0f).setXAlignOffset(CONFIRM_DIALOG_WIDTH / 2 / 2 / 2 / 2 - 20f).setYAlignOffset(-CONFIRM_DIALOG_HEIGHT / 2 / 2 / 2);
         saveNameField.grabFocus();
     }
 
