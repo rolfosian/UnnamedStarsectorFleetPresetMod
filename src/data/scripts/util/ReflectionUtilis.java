@@ -541,18 +541,7 @@ public class ReflectionUtilis {
     }
 
     public static void logMethods(Object instance) {
-        print("---------------------------------");
-        print("METHODS FOR:", instance.getClass());
-        print("---------------------------------");
-        try {
-            logConstructors(instance.getClass());
-            for (Object method : instance.getClass().getDeclaredMethods()) {
-                logMethod(method);
-            }
-        } catch (Throwable e) {
-            print(e);
-            logger.info("Error logging methods: ", e);
-        }
+        logMethods(instance.getClass());
     }
 
     public static void logMethods(Class<?> cls) {
@@ -1041,9 +1030,6 @@ public class ReflectionUtilis {
             throw new RuntimeException(e);
         }
     }
-
-
-
 
     // Helper function to compare parameter types
     private static boolean areParameterTypesMatching(Class<?>[] methodParamTypes, Class<?>[] targetParamTypes) {
