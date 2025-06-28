@@ -23,7 +23,6 @@ public class FleetMonitor implements EveryFrameScript {
     IntervalUtil checkPerishedMembersInterval = new IntervalUtil(599f, 600f);
 
     RunningMembers runningMembers;
-    // List<FleetMemberAPI> runningMembers;
     Map<String, List<FleetMemberWrapper>> presetMembers;
 
     @SuppressWarnings("unchecked")
@@ -35,7 +34,6 @@ public class FleetMonitor implements EveryFrameScript {
     @Override
     public void advance(float amount) {
         if (Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY) != null) return;
-
         checkFleetInterval.advance(amount);
         checkPerishedMembersInterval.advance(amount);
 

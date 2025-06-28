@@ -529,6 +529,10 @@ public class ReflectionUtilis {
         logger.info("public " + cls.getSimpleName() + "(" + paramString.toString() + ")");
     }
 
+    public static void logConstructors(Object instance) {
+        logConstructors(instance.getClass());
+    }
+
     public static void logConstructors(Class<?> cls) {
         try {
             Object[] ctors = cls.getDeclaredConstructors();
@@ -1074,10 +1078,19 @@ public class ReflectionUtilis {
 
     public static Object getFieldAtIndex(Object instance, int index) {
         try {
-            Object[] fields = instance.getClass().getDeclaredFields();
-            setFieldAccessibleHandle.invoke(fields[index], true);
-            // return getPrivateVariable((String)getFieldNameHandle.invoke(fields[index]), instance);
-            return getFieldHandle.invoke(fields[index], instance);
+            int i = 0;
+            Class<?> currentClass = instance.getClass();
+            while (currentClass != null) {
+                for (Object field : currentClass.getDeclaredFields()) {
+                    if (i == index) {
+                        setFieldAccessibleHandle.invoke(field, true);
+                        return getFieldHandle.invoke(field, instance);
+                    }
+                    i++;
+                }
+                currentClass = currentClass.getSuperclass();
+            }
+            return null;
         } catch (Throwable e) {
             print(e);
             return null;
@@ -1086,8 +1099,18 @@ public class ReflectionUtilis {
 
     public static Class<?> getFieldTypeAtIndex(Object instance, int index) {
         try {
-            Object[] fields = instance.getClass().getDeclaredFields();
-            return (Class<?>) getFieldTypeHandle.invoke(fields[index]);
+            int i = 0;
+            Class<?> currentClass = instance.getClass();
+            while (currentClass != null) {
+                for (Object field : currentClass.getDeclaredFields()) {
+                    if (i == index) {
+                        return (Class<?>) getFieldTypeHandle.invoke(field);
+                    }
+                    i++;
+                }
+                currentClass = currentClass.getSuperclass();
+            }
+            return null;
         } catch (Throwable e) {
             print(e);
             return null;
@@ -1172,31 +1195,33 @@ public class ReflectionUtilis {
     public static void logFieldsOfFieldIndex(Object instance, int index) {
         try {
             int i = 0;
-            for (Object field : instance.getClass().getDeclaredFields()) {
-                if (i != index) {
-                    i++;
-                    continue;
-                }
-                logger.info("---------------------------------------------");
-                Class<?> fieldType = (Class<?>) getFieldTypeHandle.invoke(field);
-                if (fieldType.isPrimitive()) continue;
-                int j = 0;
-                for (Object childField : fieldType.getDeclaredFields()) {
-                    String childFieldName = (String) getFieldNameHandle.invoke(childField);
-                    Class<?> childFieldType = (Class<?>) getFieldTypeHandle.invoke(childField);
+            Class<?> currentClass = instance.getClass();
+            while (currentClass != null) {
+                for (Object field : currentClass.getDeclaredFields()) {
+                    if (i == index) {
+                        logger.info("---------------------------------------------");
+                        Class<?> fieldType = (Class<?>) getFieldTypeHandle.invoke(field);
+                        if (fieldType.isPrimitive()) return;
+                        int j = 0;
+                        for (Object childField : fieldType.getDeclaredFields()) {
+                            String childFieldName = (String) getFieldNameHandle.invoke(childField);
+                            Class<?> childFieldType = (Class<?>) getFieldTypeHandle.invoke(childField);
 
-                    logField(childFieldName, childFieldType, childField, j);
-                    j++;
+                            logField(childFieldName, childFieldType, childField, j);
+                            j++;
+                        }
+            
+                        try {
+                            ReflectionUtilis.logConstructors(fieldType);
+                        } catch (Exception e) {
+                            print(e);
+                        }
+                        return;
+                    }
+                    i++;
                 }
-    
-                try {
-                    ReflectionUtilis.logConstructors(fieldType);
-                } catch (Exception e) {
-                    print(e);
-                }
-                i++;
+                currentClass = currentClass.getSuperclass();
             }
-    
         } catch (Throwable e) {
             logger.info("Error logging fields: ", e);
         }
