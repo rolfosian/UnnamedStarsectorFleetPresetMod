@@ -396,7 +396,7 @@ public class FleetPresetManagementListener extends ActionListener {
             button.getPosition().setYAlignOffset(50f);
 
             xOffset = subData.panel.getPosition().getWidth() - 75f - (column * 55f);
-            yOffset = 10f + (row > 0 ? row * 55f : 0f);
+            yOffset = 12f + (row > 0 ? row * 55f : 0f);
             
             subData.panel.addComponent(imgTooltipPanel).inTL(xOffset, yOffset);
 
@@ -417,7 +417,7 @@ public class FleetPresetManagementListener extends ActionListener {
         CustomPanelAPI ptsLabbelPanel = Global.getSettings().createCustom(width + 20f, height, null);
         TooltipMakerAPI ptsLabbelTooltip = ptsLabbelPanel.createUIElement(width + 20f, height, false);
         ptsLabbelTooltip.setParaOrbitronVeryLarge();
-        
+
         LabelAPI ptsLabbel = ptsLabbelTooltip.addPara(deployPts, Misc.getHighlightColor(), 10f);
         ptsLabbel.setHighlightOnMouseover(true);
         ptsLabbel.setHighlightColor(new Color(255, 255, 230));

@@ -94,7 +94,7 @@ public class PresetUtils {
         {"Automated", "graphics/icons/cargo/ai_core_alpha.png"},
         {"Exploration", "graphics/icons/skills/sensors.png"},
         {"Invasion" , "graphics/icons/cargo/heavyweapons.png"},
-        {"Colonizer", "graphics/icons/skills/planetary_ops.png"},
+        {"Colony Expedition", "graphics/icons/skills/planetary_ops.png"},
         {"Salvage", "graphics/icons/skills/salvaging.png"},
         {"Trade", "graphics/icons/skills/recovery_ops.png"}
     };
