@@ -365,6 +365,14 @@ public class FleetPresetManagementListener extends ActionListener {
             CONFIRM_DIALOG_HEIGHT / 2,
             saveListener);
 
+
+        CustomPanelAPI imgButtonPanel = Global.getSettings().createCustom(172f, 172f, null);
+        TooltipMakerAPI imageButtonTt = imgButtonPanel.createUIElement(172f, 172f, false);
+        imgButtonPanel.addUIElement(imageButtonTt).setYAlignOffset(1f);
+        imageButtonTt.beginTable(c2, c2, c2, 54f, true, false, new Object[]{"", 170f});
+        imageButtonTt.addTable("", 0, 0f);
+        subData.panel.addComponent((UIComponentAPI)imgButtonPanel).inTL(subData.panel.getPosition().getWidth() - 185f, 12f);
+
         float yOffset = 0f;
         float xOffset = 0f;
         int column = 0;
@@ -391,14 +399,17 @@ public class FleetPresetManagementListener extends ActionListener {
             imgTooltipPanel.addUIElement(imgTooltip);
 
             ButtonAPI button = imgTooltip.addButton("", "", Global.getSettings().getBasePlayerColor(), Global.getSettings().getBasePlayerColor(), Alignment.MID, CutStyle.NONE, 50f, 50f, 0f);
-            // imgTooltip.addTooltipTo(tc(fleetType), button, TooltipLocation.RIGHT, false);
             button.setOpacity(0.15f);
             button.getPosition().setYAlignOffset(50f);
 
-            xOffset = subData.panel.getPosition().getWidth() - 75f - (column * 55f);
-            yOffset = 12f + (row > 0 ? row * 55f : 0f);
+            // xOffset = subData.panel.getPosition().getWidth() - 75f - (column * 55f);
+            // yOffset = 12f + (row > 0 ? row * 55f : 0f);
+            xOffset = 5f + column * 55f;
+            yOffset = 12f + row > 0 ? row * 55f : 0f;
             
-            subData.panel.addComponent(imgTooltipPanel).inTL(xOffset, yOffset);
+            
+            // subData.panel.addComponent(imgTooltipPanel).inTL(xOffset, yOffset);
+            imgButtonPanel.addComponent(imgTooltipPanel).inTL(xOffset, yOffset);
 
             column++;
             if (column >= 3) {

@@ -88,15 +88,15 @@ public class PresetUtils {
     public static final String OFFICER_NULL_PORTRAIT_PATH = "graphics/portraits/portrait_generic_grayscale.png";
 
     public static final String[][] FLEET_TYPES = {
-        {"Stealth", "graphics/icons/skills/phase_corps.png"},
-        {"Carrier", "graphics/icons/skills/carrier_command.png"},
         {"Combat", "graphics/icons/skills/strike_commander.png"},
-        {"Automated", "graphics/icons/cargo/ai_core_alpha.png"},
-        {"Exploration", "graphics/icons/skills/sensors.png"},
+        {"Carrier", "graphics/icons/skills/carrier_command.png"},
+        {"Stealth", "graphics/icons/skills/phase_corps.png"},
         {"Invasion" , "graphics/icons/cargo/heavyweapons.png"},
-        {"Colony Expedition", "graphics/icons/skills/planetary_ops.png"},
+        {"Exploration", "graphics/icons/skills/sensors.png"},
+        {"Automated", "graphics/icons/cargo/ai_core_alpha.png"},
         {"Salvage", "graphics/icons/skills/salvaging.png"},
-        {"Trade", "graphics/icons/skills/recovery_ops.png"}
+        {"Trade", "graphics/icons/skills/recovery_ops.png"},
+        {"Colony Expedition", "graphics/icons/skills/planetary_ops.png"}
     };
 
     private static final HullSize[] SIZE_ORDER_DESCENDING = {
