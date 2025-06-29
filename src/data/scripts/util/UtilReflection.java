@@ -113,17 +113,7 @@ public class UtilReflection {
             float height,
             DialogDismissedListener dialogListener) {
 
-        Object confirmDialog = ReflectionUtilis.instantiateClass(
-            ClassRefs.confirmDialogClass,
-            ClassRefs.confirmDialogClassParamTypes,
-            width,
-            height,
-            ReflectionUtilis.getPrivateVariable("screenPanel", Global.getSector().getCampaignUI()),
-            dialogListener.getProxy(),
-            text,
-            new String[]{confirmText, cancelText}
-        );
-        
+        Object confirmDialog = createConfirmDialog(text, confirmText, cancelText, width, height, dialogListener);
         ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogShowMethod, confirmDialog, 0.25f, 0.25f);
 
         LabelAPI label = (LabelAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetLabelMethod, confirmDialog);
@@ -136,6 +126,45 @@ public class UtilReflection {
                 (UIPanelAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetInnerPanelMethod, confirmDialog),
                 (UIPanelAPI) confirmDialog);
     }
+
+    public static ConfirmDialogData showConfirmationDialog(
+        String backgroundImagePath,
+        String text,
+        String confirmText,
+        String cancelText,
+        float width,
+        float height,
+        DialogDismissedListener dialogListener) {
+
+    Object confirmDialog = createConfirmDialog(text, confirmText, cancelText, width, height, dialogListener);
+    ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogShowMethod, confirmDialog, 0.25f, 0.25f);
+
+    LabelAPI label = (LabelAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetLabelMethod, confirmDialog);
+    Button yes = new Button((ButtonAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetButtonMethod, confirmDialog, 0), null, null);
+    Button no = new Button((ButtonAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetButtonMethod, confirmDialog, 1), null, null);
+
+    UIPanelAPI innerPanel = (UIPanelAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetInnerPanelMethod, confirmDialog);
+    PositionAPI innerPanelPos = innerPanel.getPosition();
+    CustomPanelAPI bgImagePanel = Global.getSettings().createCustom(innerPanelPos.getWidth(), innerPanelPos.getHeight(), null);
+    TooltipMakerAPI imagePaneltt = bgImagePanel.createUIElement(innerPanelPos.getWidth(), innerPanelPos.getHeight(), false);
+
+    imagePaneltt.addImage(backgroundImagePath, innerPanelPos.getWidth(), innerPanelPos.getHeight(), 0f);
+    imagePaneltt.setOpacity(0.66f);
+    bgImagePanel.addUIElement(imagePaneltt);
+
+    innerPanel.addComponent((UIComponentAPI)bgImagePanel);
+    innerPanel.sendToBottom(bgImagePanel);
+    innerPanel.sendToBottom(imagePaneltt);
+    innerPanel.bringComponentToTop((UIComponentAPI)label);
+    innerPanel.bringComponentToTop((UIComponentAPI)yes.getInstance());
+    innerPanel.bringComponentToTop((UIComponentAPI)no.getInstance());
+    return new ConfirmDialogData(
+            label,
+            yes,
+            no,
+            innerPanel,
+            (UIPanelAPI) confirmDialog);
+}
 
     public static UIPanelAPI getCoreUI() {
         CampaignUIAPI campaignUI = Global.getSector().getCampaignUI();
@@ -169,6 +198,19 @@ public class UtilReflection {
         null,
         null,
         true
+        );
+    }
+
+    public static Object createConfirmDialog(String text, String confirmText, String cancelText, float width, float height, DialogDismissedListener dialogListener) {
+        return ReflectionUtilis.instantiateClass(
+            ClassRefs.confirmDialogClass,
+            ClassRefs.confirmDialogClassParamTypes,
+            width,
+            height,
+            ReflectionUtilis.getPrivateVariable("screenPanel", Global.getSector().getCampaignUI()),
+            dialogListener.getProxy(),
+            text,
+            new String[]{confirmText, cancelText}
         );
     }
 }

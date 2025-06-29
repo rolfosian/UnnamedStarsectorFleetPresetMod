@@ -337,6 +337,7 @@ public class FleetPresetManagementListener extends ActionListener {
         subData.confirmButton.getInstance().setShortcut(Keyboard.KEY_G, false);
     }
 
+    @SuppressWarnings("unchecked")
     private void openSaveDialog() {
 
         SaveListener saveListener = new SaveListener(false, true);
@@ -358,6 +359,7 @@ public class FleetPresetManagementListener extends ActionListener {
         textFieldPanel.addUIElement(textFieldTooltipMaker).inTL(0f, 0f);
 
         UtilReflection.ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
+            "graphics/illustrations/entering_hyperspace.jpg",
             SAVE_DIALOG_HEADER,
             SAVE_DIALOG_YES_TEXT,
             CANCEL_TEXT,
@@ -365,13 +367,15 @@ public class FleetPresetManagementListener extends ActionListener {
             CONFIRM_DIALOG_HEIGHT / 2,
             saveListener);
 
-
         CustomPanelAPI imgButtonPanel = Global.getSettings().createCustom(172f, 172f, null);
         TooltipMakerAPI imageButtonTt = imgButtonPanel.createUIElement(172f, 172f, false);
         imgButtonPanel.addUIElement(imageButtonTt).setYAlignOffset(1f);
         imageButtonTt.beginTable(c2, c2, c2, 54f, true, false, new Object[]{"", 170f});
         imageButtonTt.addTable("", 0, 0f);
         subData.panel.addComponent((UIComponentAPI)imgButtonPanel).inTL(subData.panel.getPosition().getWidth() - 185f, 12f);
+
+        String sectorSeedString = Global.getSector().getSeedString();
+        addVerticalSeedString(subData.panel, sectorSeedString);
 
         float yOffset = 0f;
         float xOffset = 0f;
@@ -402,13 +406,9 @@ public class FleetPresetManagementListener extends ActionListener {
             button.setOpacity(0.15f);
             button.getPosition().setYAlignOffset(50f);
 
-            // xOffset = subData.panel.getPosition().getWidth() - 75f - (column * 55f);
-            // yOffset = 12f + (row > 0 ? row * 55f : 0f);
             xOffset = 5f + column * 55f;
             yOffset = 12f + row > 0 ? row * 55f : 0f;
             
-            
-            // subData.panel.addComponent(imgTooltipPanel).inTL(xOffset, yOffset);
             imgButtonPanel.addComponent(imgTooltipPanel).inTL(xOffset, yOffset);
 
             column++;
@@ -418,8 +418,8 @@ public class FleetPresetManagementListener extends ActionListener {
             }
         }
 
-        String[] deployPtsBreakdown = PresetUtils.getDeploymentPointsBreakdown();
-        String deployPts = deployPtsBreakdown[0];
+        Object[] deployPtsBreakdown = PresetUtils.getDeploymentPointsBreakdown();
+        String deployPts = String.valueOf(deployPtsBreakdown[0]);
 
         LabelAPI dumDumLabel = Global.getSettings().createLabel(deployPts, Fonts.ORBITRON_24AA);
         float width = dumDumLabel.computeTextWidth(deployPts);
@@ -433,10 +433,10 @@ public class FleetPresetManagementListener extends ActionListener {
         ptsLabbel.setHighlightOnMouseover(true);
         ptsLabbel.setHighlightColor(new Color(255, 255, 230));
 
-        ptsLabbelTooltip.addTooltipTo(getPtsLabelTt(deployPtsBreakdown[1], Fonts.ORBITRON_16), ptsLabbelTooltip, TooltipLocation.RIGHT);
+        ptsLabbelTooltip.addTooltipTo(getPtsLabelTt((Map<String, String>)deployPtsBreakdown[1], Fonts.ORBITRON_16), ptsLabbelTooltip, TooltipLocation.RIGHT);
         ptsLabbelPanel.addUIElement(ptsLabbelTooltip);
 
-        subData.panel.addComponent(ptsLabbelPanel).inTL(0f, subData.panel.getPosition().getHeight() - height - 8f);//(10f, CONFIRM_DIALOG_HEIGHT-height - 10f);
+        subData.panel.addComponent(ptsLabbelPanel).inTL(0f, subData.panel.getPosition().getHeight() - height - 8f);
         subData.panel.addComponent(textFieldPanel).inTL(0f, 0f).setXAlignOffset(CONFIRM_DIALOG_WIDTH / 2 / 2 / 2 / 2 - 20f).setYAlignOffset(-CONFIRM_DIALOG_HEIGHT / 2 / 2 / 2);
 
         saveNameField.grabFocus();
@@ -1130,21 +1130,33 @@ public class FleetPresetManagementListener extends ActionListener {
         };
     }
 
-    public static TooltipMakerAPI.TooltipCreator getPtsLabelTt(final String breakdown, final String font) {
-        LabelAPI dumDumLabel = Global.getSettings().createLabel(breakdown, font);
-
-        float width = dumDumLabel.computeTextWidth(breakdown) + 30f;
-        float height = dumDumLabel.computeTextHeight(breakdown);
-
+    public static TooltipMakerAPI.TooltipCreator getPtsLabelTt(final Map<String, String> breakdown, final String font) {
+        final float width = 300f;
+        final float height = 32f + 32f * breakdown.size();
+        
         final CustomPanelAPI l1 = Global.getSettings().createCustom(width, height, null);
         TooltipMakerAPI tt = l1.createUIElement(width, height, false);
 
         LabelAPI header = tt.addPara("Total Deployment Pts (Non Civilian)", 0f);
         header.setAlignment(Alignment.MID);
-        header.getPosition().setYAlignOffset(-8f);
 
-        tt.setParaFont(font);
-        tt.addParaWithMarkup(breakdown, 0f).getPosition().setYAlignOffset(10f);
+        UIPanelAPI tablePanel = tt.beginTable(c1, c2, c1, 32f, true, false, new Object[]{"", width / 2 - 2.5f, "", width / 2 - 2.5f});
+
+        for (Map.Entry<String, String> entry : breakdown.entrySet()) {
+            LabelAPI shipLabbel = Global.getSettings().createLabel(entry.getKey(), Fonts.ORBITRON_12);
+            shipLabbel.setColor(Misc.getBrightPlayerColor());
+            shipLabbel.setHighlightColor(Misc.getHighlightedOptionColor());
+
+            LabelAPI ptsLabbel = Global.getSettings().createLabel(entry.getValue(), Fonts.ORBITRON_16);
+            ptsLabbel.setColor(Misc.getHighlightColor());
+            ptsLabbel.setHighlightColor(new Color(255, 255, 230));
+
+            tt.addRow(Alignment.MID, Misc.getBrightPlayerColor(), shipLabbel, Alignment.MID, Misc.getHighlightColor(), ptsLabbel);
+        }
+
+        tt.addTable("", 0, 0f);
+
+        tablePanel.getPosition().belowMid((UIComponentAPI)header, 10f);
 
         l1.addUIElement(tt);
         return new TooltipMakerAPI.TooltipCreator() {
@@ -1163,5 +1175,21 @@ public class FleetPresetManagementListener extends ActionListener {
                 tooltip.addCustom((UIComponentAPI) l1, 0);
             }
         };
+    }
+
+    private static void addVerticalSeedString(UIPanelAPI panel, String sectorSeedString) {
+        String[] sectorSeedStringArr = sectorSeedString.split("");
+        
+        float xOffset = panel.getPosition().getWidth() - 8f;
+        float yOffset = 0f;
+
+        for (int i = 0; i < sectorSeedStringArr.length; i++) {
+            LabelAPI sectorSeedLabel = Global.getSettings().createLabel(sectorSeedStringArr[i], Fonts.VICTOR_10);
+            sectorSeedLabel.setColor(Misc.getGrayColor());
+            panel.addComponent((UIComponentAPI)sectorSeedLabel).inTL(xOffset, yOffset);
+
+            yOffset += sectorSeedLabel.computeTextHeight(sectorSeedStringArr[i] + 1f);
+        }
+
     }
 }

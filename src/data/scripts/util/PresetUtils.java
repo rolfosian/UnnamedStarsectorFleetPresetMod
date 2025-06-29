@@ -91,9 +91,11 @@ public class PresetUtils {
         {"Combat", "graphics/icons/skills/strike_commander.png"},
         {"Carrier", "graphics/icons/skills/carrier_command.png"},
         {"Stealth", "graphics/icons/skills/phase_corps.png"},
-        {"Invasion" , "graphics/icons/cargo/heavyweapons.png"},
+        // {"Invasion" , "graphics/icons/cargo/heavyweapons.png"},
+        {"Invasion" , "graphics/icons/missions/tactical_bombardment.png"},
         {"Exploration", "graphics/icons/skills/sensors.png"},
-        {"Automated", "graphics/icons/cargo/ai_core_alpha.png"},
+        {"Automated", "graphics/icons/skills/automated_ships.png"},
+        // {"Automated", "graphics/icons/cargo/ai_core_alpha.png"},
         {"Salvage", "graphics/icons/skills/salvaging.png"},
         {"Trade", "graphics/icons/skills/recovery_ops.png"},
         {"Colony Expedition", "graphics/icons/skills/planetary_ops.png"}
@@ -116,9 +118,8 @@ public class PresetUtils {
         HullSize.CAPITAL_SHIP
     };
 
-    public static String[] getDeploymentPointsBreakdown() {
+    public static Object[] getDeploymentPointsBreakdown() {
         Map<String, int[]> breakdownData = new HashMap<>();
-        String breakdown = "";
         int dpPtsTotal = 0;
 
         for (FleetMemberAPI member : Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder()) {
@@ -144,12 +145,17 @@ public class PresetUtils {
                 (e1, e2) -> e1,
                 LinkedHashMap::new
             ));
-        
-        for (Map.Entry<String, int[]> entry : sortedBreakdownData.entrySet()) {
-            breakdown += "\n" + entry.getKey() + " x" + String.valueOf(entry.getValue()[0]) + " - {{" + String.valueOf(entry.getValue()[1]) + "}}"; 
-        }
 
-        return new String[] {String.valueOf(dpPtsTotal), breakdown};
+        Map<String, String> result = new LinkedHashMap<>();
+        for (Map.Entry<String, int[]> entry : sortedBreakdownData.entrySet()) {
+            String ship = entry.getKey();
+            int shipQty = entry.getValue()[0];
+            int dpPts = entry.getValue()[1];
+
+            result.put(ship + " x" + String.valueOf(shipQty), String.valueOf(dpPts));
+        }
+        
+        return new Object[]{dpPtsTotal, result};
     }
 
     // sorts while shunting civilian members to the bottom
