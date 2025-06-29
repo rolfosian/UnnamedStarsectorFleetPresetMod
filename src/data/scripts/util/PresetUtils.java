@@ -116,13 +116,40 @@ public class PresetUtils {
         HullSize.CAPITAL_SHIP
     };
 
-    public static int getDeploymentPointsMinusCivilian() {
-        int points = 0;
+    public static String[] getDeploymentPointsBreakdown() {
+        Map<String, int[]> breakdownData = new HashMap<>();
+        String breakdown = "";
+        int dpPtsTotal = 0;
+
         for (FleetMemberAPI member : Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder()) {
             if (member.getVariant().getHullSpec().isCivilianNonCarrier()) continue;
-            points += member.getDeploymentPointsCost();
+
+            if (!breakdownData.containsKey(member.getHullSpec().getHullName())) {
+                breakdownData.put(member.getHullSpec().getHullName(), new int[] {1, (int)member.getDeploymentPointsCost()});
+            } else {
+                int[] values = breakdownData.get(member.getHullSpec().getHullName());
+                values[0] += 1;
+                values[1] += (int)member.getDeploymentPointsCost();
+            }
+            dpPtsTotal += member.getDeploymentPointsCost();
         }
-        return points;
+
+        // sorting the entries by deployment points (highest first)
+        LinkedHashMap<String, int[]> sortedBreakdownData = breakdownData.entrySet()
+            .stream()
+            .sorted(Map.Entry.<String, int[]>comparingByValue((a, b) -> Integer.compare(b[1], a[1])))
+            .collect(Collectors.toMap(
+                Map.Entry::getKey,
+                Map.Entry::getValue,
+                (e1, e2) -> e1,
+                LinkedHashMap::new
+            ));
+        
+        for (Map.Entry<String, int[]> entry : sortedBreakdownData.entrySet()) {
+            breakdown += "\n" + entry.getKey() + " x" + String.valueOf(entry.getValue()[0]) + " - {{" + String.valueOf(entry.getValue()[1]) + "}}"; 
+        }
+
+        return new String[] {String.valueOf(dpPtsTotal), breakdown};
     }
 
     // sorts while shunting civilian members to the bottom

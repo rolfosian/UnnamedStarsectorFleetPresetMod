@@ -13,6 +13,7 @@ import com.fs.starfarer.api.fleet.FleetMemberAPI;
 
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipCreator;
 import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipLocation;
 import com.fs.starfarer.api.ui.Alignment;
 import com.fs.starfarer.api.ui.PositionAPI;
@@ -372,7 +373,7 @@ public class FleetPresetManagementListener extends ActionListener {
             String fleetType = pair[0];
             String icon = pair[1];
 
-            CustomPanelAPI imgTooltipPanel = Global.getSettings().createCustom(40f, 40f, new BaseCustomUIPanelPlugin() {
+            CustomPanelAPI imgTooltipPanel = Global.getSettings().createCustom(50f, 50f, new BaseCustomUIPanelPlugin() {
                 @Override
                 public void buttonPressed(Object buttonId) {
                     if (saveNameField.getText().equals(fleetType)) {
@@ -385,16 +386,17 @@ public class FleetPresetManagementListener extends ActionListener {
                 }
             });
     
-            TooltipMakerAPI imgTooltip = imgTooltipPanel.createUIElement(40f, 40f, false);
-            imgTooltip.addImage(icon, 40f, 40f, 0f);
+            TooltipMakerAPI imgTooltip = imgTooltipPanel.createUIElement(50f, 50f, false);
+            imgTooltip.addImage(icon, 50f, 50f, 0f);
             imgTooltipPanel.addUIElement(imgTooltip);
-            ButtonAPI button = imgTooltip.addButton("", "", Global.getSettings().getBasePlayerColor(), Global.getSettings().getBasePlayerColor(), Alignment.MID, CutStyle.NONE, 40f, 40f, 0f);
-            button.setOpacity(0.15f);
-            button.getPosition().setYAlignOffset(40f);
 
-            xOffset = subData.panel.getPosition().getWidth() - 67f - (column * 45f);
-            // yOffset = ((CONFIRM_DIALOG_HEIGHT / 2 / 2 / 2) + 5f) + (row > 0 ? row * 45f : 0f);
-            yOffset = 35f + (row > 0 ? row * 45f : 0f);
+            ButtonAPI button = imgTooltip.addButton("", "", Global.getSettings().getBasePlayerColor(), Global.getSettings().getBasePlayerColor(), Alignment.MID, CutStyle.NONE, 50f, 50f, 0f);
+            // imgTooltip.addTooltipTo(tc(fleetType), button, TooltipLocation.RIGHT, false);
+            button.setOpacity(0.15f);
+            button.getPosition().setYAlignOffset(50f);
+
+            xOffset = subData.panel.getPosition().getWidth() - 75f - (column * 55f);
+            yOffset = 10f + (row > 0 ? row * 55f : 0f);
             
             subData.panel.addComponent(imgTooltipPanel).inTL(xOffset, yOffset);
 
@@ -404,21 +406,28 @@ public class FleetPresetManagementListener extends ActionListener {
                 row++;
             }
         }
-        // subData.textLabel.setColor(Global.getSettings().getBrightPlayerColor());
 
-        LabelAPI labbel = Global.getSettings().createLabel("Deployment Pts (Non civilian)", Fonts.ORBITRON_12);
-        labbel.setColor(Global.getSettings().getBrightPlayerColor());
-        labbel.setAlignment(Alignment.MID);
-        // subData.panel.addComponent((UIComponentAPI)labbel).inTL(CONFIRM_DIALOG_WIDTH / 2 / 1.35f, 5f);
+        String[] deployPtsBreakdown = PresetUtils.getDeploymentPointsBreakdown();
+        String deployPts = deployPtsBreakdown[0];
+
+        LabelAPI dumDumLabel = Global.getSettings().createLabel(deployPts, Fonts.ORBITRON_24AA);
+        float width = dumDumLabel.computeTextWidth(deployPts);
+        float height = dumDumLabel.computeTextHeight(deployPts);
+
+        CustomPanelAPI ptsLabbelPanel = Global.getSettings().createCustom(width + 20f, height, null);
+        TooltipMakerAPI ptsLabbelTooltip = ptsLabbelPanel.createUIElement(width + 20f, height, false);
+        ptsLabbelTooltip.setParaOrbitronVeryLarge();
         
-        LabelAPI ptsLabbel = Global.getSettings().createLabel(String.valueOf(PresetUtils.getDeploymentPointsMinusCivilian()), Fonts.ORBITRON_16);
-        ptsLabbel.setColor(Misc.getHighlightColor());
-        ptsLabbel.setAlignment(Alignment.MID);
+        LabelAPI ptsLabbel = ptsLabbelTooltip.addPara(deployPts, Misc.getHighlightColor(), 10f);
+        ptsLabbel.setHighlightOnMouseover(true);
+        ptsLabbel.setHighlightColor(new Color(255, 255, 230));
 
-        subData.panel.addComponent((UIComponentAPI)labbel).inTL(10f, subData.panel.getPosition().getHeight() - (ptsLabbel.computeTextHeight(ptsLabbel.getText()) + labbel.computeTextHeight(labbel.getText()) + 30f));
-        subData.panel.addComponent((UIComponentAPI)ptsLabbel).belowLeft((UIComponentAPI)labbel, 5f);
+        ptsLabbelTooltip.addTooltipTo(getPtsLabelTt(deployPtsBreakdown[1], Fonts.ORBITRON_16), ptsLabbelTooltip, TooltipLocation.RIGHT);
+        ptsLabbelPanel.addUIElement(ptsLabbelTooltip);
 
+        subData.panel.addComponent(ptsLabbelPanel).inTL(0f, subData.panel.getPosition().getHeight() - height - 8f);//(10f, CONFIRM_DIALOG_HEIGHT-height - 10f);
         subData.panel.addComponent(textFieldPanel).inTL(0f, 0f).setXAlignOffset(CONFIRM_DIALOG_WIDTH / 2 / 2 / 2 / 2 - 20f).setYAlignOffset(-CONFIRM_DIALOG_HEIGHT / 2 / 2 / 2);
+
         saveNameField.grabFocus();
     }
 
@@ -1089,9 +1098,44 @@ public class FleetPresetManagementListener extends ActionListener {
         }
     }
 
-    public static TooltipMakerAPI.TooltipCreator tc(final String text){
+    public static TooltipMakerAPI.TooltipCreator tc(final String text) {
         final LabelAPI l1 = Global.getSettings().createLabel(text, Fonts.ORBITRON_12);
         //create simple tooltip with text inside it
+        return new TooltipMakerAPI.TooltipCreator() {
+            @Override
+            public boolean isTooltipExpandable(Object tooltipParam) {
+                return false;
+            }
+
+            @Override
+            public float getTooltipWidth(Object tooltipParam) {
+                return l1.getPosition().getWidth();
+            }
+
+            @Override
+            public void createTooltip(TooltipMakerAPI tooltip, boolean expanded, Object tooltipParam) {
+                tooltip.addCustom((UIComponentAPI) l1, 0);
+            }
+        };
+    }
+
+    public static TooltipMakerAPI.TooltipCreator getPtsLabelTt(final String breakdown, final String font) {
+        LabelAPI dumDumLabel = Global.getSettings().createLabel(breakdown, font);
+
+        float width = dumDumLabel.computeTextWidth(breakdown) + 30f;
+        float height = dumDumLabel.computeTextHeight(breakdown);
+
+        final CustomPanelAPI l1 = Global.getSettings().createCustom(width, height, null);
+        TooltipMakerAPI tt = l1.createUIElement(width, height, false);
+
+        LabelAPI header = tt.addPara("Total Deployment Pts (Non Civilian)", 0f);
+        header.setAlignment(Alignment.MID);
+        header.getPosition().setYAlignOffset(-8f);
+
+        tt.setParaFont(font);
+        tt.addParaWithMarkup(breakdown, 0f).getPosition().setYAlignOffset(10f);
+
+        l1.addUIElement(tt);
         return new TooltipMakerAPI.TooltipCreator() {
             @Override
             public boolean isTooltipExpandable(Object tooltipParam) {
