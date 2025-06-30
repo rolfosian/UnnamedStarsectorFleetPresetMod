@@ -33,7 +33,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
     public static void print(Object... args) {
         PresetMiscUtils.print(args);
     }
-    private static final String ver = "0.0.10";
+    private static final String ver = "0.0.11";
     
     @Override
     public void onGameLoad(boolean newGame) {
@@ -66,8 +66,6 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         sector.addTransientListener(new DockingListener(false));
         sector.getListenerManager().addListener(new ColonyDecivStorageListener(), true);
         sector.getListenerManager().addListener(new ColonyAbandonListener(), true);
-
-
     }
 
     @Override

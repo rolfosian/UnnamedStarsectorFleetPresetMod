@@ -41,7 +41,7 @@ import data.scripts.listeners.DockingListener;
 import data.scripts.ui.BaseSelfRefreshingPanel;
 import data.scripts.ui.UIComponent;
 import data.scripts.ui.UIPanel;
-import data.scripts.ui.UiConfig;
+import data.scripts.ui.UIConfig;
 
 import data.scripts.util.ReflectionUtilis;
 import data.scripts.util.ReflectionUtilis.ListenerFactory.DialogDismissedListener;
@@ -64,14 +64,14 @@ public class FleetPresetManagementListener extends ActionListener {
         PresetMiscUtils.print(args);
     }
 
-    private static final float CONFIRM_DIALOG_WIDTH = UiConfig.DISPLAY_WIDTH / UiConfig.CONFIRM_DIALOG_WIDTH_DIVISOR;
-    private static final float CONFIRM_DIALOG_HEIGHT = UiConfig.DISPLAY_HEIGHT / UiConfig.CONFIRM_DIALOG_HEIGHT_DIVISOR;
+    private static final float CONFIRM_DIALOG_WIDTH = UIConfig.DISPLAY_WIDTH / UIConfig.CONFIRM_DIALOG_WIDTH_DIVISOR;
+    private static final float CONFIRM_DIALOG_HEIGHT = UIConfig.DISPLAY_HEIGHT / UIConfig.CONFIRM_DIALOG_HEIGHT_DIVISOR;
 
-    private static final float PANEL_WIDTH = UiConfig.DISPLAY_WIDTH / UiConfig.CONFIRM_DIALOG_WIDTH_DIVISOR - UiConfig.PANEL_WIDTH_SUBTRACTOR;
-    private static final float PANEL_HEIGHT = UiConfig.DISPLAY_HEIGHT / UiConfig.CONFIRM_DIALOG_HEIGHT_DIVISOR - UiConfig.PANEL_HEIGHT_SUBTRACTOR;
+    private static final float PANEL_WIDTH = UIConfig.DISPLAY_WIDTH / UIConfig.CONFIRM_DIALOG_WIDTH_DIVISOR - UIConfig.PANEL_WIDTH_SUBTRACTOR;
+    private static final float PANEL_HEIGHT = UIConfig.DISPLAY_HEIGHT / UIConfig.CONFIRM_DIALOG_HEIGHT_DIVISOR - UIConfig.PANEL_HEIGHT_SUBTRACTOR;
     
-    private static final float NAME_COLUMN_WIDTH = PANEL_WIDTH / UiConfig.NAME_COLUMN_WIDTH_DIVISOR;
-    private static final float SHIP_COLUMN_WIDTH = PANEL_WIDTH / UiConfig.SHIP_COLUMN_WIDTH_DIVISOR;
+    private static final float NAME_COLUMN_WIDTH = PANEL_WIDTH / UIConfig.NAME_COLUMN_WIDTH_DIVISOR;
+    private static final float SHIP_COLUMN_WIDTH = PANEL_WIDTH / UIConfig.SHIP_COLUMN_WIDTH_DIVISOR;
 
     private static final float FLOAT_ZERO = 0f;
     
@@ -202,13 +202,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
     public FleetPresetManagementListener() {
         super();
-
-        for (CampaignEventListener listener : Global.getSector().getAllListeners()) {
-            if (listener instanceof DockingListener) {
-                this.dockingListener = (DockingListener) listener;
-                break;
-            }
-        }
+        dockingListener = PresetUtils.getDockingListener();
     }
 
     @Override
@@ -774,7 +768,6 @@ public class FleetPresetManagementListener extends ActionListener {
                     }
 
                 } else {
-                    // theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
 
                     if (PresetUtils.isPresetPlayerFleet(selectedPresetName)) {
                         isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet"));
@@ -782,13 +775,15 @@ public class FleetPresetManagementListener extends ActionListener {
                     } else if (PresetUtils.isPresetPlayerFleetOfficerAgnostic(selectedPresetName)) {
                         isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet but the ship order or officer assignments are different."));
                         isSelectedPresetAvailablePara.setColor(TEXT_HIGHLIGHT_COLOR);
+                    } else if (PresetUtils.isPresetContainedInPlayerFleet(selectedPresetName)) {
+                        isSelectedPresetAvailablePara.setText(String.format("Current fleet is partially comprised of the Selected Preset"));
+                        isSelectedPresetAvailablePara.setColor(TEXT_HIGHLIGHT_COLOR);
                     } else {
                         isSelectedPresetAvailablePara.setText(String.format(isSelectedPresetAvailableParaFormat, "only partially available, or unavailable"));
                         isSelectedPresetAvailablePara.setColor(Misc.getNegativeHighlightColor());
                     }
                 }
-                // selectedPresetNamePara.setText(String.format(selectedPresetNameParaFormat, selectedPresetName));
-                // addShipList(currentTableMap.get(selectedPresetName).getFleetMembers());
+
                 if (neededMembers != null) {
                     if (mangledFleet != null) {
                         mangledFleet.despawn();
@@ -798,11 +793,9 @@ public class FleetPresetManagementListener extends ActionListener {
                     addShipList(mangledFleet);
                 } else {
                     addShipList(currentTableMap.get(selectedPresetName).getCampaignFleet());
-                    // Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.EXTRANEOUS_MEMBERS_KEY);
                 }
 
             } else {
-                // selectedPresetNamePara.setText(EMPTY_STRING);
                 isSelectedPresetAvailablePara.setText(EMPTY_STRING);
                 addShipList(null);
             };
@@ -810,7 +803,6 @@ public class FleetPresetManagementListener extends ActionListener {
             tableTipMaker.getExternalScroller().setYOffset(yScrollOffset);
         }
 
-        // public void addShipList(List<PresetUtils.FleetMemberWrapper> fleetMembers) {
         public void addShipList(CampaignFleetAPI fleet) {
             if (fleetInfoPanel != null && shipsPanel != null) {
                 shipsPanel.removeComponent(fleetInfoPanel);
@@ -833,7 +825,7 @@ public class FleetPresetManagementListener extends ActionListener {
             // have to do this because if directly added to the refreshing panel then the game crashes when the confirm dialog window is closed
             fenaglePanele.parent.addComponent(shipsPanel).rightOfTop(fenaglePanele.panel, 0f)
             .setXAlignOffset(-8f)
-            .setYAlignOffset(-1f * UiConfig.SHIPLIST_Y_OFFSET_MULTIPLIER);
+            .setYAlignOffset(-1f * UIConfig.SHIPLIST_Y_OFFSET_MULTIPLIER);
         }
 
         @Override
@@ -927,7 +919,6 @@ public class FleetPresetManagementListener extends ActionListener {
                     float rY = rowPos.getY();
                     float rW = rowPos.getWidth();
                     float rH = rowPos.getHeight();
-
                     
                     // For table headers to sort the table by ascending or descending.
                     // I couldnt get mouse events to register on the header itself, idk what is blocking them. Above and below worked fine lol. So used offsets instead
@@ -1028,6 +1019,7 @@ public class FleetPresetManagementListener extends ActionListener {
                     if (Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY) == null) {
                         Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, PresetUtils.getFleetPresets().get(selectedPresetName));
                     }
+                    enableButtonsRequiringSelection();
                 } else {
                     // FleetPreset possibleDuplicate = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
                     String text = saveNameField.getText();
@@ -1054,9 +1046,10 @@ public class FleetPresetManagementListener extends ActionListener {
                 tablePlugin.rebuild();
                 return;
             } else if (option == 1) {
-                if (overwrite && cancel) {
+                if (overwrite && !cancel) {
                     openSaveDialog();
                 }
+                if (!selectedPresetName.equals(EMPTY_STRING)) enableButtonsRequiringSelection();
                 // cancel
                 return;
             }

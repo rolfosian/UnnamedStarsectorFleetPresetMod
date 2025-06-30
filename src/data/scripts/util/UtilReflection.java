@@ -153,11 +153,11 @@ public class UtilReflection {
     CustomPanelAPI bgImagePanel = Global.getSettings().createCustom(innerPanelPos.getWidth(), innerPanelPos.getHeight(), null);
     TooltipMakerAPI imagePaneltt = bgImagePanel.createUIElement(innerPanelPos.getWidth(), innerPanelPos.getHeight(), false);
 
-    imagePaneltt.addImage(backgroundImagePath, innerPanelPos.getWidth(), innerPanelPos.getHeight(), 0f);
+    imagePaneltt.addImage(backgroundImagePath, innerPanelPos.getWidth()-5f, innerPanelPos.getHeight()-5f, 0f);
     bgImagePanel.setOpacity(backgroundImageOpacity);
     bgImagePanel.addUIElement(imagePaneltt);
 
-    innerPanel.addComponent((UIComponentAPI)bgImagePanel);
+    innerPanel.addComponent((UIComponentAPI)bgImagePanel).inMid();
     innerPanel.sendToBottom(bgImagePanel);
     innerPanel.sendToBottom(imagePaneltt);
     innerPanel.bringComponentToTop((UIComponentAPI)label);

@@ -46,11 +46,7 @@ public class FleetPresetManagerCoreScript implements EveryFrameScript {
     public FleetPresetManagerCoreScript() {
         fleetPanelInjector = new FleetPresetsFleetPanelInjector();
     }
-
-    private boolean isCurrentFleetPreset(PresetUtils.FleetPreset preset) {
-        return currentFleetPreset.equals(preset);
-    }
-
+    
     @Override
     public void advance(float amount) {
         if (isFirstFrame) {
@@ -77,6 +73,7 @@ public class FleetPresetManagerCoreScript implements EveryFrameScript {
                 throw new RuntimeException(e);
             }
             isFirstFrame = false;
+            fleetPanelInjector.init();
         }
         ClassRefs.findAllClasses();
 

@@ -6,10 +6,11 @@ import com.fs.starfarer.api.Global;
 
 import data.scripts.util.PresetMiscUtils;
 
-public class UiConfig {
+public class UIConfig {
     public static final int DISPLAY_WIDTH = (int)Global.getSettings().getScreenWidthPixels();
     public static final int DISPLAY_HEIGHT = (int)Global.getSettings().getScreenHeightPixels();
 
+    // values for the main management window and its save/del/overwrite derivatives
     public static final float CONFIRM_DIALOG_WIDTH_DIVISOR;
     public static final float CONFIRM_DIALOG_HEIGHT_DIVISOR;
     public static final float PANEL_WIDTH_SUBTRACTOR;
@@ -17,6 +18,12 @@ public class UiConfig {
     public static final float NAME_COLUMN_WIDTH_DIVISOR;
     public static final float SHIP_COLUMN_WIDTH_DIVISOR;
     public static final float SHIPLIST_Y_OFFSET_MULTIPLIER;
+
+    // values for fleet tab injector requirements for lower resolutions
+    public static final float STORE_SHIPS_BTN_X_OFFSET;
+    public static final float TAKE_SHIPS_BTN_X_OFFSET;
+    public static final float MANAGEMENT_BTN_X_OFFSET;
+    public static final boolean IS_SET_CURRENT_PRESET_LABEL;
 
     // These are teh values for 1080p
     // CONFIRM_DIALOG_WIDTH_DIVISOR_ = 2.64f;
@@ -34,6 +41,22 @@ public class UiConfig {
     // THERE HAS TO BE A BETTER WAY TO DO THIS
     // TODO ULTRAWIDE RESOLUTIONS
     static {
+        if (DISPLAY_WIDTH >= 1600) {
+            STORE_SHIPS_BTN_X_OFFSET = 1352f;
+            TAKE_SHIPS_BTN_X_OFFSET = 1127f;
+        } else {
+            STORE_SHIPS_BTN_X_OFFSET = 1105f;
+            TAKE_SHIPS_BTN_X_OFFSET = 880f;
+        }
+
+        if (DISPLAY_WIDTH < 1360) {
+            IS_SET_CURRENT_PRESET_LABEL = false;
+            MANAGEMENT_BTN_X_OFFSET = 365f;
+        } else {
+            IS_SET_CURRENT_PRESET_LABEL = true;
+            MANAGEMENT_BTN_X_OFFSET = 435f;
+        }
+
         double ratio = (double)DISPLAY_HEIGHT / (double)DISPLAY_WIDTH;
         double epsilon = 1e-6;
 
@@ -209,6 +232,19 @@ public class UiConfig {
                             
                             PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.7f) - 5f;
                             PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 2f);
+                            
+                            NAME_COLUMN_WIDTH_DIVISOR_ = 5.32f;
+                            SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
+
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                            break;
+
+                        case 1400:
+                            CONFIRM_DIALOG_WIDTH_DIVISOR_ = 1.95f;
+                            CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 1.95f;
+                            
+                            PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.4f) - 5f;
+                            PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.5f);
                             
                             NAME_COLUMN_WIDTH_DIVISOR_ = 5.32f;
                             SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
