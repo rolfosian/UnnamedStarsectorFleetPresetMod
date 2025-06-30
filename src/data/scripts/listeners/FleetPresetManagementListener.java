@@ -5,6 +5,7 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.campaign.CampaignEventListener;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.campaign.CargoAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
@@ -194,18 +195,28 @@ public class FleetPresetManagementListener extends ActionListener {
     private boolean tableUp = true;
     private boolean tableRight = false;
     private String tablePresetNamesColumnHeader = "Presets <Ascending>";
+        // private String tableShipsColumnHeader = "Ships <Descending>";
 
     private CampaignFleetAPI mangledFleet = null;
-    // private String tableShipsColumnHeader = "Ships <Descending>";
+    private DockingListener dockingListener = null;
 
     public FleetPresetManagementListener() {
         super();
+
+        for (CampaignEventListener listener : Global.getSector().getAllListeners()) {
+            if (listener instanceof DockingListener) {
+                this.dockingListener = (DockingListener) listener;
+                break;
+            }
+        }
     }
 
     @Override
     public void trigger(Object arg0, Object arg1) {
         CustomPanelAPI tableMasterPanel = Global.getSettings().createCustom(PANEL_WIDTH - CANCEL_CONFIRM_BUTTON_WIDTH - 5f, PANEL_HEIGHT, new BaseCustomUIPanelPlugin() );
         UtilReflection.ConfirmDialogData master = UtilReflection.showConfirmationDialog(
+            0.165f,
+            "graphics/illustrations/abyssal_light2.jpg",
             EMPTY_STRING,
             EMPTY_STRING,
             CLOSE_TEXT,
@@ -237,7 +248,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
         String storageAvailableText;
         Color storageAvailableColor;
-        if (DockingListener.getPlayerCurrentMarket() != null && DockingListener.canPlayerAccessStorage(DockingListener.getPlayerCurrentMarket())) {
+        if (dockingListener.getPlayerCurrentMarket() != null && dockingListener.canPlayerAccessStorage(dockingListener.getPlayerCurrentMarket())) {
             storageAvailableText = "Storage Available";
             storageAvailableColor = Misc.getPositiveHighlightColor();
         } else {
@@ -359,6 +370,7 @@ public class FleetPresetManagementListener extends ActionListener {
         textFieldPanel.addUIElement(textFieldTooltipMaker).inTL(0f, 0f);
 
         UtilReflection.ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
+            0.66f,
             "graphics/illustrations/entering_hyperspace.jpg",
             SAVE_DIALOG_HEADER,
             SAVE_DIALOG_YES_TEXT,
@@ -502,8 +514,8 @@ public class FleetPresetManagementListener extends ActionListener {
                 case AUTO_UPDATE_BUTTON_ID:
                     if (theButtons.get(AUTO_UPDATE_BUTTON_ID).isChecked()) {
                         Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, true);
-                        if (DockingListener.getPlayerCurrentMarket() == null) {
-                            FleetPreset preset = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
+                        if (dockingListener.getPlayerCurrentMarket() == null) {
+                            FleetPreset preset = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
 
                             if (preset != null) {
                                 Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, preset);
@@ -603,8 +615,8 @@ public class FleetPresetManagementListener extends ActionListener {
 
     private void enableButtonsRequiringSelection() {
         if (selectedPresetName != EMPTY_STRING) {
-            if (DockingListener.getPlayerCurrentMarket() != null && DockingListener.canPlayerAccessStorage(DockingListener.getPlayerCurrentMarket())) {
-                if (Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder().size() > 1) {
+            if (dockingListener.getPlayerCurrentMarket() != null && dockingListener.canPlayerAccessStorage(dockingListener.getPlayerCurrentMarket())) {
+                if (Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy().size() > 1) {
                     theButtons.get(STORE_BUTTON_ID).setEnabled(true);
                 } else {
                     theButtons.get(STORE_BUTTON_ID).setEnabled(false);
@@ -624,8 +636,8 @@ public class FleetPresetManagementListener extends ActionListener {
             theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(false);
             theButtons.get(DELETE_BUTTON_ID).setEnabled(false);
 
-            if (DockingListener.getPlayerCurrentMarket() != null && DockingListener.canPlayerAccessStorage(DockingListener.getPlayerCurrentMarket())
-                && Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder().size() > 1) {
+            if (dockingListener.getPlayerCurrentMarket() != null && dockingListener.canPlayerAccessStorage(dockingListener.getPlayerCurrentMarket())
+                && Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy().size() > 1) {
                 theButtons.get(STORE_BUTTON_ID).setEnabled(true);
             } else {
                 theButtons.get(STORE_BUTTON_ID).setEnabled(false);
@@ -638,8 +650,8 @@ public class FleetPresetManagementListener extends ActionListener {
         theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
         theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(false);
 
-        if (DockingListener.getPlayerCurrentMarket() != null && DockingListener.canPlayerAccessStorage(DockingListener.getPlayerCurrentMarket())
-            && Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder().size() > 1) {
+        if (dockingListener.getPlayerCurrentMarket() != null && dockingListener.canPlayerAccessStorage(dockingListener.getPlayerCurrentMarket())
+            && Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy().size() > 1) {
             theButtons.get(STORE_BUTTON_ID).setEnabled(true);
         } else {
             theButtons.get(STORE_BUTTON_ID).setEnabled(false);
@@ -744,10 +756,10 @@ public class FleetPresetManagementListener extends ActionListener {
 
             if (selectedPresetName != EMPTY_STRING) {
                 // in case there is a matching member in storage with the same variant but not the exact same member the preset was saved with
-                Map<FleetMemberWrapper, FleetMemberAPI> neededMembers = PresetUtils.getIdAgnosticRequiredMembers(DockingListener.getPlayerCurrentMarket(), selectedPresetName);
+                Map<FleetMemberWrapper, FleetMemberAPI> neededMembers = PresetUtils.getIdAgnosticRequiredMembers(dockingListener.getPlayerCurrentMarket(), selectedPresetName);
 
-                if (PresetUtils.isPresetAvailableAtCurrentMarket(DockingListener.getPlayerCurrentMarket(), selectedPresetName, 
-                    Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder())) {
+                if (PresetUtils.isPresetAvailableAtCurrentMarket(dockingListener.getPlayerCurrentMarket(), selectedPresetName, 
+                    Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy())) {
 
                     isSelectedPresetAvailablePara.setText(String.format(isSelectedPresetAvailableParaFormat, "available"));
                     isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
@@ -768,7 +780,7 @@ public class FleetPresetManagementListener extends ActionListener {
                         isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet"));
                         isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
                     } else if (PresetUtils.isPresetPlayerFleetOfficerAgnostic(selectedPresetName)) {
-                        isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet but the officer assignments are different."));
+                        isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet but the ship order or officer assignments are different."));
                         isSelectedPresetAvailablePara.setColor(TEXT_HIGHLIGHT_COLOR);
                     } else {
                         isSelectedPresetAvailablePara.setText(String.format(isSelectedPresetAvailableParaFormat, "only partially available, or unavailable"));
@@ -1017,7 +1029,7 @@ public class FleetPresetManagementListener extends ActionListener {
                         Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, PresetUtils.getFleetPresets().get(selectedPresetName));
                     }
                 } else {
-                    // FleetPreset possibleDuplicate = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
+                    // FleetPreset possibleDuplicate = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
                     String text = saveNameField.getText();
                     if (!isEmptyOrWhitespace(text)) {
                         if (currentTableMap.containsKey(text)) {

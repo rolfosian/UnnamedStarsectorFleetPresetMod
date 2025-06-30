@@ -27,7 +27,7 @@ public class FleetMonitor implements EveryFrameScript {
 
     @SuppressWarnings("unchecked")
     public FleetMonitor() {
-        this.runningMembers = new RunningMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
+        this.runningMembers = new RunningMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
         this.presetMembers = (Map<String, List<FleetMemberWrapper>>) Global.getSector().getPersistentData().get(PresetUtils.PRESET_MEMBERS_KEY);
     }
 

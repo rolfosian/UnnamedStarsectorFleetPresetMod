@@ -9,6 +9,7 @@ import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.campaign.econ.SubmarketAPI;
 import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
+import com.fs.starfarer.api.fleet.FleetMemberViewAPI;
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.util.Misc;
 import com.fs.starfarer.campaign.fleet.FleetMember;
@@ -32,6 +33,9 @@ import data.scripts.util.UtilReflection;
 import data.scripts.util.UtilReflection.ConfirmDialogData;
 
 import java.util.*;
+
+import javax.management.RuntimeErrorException;
+
 import java.awt.Color;
 
 import org.lwjgl.input.Keyboard;
@@ -52,6 +56,7 @@ public class FleetPresetsFleetPanelInjector {
     private UIPanelAPI fleetInfoPanelRef;
     private UIPanel fleetTabLeftPane;
     private Object fleetTab;
+    private Object fleetPanelClickHandler;
 
     private ButtonAPI autoAssignButton;
     private PositionAPI officerAutoAssignButtonPosition;
@@ -87,7 +92,7 @@ public class FleetPresetsFleetPanelInjector {
     }
 
     public FleetPresetsFleetPanelInjector() {
-        this.runningMembers = new RunningMembersList(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
+        this.runningMembers = new RunningMembersList(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
         this.storedMemberIds = PresetUtils.getStoredFleetPresetsMemberIds();
         this.presetMembers = (Map<String, List<FleetMemberWrapper>>) Global.getSector().getPersistentData().get(PresetUtils.PRESET_MEMBERS_KEY);
     }
@@ -115,11 +120,12 @@ public class FleetPresetsFleetPanelInjector {
             currentPresetLabelHeader = null;
             fleetTabLeftPane = null;
             fleetTab = null;
+            fleetPanelClickHandler = null;
             Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.FLEETINFOPANEL_KEY);
             return;
         }
 
-        List<FleetMemberAPI> playerFleetMembers = Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder();
+        List<FleetMemberAPI> playerFleetMembers = Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy();
         MarketAPI market = PresetUtils.getPlayerCurrentMarket();
         List<FleetMemberAPI> mothballedShips = PresetUtils.getMothBalledShips(market);
 
@@ -130,12 +136,14 @@ public class FleetPresetsFleetPanelInjector {
                 if (PresetUtils.isPlayerPaidForStorage(CargoPresetUtils.getStorageSubmarket(market).getPlugin())) {
                     if (pullAllShipsButton == null || storeFleetButton == null) addAuxStorageButtons(playerFleetMembers, officerAutoAssignButtonPosition, mothballedShips, market);
 
-                    if (mothballedShips != null && mothballedShips.size() > 0) {
-                        if (!pullAllShipsButton.isEnabled()) pullAllShipsButton.setEnabled(true);
-                    } else {
-                        if (pullAllShipsButton.isEnabled()) pullAllShipsButton.setEnabled(false);
+                    if (pullAllShipsButton != null) {
+                        if (mothballedShips != null && mothballedShips.size() > 0) {
+                            if (!pullAllShipsButton.isEnabled()) pullAllShipsButton.setEnabled(true);
+                        } else {
+                            if (pullAllShipsButton.isEnabled()) pullAllShipsButton.setEnabled(false);
+                        }
+                        if (!storeFleetButton.isEnabled() && playerFleetMembers.size() > 1) storeFleetButton.setEnabled(true);
                     }
-                    if (!storeFleetButton.isEnabled() && playerFleetMembers.size() > 1) storeFleetButton.setEnabled(true);
                 }
                 // checking if members are sold so there's no memory leak for wrappedMembers
                 if (runningMembers.size() > playerFleetMembers.size()) {
@@ -150,8 +158,8 @@ public class FleetPresetsFleetPanelInjector {
                                     }
                                     storedMemberIds.get(market.getName()).add(runningMember.getId());
 
-                                } else if (PresetUtils.getFleetPresetsMembers().get(runningMember.getId()) != null) {
-                                    // member was sold or scuttled
+                                } else if (PresetUtils.getFleetPresetsMembers().get(runningMember.getId()) != null && getPickedUpMember() == null) {
+                                    // member was sold or scuttled or picked up
                                     PresetUtils.cleanUpPerishedPresetMembers();
 
                                 }
@@ -257,6 +265,9 @@ public class FleetPresetsFleetPanelInjector {
 
         Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.COREUI_KEY, core);
         UIPanelAPI currentTab = (UIPanelAPI) ReflectionUtilis.getMethodAndInvokeDirectly("getCurrentTab", core, 0);
+
+        Object fleetPanel = ReflectionUtilis.getMethodAndInvokeDirectly("getFleetPanel", currentTab, 0);
+        fleetPanelClickHandler = ReflectionUtilis.getMethodAndInvokeDirectly("getClickAndDropHandler", fleetPanel, 0);
 
         // Since the current tab ID is fleet, this *should* give us the fleet tab.
         // We need to find the field corresponding to the info panel. There's no good way to do this,
@@ -389,5 +400,9 @@ public class FleetPresetsFleetPanelInjector {
             storeFleetButton = null;
             pullAllShipsButton = null;
         }
+    }
+
+    private Object getPickedUpMember() {
+        return ReflectionUtilis.getMethodAndInvokeDirectly("getPickedUpMember", fleetPanelClickHandler, 0);
     }
 }

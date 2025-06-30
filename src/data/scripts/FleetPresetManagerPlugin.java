@@ -53,7 +53,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         mem.set(PresetUtils.MESSAGEQUEUE_KEY, new ArrayList<>());
         mem.unset(PresetUtils.UNDOCKED_PRESET_KEY);
 
-        FleetPreset activePreset = PresetUtils.getPresetOfMembers(sector.getPlayerFleet().getFleetData().getMembersInPriorityOrder());
+        FleetPreset activePreset = PresetUtils.getPresetOfMembers(sector.getPlayerFleet().getFleetData().getMembersListCopy());
         if (activePreset != null &&(boolean)persistentData.get(PresetUtils.IS_AUTO_UPDATE_KEY)) {
             sector.getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, activePreset);
         }
@@ -66,6 +66,8 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         sector.addTransientListener(new DockingListener(false));
         sector.getListenerManager().addListener(new ColonyDecivStorageListener(), true);
         sector.getListenerManager().addListener(new ColonyAbandonListener(), true);
+
+
     }
 
     @Override

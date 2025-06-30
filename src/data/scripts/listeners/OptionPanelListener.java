@@ -118,18 +118,18 @@ public abstract class OptionPanelListener {
                                     ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldListener, arg0, arg1);
                                     
                                     List<Object> children = (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.visualPanelGetChildrenNonCopyMethod, visualPanel);
-                                    Object child = children.get(children.size()-1); // the standard confirm dialog
+                                    Object confirmDialog = children.get(children.size()-1); // the standard confirm dialog
                                     // (ButtonAPI) ReflectionUtilis.getMethodAndInvokeDirectly("getButton", child, 1, 0), // Yes
-                                    // (ButtonAPI) ReflectionUtilis.getMethodAndInvokeDirectly("getButton", child, 1, 1) // No
+                                    // (ButtonAPI) ReflectionUtilis.getMethodAndInvokeDirectly("getButton", child, 1, 1); // No
 
                                     // Yes button
-                                    Object yesButton = ReflectionUtilis.getMethodAndInvokeDirectly("getButton", child, 1, 0);
+                                    Object yesButton = ReflectionUtilis.getMethodAndInvokeDirectly("getButton", confirmDialog, 1, 0);
                                     if (yesButton != null) {
                                         setConfirmListener(yesButton, val, newButtons, newOptions);
 
                                     } else {
                                         // the confirm button is possibly nested, such as in the case of "transfer command for this engagement"
-                                        Object innerPanel = ReflectionUtilis.getMethodAndInvokeDirectly("getInnerPanel", child, 0);
+                                        Object innerPanel = ReflectionUtilis.getMethodAndInvokeDirectly("getInnerPanel", confirmDialog, 0);
                                         
                                         if (innerPanel == null) {
                                             executeAfter(val);
@@ -138,24 +138,25 @@ public abstract class OptionPanelListener {
                                             return;
                                         }
 
-                                        List<Object> innerChildren = (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.visualPanelGetChildrenNonCopyMethod, innerPanel);
+                                        List<Object> innerChildren = UtilReflection.getChildrenRecursive(innerPanel);
                                         Set<Object> nonButtons = new HashSet<>();
 
                                         if (innerChildren != null) {
-                                            for (Object child_ : innerChildren) {
-                                                if (ButtonAPI.class.isAssignableFrom(child_.getClass()) && !currentConfirmButtons.contains(child)) {
-                                                    String buttonText = ((ButtonAPI) child_).getText().toLowerCase();
+                                            for (Object child : innerChildren) {
+                                                if (ButtonAPI.class.isAssignableFrom(child.getClass()) && !currentConfirmButtons.contains(child)) {
+                                                    if (((ButtonAPI) child).getText() == null) continue;
+                                                    String buttonText = ((ButtonAPI) child).getText().toLowerCase();
 
-                                                    if (currentConfirmButtons.contains(child_)) continue;
+                                                    if (currentConfirmButtons.contains(child)) continue;
 
-                                                    if (buttonText != null && !buttonText.contains("cancel") && !buttonText.contains("no") && !buttonText.contains("dismiss") && !buttonText.contains("leave") && !buttonText.contains("back") && !buttonText.contains("never")) {
-                                                        setConfirmListener(child_, val, newButtons, newOptions);
-                                                        currentConfirmButtons.add(child_);
+                                                    if (!buttonText.contains("all") && !buttonText.contains("cancel") && !buttonText.contains("no") && !buttonText.contains("dismiss") && !buttonText.contains("leave") && !buttonText.contains("back") && !buttonText.contains("never")) {
+                                                        setConfirmListener(child, val, newButtons, newOptions);
+                                                        currentConfirmButtons.add(child);
                                                         return;
                                                     }
 
                                                 } else {
-                                                    nonButtons.add(child_);
+                                                    nonButtons.add(child);
                                                 }
                                             }
 
@@ -256,16 +257,19 @@ public abstract class OptionPanelListener {
 
     private void handleCommDirectory(Set<Object> innerPanelNonButtons, Set<Object> newButtons, Set<Object> newOptions) {
         for (Object nonButton : innerPanelNonButtons) {
-            for (Object child : (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.visualPanelGetChildrenNonCopyMethod, nonButton)) {
-                List<Object> lst = (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getItems", child, 0);
-                
-                if (lst != null) {
-                    // these are the buttons for the comm directory entries, there is a field for this particular child that maps to CommDirectoryEntry with its keys being these buttons
-                    for (Object o : lst) {
-                        if (currentConfirmButtons.contains(o)) continue;
-
-                        currentConfirmButtons.add(o);
-                        setCommmDirectoryButtonListener(o, newButtons, newOptions);
+            List<Object> children = (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", nonButton, 0);
+            if (children != null) {
+                for (Object child : children) {
+                    List<Object> lst = (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getItems", child, 0);
+                    
+                    if (lst != null) {
+                        // these are the buttons for the comm directory entries, there is a field for this particular child that maps to CommDirectoryEntry with its keys being these buttons
+                        for (Object o : lst) {
+                            if (currentConfirmButtons.contains(o)) continue;
+    
+                            currentConfirmButtons.add(o);
+                            setCommmDirectoryButtonListener(o, newButtons, newOptions);
+                        }
                     }
                 }
             }

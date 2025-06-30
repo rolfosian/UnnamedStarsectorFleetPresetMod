@@ -41,6 +41,7 @@ public class DockingListener extends BaseCampaignEventListener {
     final DockingListener self = this;
 
     private boolean isBattle = false;
+    private boolean isHostileTimeout = false;
 
     public DockingListener(boolean permaRegister) {
         super(permaRegister);
@@ -48,12 +49,12 @@ public class DockingListener extends BaseCampaignEventListener {
     public static final String PLAYERCURRENTMARKET_KEY = PresetUtils.PLAYERCURRENTMARKET_KEY;
     public static final String ISPLAYERPAIDFORSTORAGE_KEY = PresetUtils.ISPLAYERPAIDFORSTORAGE_KEY;
 
-    public static boolean canPlayerAccessStorage(MarketAPI market) {
-        return (market != null && CargoPresetUtils.getStorageSubmarket(market) != null && PresetUtils.isPlayerPaidForStorage(CargoPresetUtils.getStorageSubmarket(market).getPlugin()));
+    public boolean canPlayerAccessStorage(MarketAPI market) {
+        return (market != null && CargoPresetUtils.getStorageSubmarket(market) != null && PresetUtils.isPlayerPaidForStorage(CargoPresetUtils.getStorageSubmarket(market).getPlugin()) && !isHostileTimeout);
     }
 
-    public static MarketAPI getPlayerCurrentMarket() {
-        return (MarketAPI) Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY);
+    public MarketAPI getPlayerCurrentMarket() {
+        return (MarketAPI) Global.getSector().getMemoryWithoutUpdate().get(PLAYERCURRENTMARKET_KEY);
     }
 
     @Override
@@ -64,7 +65,7 @@ public class DockingListener extends BaseCampaignEventListener {
     }
 
     private void setUndockedPreset() {
-        FleetPreset preset = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
+        FleetPreset preset = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
         if (preset != null) {
             Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, preset);
         } else {
@@ -76,7 +77,7 @@ public class DockingListener extends BaseCampaignEventListener {
     public void reportPlayerClosedMarket(MarketAPI market) {
         MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
         mem.unset(PLAYERCURRENTMARKET_KEY);
-        mem.unset(PresetUtils.ISPLAYERPAIDFORSTORAGE_KEY);
+        mem.unset(ISPLAYERPAIDFORSTORAGE_KEY);
         
         PresetUtils.addMessagesToCampaignUI();
         setUndockedPreset();
@@ -97,6 +98,12 @@ public class DockingListener extends BaseCampaignEventListener {
         MarketAPI originalMarket = dialog.getInteractionTarget().getMarket();
         boolean isSettlement = false;
 
+        if (dialog.getPlugin().getMemoryMap().get("market").get("$playerHostileTimeout") != null) {
+            isHostileTimeout = true;
+        } else {
+            isHostileTimeout = false;
+        }
+
         if (originalMarket.getName().endsWith(" Settlement") && !(dialog.getPlugin() instanceof RuleBasedInteractionDialogPluginImpl)) {
             reportPlayerClosedMarket(((FrontiersData)Global.getSector().getMemoryWithoutUpdate().get("$rat_frontiers_data")).getActiveSettlement().getPrimaryPlanet().getMarket());
             reportPlayerOpenedMarket(originalMarket);
@@ -104,7 +111,7 @@ public class DockingListener extends BaseCampaignEventListener {
         }
 
         new OptionPanelListener(dialog) {
-            private RunningMembers runningMembers = new RunningMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
+            private RunningMembers runningMembers = new RunningMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
             private SettlementData settlement = null;
             private boolean checkingAbandon = false;
 
@@ -207,7 +214,7 @@ public class DockingListener extends BaseCampaignEventListener {
                         return;
 
                     case "mktEngage":
-                        this.runningMembers = new RunningMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
+                        this.runningMembers = new RunningMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
                         reportPlayerClosedMarket(originalMarket);
                         return;
 
@@ -217,6 +224,12 @@ public class DockingListener extends BaseCampaignEventListener {
                             PresetUtils.checkFleetAgainstPreset(runningMembers);
                         }
                         return;
+                    
+                    case "CONTINUE_LOOT":
+                        if (isBattle) {
+                            isBattle = false;
+                            PresetUtils.checkFleetAgainstPreset(runningMembers);
+                        }
                         
                     case "LEAVE":
                         if (isBattle) {

@@ -88,6 +88,10 @@ public class UtilReflection {
         ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, listener, UtilReflection.createButtonClickEventInstance(((ButtonAPI)button).getPosition()), button);
     }
 
+    public static List<Object> getChildren(Object parent) {
+        return (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", parent, 0);
+    }
+
     public static List<Object> getChildrenRecursive(Object parentPanel) {
         List<Object> list = new ArrayList<>();
         collectChildren(parentPanel, list);
@@ -95,7 +99,7 @@ public class UtilReflection {
     }
     
     private static void collectChildren(Object parent, List<Object> list) {
-        List<Object> children = (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.visualPanelGetChildrenNonCopyMethod, parent);
+        List<Object> children = (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", parent, 0);
 
         if (children != null) {
             for (Object child : children) {
@@ -128,6 +132,7 @@ public class UtilReflection {
     }
 
     public static ConfirmDialogData showConfirmationDialog(
+        float backgroundImageOpacity,
         String backgroundImagePath,
         String text,
         String confirmText,
@@ -149,7 +154,7 @@ public class UtilReflection {
     TooltipMakerAPI imagePaneltt = bgImagePanel.createUIElement(innerPanelPos.getWidth(), innerPanelPos.getHeight(), false);
 
     imagePaneltt.addImage(backgroundImagePath, innerPanelPos.getWidth(), innerPanelPos.getHeight(), 0f);
-    imagePaneltt.setOpacity(0.66f);
+    bgImagePanel.setOpacity(backgroundImageOpacity);
     bgImagePanel.addUIElement(imagePaneltt);
 
     innerPanel.addComponent((UIComponentAPI)bgImagePanel);
