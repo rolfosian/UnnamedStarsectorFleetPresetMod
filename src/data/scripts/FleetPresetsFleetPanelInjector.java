@@ -169,7 +169,6 @@ public class FleetPresetsFleetPanelInjector {
                 if (storeFleetButton.isEnabled()) storeFleetButton.setEnabled(false);
             }
         }
-        runningMembers = new RunningMembers(playerFleetMembers);
 
         if (!injected) {
             injected = true;
@@ -212,6 +211,7 @@ public class FleetPresetsFleetPanelInjector {
 
             PresetUtils.updateFleetPresetStats(playerFleetMembers);
         }
+        if (!masterPresetsDialog.isPartialSelecting()) runningMembers = new RunningMembers(playerFleetMembers);
     }
 
     private void setCurrentPresetLabel(List<FleetMemberAPI> playerFleetMembers) {

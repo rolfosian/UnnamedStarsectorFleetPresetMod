@@ -89,6 +89,7 @@ public class ClassRefs {
     public static Object buttonSetEnabledMethod;
     public static Object buttonSetShortcutMethod;
     public static Object buttonSetButtonPressedSoundMethod;
+    public static Object buttonSetActiveMethod;
 
     public static Object tablePanelsetItemsSelectableMethod;
     public static Object tablePanelSelectMethod;
@@ -198,6 +199,7 @@ public class ClassRefs {
                 buttonSetEnabledMethod = ReflectionUtilis.getMethod("setEnabled", buttonClass, 1);
                 buttonSetShortcutMethod = ReflectionUtilis.getMethodExplicit("setShortcut", buttonClass, new Class<?>[]{int.class, boolean.class});
                 buttonSetButtonPressedSoundMethod = ReflectionUtilis.getMethod("setButtonPressedSound", buttonClass, 1);
+                buttonSetActiveMethod = ReflectionUtilis.getMethod("setActive", buttonClass, 1);
                 return;
             }
         }

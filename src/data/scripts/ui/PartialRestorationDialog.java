@@ -12,11 +12,9 @@ import data.scripts.util.UtilReflection;
 import data.scripts.ui.TreeTraverser;
 import data.scripts.ui.TreeTraverser.TreeNode;
 
-import com.fs.graphics.Sprite;
-import com.fs.starfarer.ui.newui.FleetMemberRecoveryDialog;
-import com.fs.util.container.Pair;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCampaignEventListener;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.campaign.CampaignUIAPI;
 import com.fs.starfarer.api.campaign.FleetDataAPI;
@@ -25,13 +23,14 @@ import com.fs.starfarer.api.campaign.InteractionDialogAPI;
 import com.fs.starfarer.api.campaign.SectorEntityToken.VisibilityLevel;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 
-
 import com.fs.starfarer.api.ui.UIComponentAPI;
 import com.fs.starfarer.api.ui.Alignment;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
+import com.fs.starfarer.api.util.Misc;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.CutStyle;
 import com.fs.starfarer.api.ui.Fonts;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
@@ -59,13 +58,15 @@ public class PartialRestorationDialog {
     private TreeTraverser traverser;
     
     private UtilReflection.ConfirmDialogData FMRDialog;
-    private UIPanel innerPanel;
+    private UIPanelAPI innerPanel;
     private UIPanelAPI fleetPanel;
     private Map<ButtonAPI, FleetMemberButton> shipButtons;
     private Map<ButtonAPI, Object> buttonToRenderControllerMap;
 
     private FleetPresetManagementListener master;
     private PartialRestorationDialog self = this;
+
+    private boolean all = false;
 
     public PartialRestorationDialog(Map<Integer, FleetMemberAPI> whichFleetMembersAvailable, CampaignFleetAPI fleet, FleetPresetManagementListener master) {
         master.setPartialSelecting(true);
@@ -92,7 +93,7 @@ public class PartialRestorationDialog {
             "graphics/illustrations/gate_hauler1.jpg",
             "",
             "Restore",
-            "Close",
+            "Cancel",
             ClassRefs.FMRDialogWidth,
             ClassRefs.FMRDialogHeight,
             new DialogDismissedListener() {
@@ -122,7 +123,9 @@ public class PartialRestorationDialog {
             return;
         }
         FMRDialog.confirmButton.setShortcut(Keyboard.KEY_G, false);
-        innerPanel = new UIPanel(FMRDialog.panel);
+        FMRDialog.confirmButton.setEnabled(false);
+        innerPanel = FMRDialog.panel;
+        addAllButton();
 
         PresetUtils.refreshFleetUI();
 
@@ -130,6 +133,8 @@ public class PartialRestorationDialog {
         refShipButtons();
         clearFleetPanel();
         reAddShipButtons();
+
+        addVerticalSeedString(innerPanel, Global.getSector().getSeedString(), "left");
 
         for (ButtonAPI btn : shipButtons.keySet()) {
             buttonToRenderControllerMap = getButtonToRenderControllerMap(ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, btn));
@@ -157,18 +162,25 @@ public class PartialRestorationDialog {
         for (TreeNode node : traverser.getNodesAtDepth(7)) {
             for (Object child : node.getChildren()) {
                 ButtonAPI btn = (ButtonAPI) child;
-                shipButtons.put(btn, new FleetMemberButton(btn));
+                shipButtons.put(btn, new FleetMemberButton(btn, getMemberFromButton(btn)));
             }
         }
     }
 
     private void reAddShipButtons() {
         float width = ClassRefs.FMRDialogPanelWidth - 5f;
-        float height = ClassRefs.FMRDialogPanelHeight - 5f;
+        float height = ClassRefs.FMRDialogPanelHeight - FMRDialog.confirmButton.getPosition().getHeight() - 20f;
 
-        CustomPanelAPI shipPanel = Global.getSettings().createCustom(width, height, null);
+        CustomPanelAPI pane = Global.getSettings().createCustom(0f, 0f, new BaseCustomUIPanelPlugin());
+        innerPanel.addComponent(pane).inTL(0f, 5f);
+
+        TooltipMakerAPI ttHolder = pane.createUIElement(0f, 0f, false);
+        pane.addUIElement(ttHolder);
+        
+        CustomPanelAPI shipPanel = Global.getSettings().createCustom(width, height, new BaseCustomUIPanelPlugin());
+        ttHolder.addCustom(shipPanel, 0f).getPosition().inTL(0f, 0f);
+
         TooltipMakerAPI tt = shipPanel.createUIElement(width, height, true);
-
         PositionAPI pos = null;
         float xOffset = 35f;
         float yOffset = 5f;
@@ -182,7 +194,7 @@ public class PartialRestorationDialog {
                 btn.setHighlightBrightness(0f);
                 btn.setOpacity(0.5f);
                 btn.setShowTooltipWhileInactive(false);
-                ReflectionUtilis.getMethodAndInvokeDirectly("setActive", btn, 1, false);
+                ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetActiveMethod, btn, false);
             }
             i++;
 
@@ -190,22 +202,21 @@ public class PartialRestorationDialog {
                 xOffset = 35f;
                 yOffset += pos.getHeight() + 5f;
             }
-            
-            setListener(btn);
-            pos = tt.addCustomDoNotSetPosition(shipButtons.get(btn).getPanel()).getPosition().inTL(xOffset, yOffset);
+
+            FleetMemberButton buttonWrapper = shipButtons.get(btn);
+            buttonWrapper.setListener(setListener(btn, buttonWrapper.getMember()));
+            pos = tt.addComponent(buttonWrapper.getPanel()).inTL(xOffset, yOffset);
             
             xOffset += pos.getWidth() + 5f;
         }
-
+        tt.setHeightSoFar(yOffset);
         shipPanel.addUIElement(tt);
-        innerPanel.getInstance().addComponent(shipPanel).inTMid(5f);
     }
 
-    private void setListener(ButtonAPI btn) {
+    private ActionListener setListener(ButtonAPI btn, FleetMemberAPI member) {
         FleetMemberButton buttonWrapper = shipButtons.get(btn);
-        FleetMemberAPI member = buttonWrapper.getMember();
-        
-        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, btn, new ActionListener() {
+
+        ActionListener listener = new ActionListener() {
             public void trigger(Object arg0, Object arg1) {
 
                 if (btn.isChecked()) {
@@ -213,18 +224,44 @@ public class PartialRestorationDialog {
                     pickedFleetMembers.add(member);
                     Global.getSector().getPlayerFleet().getFleetData().addFleetMember(tempToPresetMembersMap.get(member));
 
+                    if (!FMRDialog.confirmButton.isEnabled()) FMRDialog.confirmButton.setEnabled(true);
+
                 } else {
                     buttonWrapper.removeLabel();
                     pickedFleetMembers.remove(member);
                     Global.getSector().getPlayerFleet().getFleetData().removeFleetMember(tempToPresetMembersMap.get(member));
                     presetFleet.getFleetData().addFleetMember(tempToPresetMembersMap.get(member));
                     presetFleet.getFleetData().sortToMatchOrder(originalOrder);
+                    
+                    if (all) all = false;
+                    if (pickedFleetMembers.isEmpty()) FMRDialog.confirmButton.setEnabled(false);
                 }
 
                 Global.getSector().getPlayerFleet().getFleetData().sortToMatchOrder(presetFleet.getFleetData().getMembersListCopy());
-                PresetUtils.refreshFleetUI();
+                if (!String.valueOf(arg0).equals("All")) {
+                    PresetUtils.refreshFleetUI();
+                }
+                
             }
-        }.getProxy());
+        };
+        
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, btn, listener.getProxy());
+        return listener;
+    }
+
+    private static void addVerticalSeedString(UIPanelAPI panel, String sectorSeedString, String side) {
+        String[] sectorSeedStringArr = sectorSeedString.split("");
+        
+        float xOffset = side.equals("left") ? 8f : panel.getPosition().getWidth() - 12f;
+        float yOffset = 5f;
+
+        for (int i = 0; i < sectorSeedStringArr.length; i++) {
+            LabelAPI sectorSeedLabel = Global.getSettings().createLabel(sectorSeedStringArr[i], Fonts.VICTOR_10);
+            sectorSeedLabel.setColor(Misc.getGrayColor());
+            panel.addComponent((UIComponentAPI)sectorSeedLabel).inTL(xOffset, yOffset);
+
+            yOffset += sectorSeedLabel.computeTextHeight(sectorSeedStringArr[i] + 1f);
+        }
     }
 
     private void removeAllMembersFromPlayerFleet() {
@@ -301,7 +338,7 @@ public class PartialRestorationDialog {
     private void pickedFleetMembers(List<FleetMemberAPI> membersToRestore) {
         removeAllMembersFromPlayerFleet();
         readdFleetMembersToPlayerFleet();
-
+        
         PresetUtils.partRestorePreset(membersToRestore, whichFleetMembersAvailable, presetFleet.getFleetData());
 
         master.setPartialSelecting(false);
@@ -314,22 +351,18 @@ public class PartialRestorationDialog {
         private final FleetMemberAPI member;
         private final CustomPanelAPI panel;
         private final LabelAPI label;
-        private final PositionAPI panelPos;
+        private ActionListener listener;
 
-        public FleetMemberButton(ButtonAPI button) {
+        public FleetMemberButton(ButtonAPI button, FleetMemberAPI member) {
             this.button = button;
+            this.member = member;
 
-            this.panel = Global.getSettings().createCustom(button.getPosition().getWidth(), button.getPosition().getHeight(), null);
+            this.panel = Global.getSettings().createCustom(button.getPosition().getWidth(), button.getPosition().getHeight(), new BaseCustomUIPanelPlugin());
             this.panel.addComponent((UIComponentAPI)button).inTL(0f, 0f);
-            panelPos = panel.getPosition();
 
-            this.label = Global.getSettings().createLabel("RESTORE", Fonts.VICTOR_10);
+            this.label = Global.getSettings().createLabel("RESTORE", "graphics/fonts/victor14.fnt");
             this.label.setColor(new Color(173, 255, 47));
             this.label.setAlignment(Alignment.MID);
-            this.label.setHighlightColor(Color.GREEN);
-            this.label.setHighlightOnMouseover(true);
-
-            this.member = getMemberFromButton(button);
         }
 
         public void addLabel() {
@@ -343,6 +376,14 @@ public class PartialRestorationDialog {
         public ButtonAPI getButton() {
             return this.button;
         }
+
+        public ActionListener getListener() {
+            return this.listener;
+        }
+
+        public void setListener(ActionListener listener) {
+            this.listener = listener;
+        }
         
         public CustomPanelAPI getPanel() {
             return this.panel;
@@ -355,5 +396,49 @@ public class PartialRestorationDialog {
         public FleetMemberAPI getMember() {
             return this.member;
         }
+    }
+
+    private void addAllButton() {
+        float width = FMRDialog.confirmButton.getPosition().getWidth() / 2;
+        float height = FMRDialog.confirmButton.getPosition().getHeight();
+        CustomPanelAPI panel = Global.getSettings().createCustom(width, height, new BaseCustomUIPanelPlugin() {
+            @Override
+            public void buttonPressed(Object buttonId) {
+                if (!all) {
+                    for (FleetMemberButton btn : shipButtons.values()) {
+                        if (!btn.getButton().isChecked()) {
+                            btn.getButton().setChecked(true);
+                            btn.getListener().trigger("All", null);
+                        }
+                    }
+                    all = true;
+                } else {
+                    for (FleetMemberButton btn : shipButtons.values()) {
+                        btn.getButton().setChecked(false);
+                        btn.getListener().trigger("All", null);
+                    }
+                }
+                PresetUtils.refreshFleetUI();
+            }
+        });
+        TooltipMakerAPI tt = panel.createUIElement(width, height, false);
+        tt.setButtonFontOrbitron20();
+        tt.addButton("All",
+        "",
+        Misc.getBasePlayerColor(),
+        Misc.getDarkPlayerColor(),
+        Alignment.MID,
+        CutStyle.TL_BR,
+        width,
+        height,
+        5f
+        );
+        panel.addUIElement(tt);
+
+        
+        // pos.set(FMRDialog.confirmButton.getPosition());
+        innerPanel.addComponent(panel).leftOfMid((UIComponentAPI)FMRDialog.cancelButton.getInstance(), 10f);
+
+        FMRDialog.confirmButton.getPosition().leftOfMid(panel, 0f);
     }
 }
