@@ -23,12 +23,8 @@ public class FleetMonitor implements EveryFrameScript {
     IntervalUtil checkPerishedMembersInterval = new IntervalUtil(599f, 600f);
 
     RunningMembers runningMembers;
-    Map<String, List<FleetMemberWrapper>> presetMembers;
-
-    @SuppressWarnings("unchecked")
     public FleetMonitor() {
         this.runningMembers = new RunningMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
-        this.presetMembers = (Map<String, List<FleetMemberWrapper>>) Global.getSector().getPersistentData().get(PresetUtils.PRESET_MEMBERS_KEY);
     }
 
     @Override

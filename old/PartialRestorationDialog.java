@@ -7,8 +7,8 @@ import data.scripts.util.PresetUtils;
 import data.scripts.util.ReflectionUtilis;
 import data.scripts.util.ReflectionUtilis.ListenerFactory.ActionListener;
 import data.scripts.util.UtilReflection;
-import data.scripts.util.UtilReflection.TreeTraverser;
-import data.scripts.util.UtilReflection.TreeTraverser.TreeNode;
+import data.scripts.ui.TreeTraverser;
+import data.scripts.ui.TreeTraverser.TreeNode;
 
 import com.fs.graphics.Sprite;
 import com.fs.starfarer.ui.newui.FleetMemberRecoveryDialog;
@@ -165,7 +165,7 @@ public class PartialRestorationDialog {
 
     private void refShipButtons() {
         shipButtons = new ArrayList<>();
-        for (TreeNode node : traverser.getNodesAtDepth(5)) {
+        for (TreeNode node : traverser.getNodesAtDepth(4)) {
             for (Object child : node.getChildren()) {
                 shipButtons.add((ButtonAPI) child);
             }
