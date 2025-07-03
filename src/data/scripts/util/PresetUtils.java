@@ -1732,11 +1732,8 @@ public class PresetUtils {
 
         FleetDataAPI playerFleetData = playerFleet.getFleetData();
         List<FleetMemberAPI> playerFleetMembers = playerFleet.getFleetData().getMembersListCopy();
-        FleetMemberAPI playerFleetMember = getPlayerFleetMember(playerFleetData);
 
-        Map<String, PersonAPI> captains = new HashMap<>();
         for (FleetMemberAPI member : playerFleetMembers) {
-            captains.put(member.getId(), member.getCaptain());
             member.setCaptain(null);
             playerFleetData.removeFleetMember(member);
             storageCargo.getMothballedShips().addFleetMember(member);
@@ -1747,8 +1744,15 @@ public class PresetUtils {
             for (FleetMemberAPI availableMember : whichMembersAreAvailable.values()) {
                 if (availableMember.getId().equals(memberToRestore.getId())) {
                     storageCargo.getMothballedShips().removeFleetMember(availableMember);
-                    availableMember.setCaptain(captains.get(availableMember.getId()));
                     playerFleetData.addFleetMember(availableMember);
+
+                    for (OfficerDataAPI officerData : playerFleet.getFleetData().getOfficersCopy()) {
+                        PersonAPI officer = officerData.getPerson();
+                        if (officer.getId().equals(memberToRestore.getId())) {
+                            availableMember.setCaptain(officer);
+                            break;
+                        }
+                    }
                     break;
                 }
             }

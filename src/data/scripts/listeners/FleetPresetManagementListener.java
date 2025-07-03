@@ -1230,7 +1230,7 @@ public class FleetPresetManagementListener extends ActionListener {
     }
 
     private void showFleetMemberRecoveryDialog(CampaignFleetAPI fleet) {
-        Map<Integer, FleetMemberAPI> whichFleetMembersAvailable = PresetUtils.whichMembersAvailable(dockingListener.getPlayerCurrentMarket(), fleet.getFleetData().getMembersInPriorityOrder());
+        Map<Integer, FleetMemberAPI> whichFleetMembersAvailable = PresetUtils.whichMembersAvailable(dockingListener.getPlayerCurrentMarket(), fleet.getFleetData().getMembersListCopy());
         new PartialRestorationDialog(whichFleetMembersAvailable, fleet, this);
     }
 

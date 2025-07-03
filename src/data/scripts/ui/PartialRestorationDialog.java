@@ -4,12 +4,13 @@ import data.scripts.ClassRefs;
 import data.scripts.listeners.FleetPresetManagementListener;
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
+import data.scripts.util.PresetUtils.FleetPreset;
 import data.scripts.util.ReflectionUtilis;
 import data.scripts.util.ReflectionUtilis.ListenerFactory.ActionListener;
 import data.scripts.util.ReflectionUtilis.ListenerFactory.DialogDismissedListener;
 import data.scripts.util.UtilReflection;
-import data.scripts.util.UtilReflection.TreeTraverser;
-import data.scripts.util.UtilReflection.TreeTraverser.TreeNode;
+import data.scripts.ui.TreeTraverser;
+import data.scripts.ui.TreeTraverser.TreeNode;
 
 import com.fs.graphics.Sprite;
 import com.fs.starfarer.ui.newui.FleetMemberRecoveryDialog;
@@ -43,23 +44,25 @@ public class PartialRestorationDialog {
         PresetMiscUtils.print(args);
     }
 
-    private CampaignFleetAPI fleet;
+    private CampaignFleetAPI presetFleet;
+    private CampaignFleetAPI tempFleet;
+
+    private Map<FleetMemberAPI, FleetMemberAPI> tempToPresetMembersMap = new HashMap<>();
     private Map<Integer, FleetMemberAPI> whichFleetMembersAvailable;
+    
     private List<FleetMemberAPI> playerFleetMembers = new ArrayList<>();
     private List<FleetMemberAPI> pickedFleetMembers = new ArrayList<>();
     private List<FleetMemberAPI> originalOrder = new ArrayList<>();
     
     private TreeTraverser traverser;
-    private Map<ButtonAPI, FleetMemberButton> shipButtons;
+    
     private UtilReflection.ConfirmDialogData FMRDialog;
-    private UIPanelAPI fleetPanel;
     private UIPanel innerPanel;
+    private UIPanelAPI fleetPanel;
+    private Map<ButtonAPI, FleetMemberButton> shipButtons;
 
     private FleetPresetManagementListener master;
     private PartialRestorationDialog self = this;
-
-    private CampaignFleetAPI tempFleet;
-    private Map<FleetMemberAPI, FleetMemberAPI> tempToPresetMembersMap = new HashMap<>();
 
     public PartialRestorationDialog(Map<Integer, FleetMemberAPI> whichFleetMembersAvailable, CampaignFleetAPI fleet, FleetPresetManagementListener master) {
         master.setPartialSelecting(true);
@@ -67,7 +70,7 @@ public class PartialRestorationDialog {
         removeFleetMembersFromPlayerFleet();
         
         this.whichFleetMembersAvailable = whichFleetMembersAvailable;
-        this.fleet = fleet;
+        this.presetFleet = fleet;
         this.originalOrder = new ArrayList<>(fleet.getFleetData().getMembersListCopy());
 
         this.tempFleet = PresetUtils.createTempFleetCopy(fleet.getFleetData().getMembersListCopy());
@@ -133,7 +136,7 @@ public class PartialRestorationDialog {
 
     private void refShipButtons() {
         shipButtons = new LinkedHashMap<>();
-        for (TreeNode node : traverser.getNodesAtDepth(8)) {
+        for (TreeNode node : traverser.getNodesAtDepth(7)) {
             for (Object child : node.getChildren()) {
                 ButtonAPI btn = (ButtonAPI) child;
                 shipButtons.put(btn, new FleetMemberButton(btn));
@@ -170,7 +173,7 @@ public class PartialRestorationDialog {
                 yOffset += pos.getHeight() + 5f;
             }
             
-            replaceListener(btn);
+            setListener(btn);
             pos = tt.addCustomDoNotSetPosition(shipButtons.get(btn).getPanel()).getPosition().inTL(xOffset, yOffset);
             
             xOffset += pos.getWidth() + 5f;
@@ -180,7 +183,7 @@ public class PartialRestorationDialog {
         innerPanel.getInstance().addComponent(shipPanel).inTMid(5f);
     }
 
-    private void replaceListener(ButtonAPI btn) {
+    private void setListener(ButtonAPI btn) {
         FleetMemberButton buttonWrapper = shipButtons.get(btn);
         FleetMemberAPI member = buttonWrapper.getMember();
         
@@ -196,11 +199,11 @@ public class PartialRestorationDialog {
                     buttonWrapper.removeLabel();
                     pickedFleetMembers.remove(member);
                     Global.getSector().getPlayerFleet().getFleetData().removeFleetMember(tempToPresetMembersMap.get(member));
-                    self.fleet.getFleetData().addFleetMember(tempToPresetMembersMap.get(member));
-                    self.fleet.getFleetData().sortToMatchOrder(originalOrder);
+                    presetFleet.getFleetData().addFleetMember(tempToPresetMembersMap.get(member));
+                    presetFleet.getFleetData().sortToMatchOrder(originalOrder);
                 }
 
-                Global.getSector().getPlayerFleet().getFleetData().sortToMatchOrder(fleet.getFleetData().getMembersListCopy());
+                Global.getSector().getPlayerFleet().getFleetData().sortToMatchOrder(presetFleet.getFleetData().getMembersListCopy());
                 PresetUtils.refreshFleetUI();
             }
         }.getProxy());
@@ -209,13 +212,13 @@ public class PartialRestorationDialog {
     private void removeAllMembersFromPlayerFleet() {
         for (FleetMemberAPI member : Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder()) {
             Global.getSector().getPlayerFleet().getFleetData().removeFleetMember(member);
-            self.fleet.getFleetData().addFleetMember(member);
+            presetFleet.getFleetData().addFleetMember(member);
             if (member.getCaptain().getId().equals(Global.getSector().getPlayerPerson().getId())) {
-                self.fleet.setCommander(member.getCaptain());
-                self.fleet.getFleetData().setFlagship(member);
+                presetFleet.setCommander(member.getCaptain());
+                presetFleet.getFleetData().setFlagship(member);
             }
         }
-        self.fleet.getFleetData().sortToMatchOrder(originalOrder);
+        presetFleet.getFleetData().sortToMatchOrder(originalOrder);
     }
 
     // so warning message doesnt show for over max ships
@@ -281,7 +284,7 @@ public class PartialRestorationDialog {
         removeAllMembersFromPlayerFleet();
         readdFleetMembersToPlayerFleet();
 
-        PresetUtils.partRestorePreset(membersToRestore, whichFleetMembersAvailable, fleet.getFleetData());
+        PresetUtils.partRestorePreset(membersToRestore, whichFleetMembersAvailable, presetFleet.getFleetData());
 
         master.setPartialSelecting(false);
         master.enableButtonsRequiringSelection();
@@ -302,7 +305,7 @@ public class PartialRestorationDialog {
             this.panel.addComponent((UIComponentAPI)button).inTL(0f, 0f);
             panelPos = panel.getPosition();
 
-            this.label = Global.getSettings().createLabel("Restore", Fonts.VICTOR_10);
+            this.label = Global.getSettings().createLabel("RESTORE", Fonts.VICTOR_10);
             this.label.setColor(new Color(173, 255, 47));
             this.label.setAlignment(Alignment.MID);
             this.label.setHighlightColor(Color.GREEN);
