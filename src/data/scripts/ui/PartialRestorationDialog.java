@@ -39,6 +39,8 @@ import com.fs.starfarer.api.ui.PositionAPI;
 import java.awt.Color;
 import java.util.*;
 
+import org.lwjgl.input.Keyboard;
+
 public class PartialRestorationDialog {
     public static void print(Object... args) {
         PresetMiscUtils.print(args);
@@ -60,6 +62,7 @@ public class PartialRestorationDialog {
     private UIPanel innerPanel;
     private UIPanelAPI fleetPanel;
     private Map<ButtonAPI, FleetMemberButton> shipButtons;
+    private Map<ButtonAPI, Object> buttonToRenderControllerMap;
 
     private FleetPresetManagementListener master;
     private PartialRestorationDialog self = this;
@@ -118,6 +121,7 @@ public class PartialRestorationDialog {
         if (FMRDialog == null) {
             return;
         }
+        FMRDialog.confirmButton.setShortcut(Keyboard.KEY_G, false);
         innerPanel = new UIPanel(FMRDialog.panel);
 
         PresetUtils.refreshFleetUI();
@@ -125,13 +129,27 @@ public class PartialRestorationDialog {
         traverser = new TreeTraverser(fleetPanel);
         refShipButtons();
         clearFleetPanel();
-
-        FMRDialog.dialog.bringComponentToTop(FMRDialog.panel);
-        FMRDialog.dialog.bringComponentToTop(FMRDialog.confirmButton.getInstance());
-        FMRDialog.dialog.bringComponentToTop(FMRDialog.cancelButton.getInstance());
         reAddShipButtons();
 
+        for (ButtonAPI btn : shipButtons.keySet()) {
+            buttonToRenderControllerMap = getButtonToRenderControllerMap(ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, btn));
+            break;
+        }
         return;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<ButtonAPI, Object> getButtonToRenderControllerMap(Object listener) {
+        for (Object field : listener.getClass().getDeclaredFields()) {
+            Class<?> fieldType = ReflectionUtilis.getFieldType(field);
+
+            for (Object nestedField : fieldType.getDeclaredFields()) {
+                if (Map.class.equals(ReflectionUtilis.getFieldType(nestedField))) {
+                    return (Map<ButtonAPI, Object>) ReflectionUtilis.getPrivateVariable(nestedField, ReflectionUtilis.getPrivateVariable(field, listener));
+                }
+            }
+        }
+        return null;
     }
 
     private void refShipButtons() {
