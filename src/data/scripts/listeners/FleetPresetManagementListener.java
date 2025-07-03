@@ -3,15 +3,21 @@ package data.scripts.listeners;
 import com.fs.starfarer.api.Global;
 
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
+import com.fs.starfarer.api.campaign.FleetMemberPickerListener;
+import com.fs.starfarer.api.campaign.InteractionDialogAPI;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
+import com.fs.starfarer.api.campaign.BaseCampaignEventListener;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.campaign.CampaignEventListener;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
+import com.fs.starfarer.api.campaign.CampaignUIAPI;
 import com.fs.starfarer.api.campaign.CargoAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 
+import com.fs.starfarer.campaign.fleet.FleetMember;
+import com.fs.starfarer.ui.newui.FleetMemberRecoveryDialog;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipCreator;
@@ -33,12 +39,12 @@ import com.fs.starfarer.api.input.InputEventClass;
 import com.fs.starfarer.api.input.InputEventType;
 
 import com.fs.starfarer.api.util.Misc;
-import com.fs.starfarer.campaign.fleet.CampaignFleet;
 
 import data.scripts.ClassRefs;
 import data.scripts.listeners.DockingListener;
 
 import data.scripts.ui.BaseSelfRefreshingPanel;
+import data.scripts.ui.PartialRestorationDialog;
 import data.scripts.ui.UIComponent;
 import data.scripts.ui.UIPanel;
 import data.scripts.ui.UIConfig;
@@ -96,6 +102,10 @@ public class FleetPresetManagementListener extends ActionListener {
     private static final String RESTORE_BUTTON_ID = "restoreButton"; 
     private static final String RESTORE_BUTTON_TOOLTIP_PARA_TEXT = "Restores the selected preset.";
     private static final String RESTORE_BUTTON_TEXT  = "RESTORE";
+
+    private static final String PARTIAL_RESTORE_BUTTON_ID = "partialRestoreButton";
+    private static final String PARTIAL_RESTORE_BUTTON_TOOLTIP_PARA_TEXT = "Opens a dialog for ship selection and partial preset restoration.";
+    private static final String PARTIAL_RESTORE_BUTTON_TEXT = "PART. RESTORE";
 
     private static final String STORE_BUTTON_ID = "storeButton";
     private static final String STORE_BUTTON_TOOLTIP_PARA_TEXT = "Stores the current fleet in storage.";
@@ -199,6 +209,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
     private CampaignFleetAPI mangledFleet = null;
     private DockingListener dockingListener = null;
+    private boolean isPartialSelecting = false;
 
     public FleetPresetManagementListener() {
         super();
@@ -209,7 +220,6 @@ public class FleetPresetManagementListener extends ActionListener {
     public void trigger(Object arg0, Object arg1) {
         CustomPanelAPI tableMasterPanel = Global.getSettings().createCustom(PANEL_WIDTH - CANCEL_CONFIRM_BUTTON_WIDTH - 5f, PANEL_HEIGHT, new BaseCustomUIPanelPlugin() );
         UtilReflection.ConfirmDialogData master = UtilReflection.showConfirmationDialog(
-            0.165f,
             "graphics/illustrations/abyssal_light2.jpg",
             EMPTY_STRING,
             EMPTY_STRING,
@@ -221,10 +231,12 @@ public class FleetPresetManagementListener extends ActionListener {
                 public void trigger(Object arg0, Object arg1) {
                     resetTopLevelVars();
                 }
-            });
+        });
         if (master == null) {
             return;
         }
+        overlordPanel = master.panel;
+        overlordPanelPos = master.panel.getPosition();
 
         ButtonAPI confirmButton = master.confirmButton.getInstance();
         PositionAPI confirmButtonPosition = confirmButton.getPosition();
@@ -268,8 +280,6 @@ public class FleetPresetManagementListener extends ActionListener {
         master.panel.addComponent(canvasPanel).rightOfTop(buttonsPanel, 10f);
 
         tablePlugin.setRoot(tableMasterPanel);
-        overlordPanel = master.panel;
-        overlordPanelPos = master.panel.getPosition();
     }
     
     private void addTheButtons(TooltipMakerAPI tooltipMaker, PositionAPI confirmPosition, PositionAPI cancelPosition) {
@@ -286,19 +296,25 @@ public class FleetPresetManagementListener extends ActionListener {
         restorePresetButton.setShortcut(Keyboard.KEY_2, false);
         tooltipMaker.addTooltipTo(tc(RESTORE_BUTTON_TOOLTIP_PARA_TEXT), restorePresetButton, TooltipLocation.RIGHT, false);
 
+        ButtonAPI partialRestorePresetButton = tooltipMaker.addButton(PARTIAL_RESTORE_BUTTON_TEXT, PARTIAL_RESTORE_BUTTON_ID, c1, c2,
+        Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
+        partialRestorePresetButton.setShortcut(Keyboard.KEY_3, false);
+        tooltipMaker.addTooltipTo(tc(PARTIAL_RESTORE_BUTTON_TOOLTIP_PARA_TEXT), partialRestorePresetButton, TooltipLocation.RIGHT, false);
+
+
         ButtonAPI storeAllButton = tooltipMaker.addButton(STORE_BUTTON_TEXT, STORE_BUTTON_ID, c1, c2,
         Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
-        storeAllButton.setShortcut(Keyboard.KEY_3, false);
+        storeAllButton.setShortcut(Keyboard.KEY_4, false);
         tooltipMaker.addTooltipTo(tc(STORE_BUTTON_TOOLTIP_PARA_TEXT), storeAllButton, TooltipLocation.RIGHT, false);
 
         ButtonAPI deleteButton = tooltipMaker.addButton(DELETE_BUTTON_TEXT, DELETE_BUTTON_ID, c1, c2,
         Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
-        deleteButton.setShortcut(Keyboard.KEY_4, false);
+        deleteButton.setShortcut(Keyboard.KEY_5, false);
         tooltipMaker.addTooltipTo(tc(DELETE_BUTTON_TOOLTIP_PARA_TEXT), deleteButton, TooltipLocation.RIGHT, false);
 
         ButtonAPI overwriteToPresetButton = tooltipMaker.addButton(OVERWRITE_PRESET_BUTTON_TEXT, OVERWRITE_PRESET_BUTTON_ID, c1, c2,
         Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
-        overwriteToPresetButton.setShortcut(Keyboard.KEY_5, false);
+        overwriteToPresetButton.setShortcut(Keyboard.KEY_6, false);
         tooltipMaker.addTooltipTo(tc(OVERWRITE_PRESET_BUTTON_TOOLTIP_PARA_TEXT), overwriteToPresetButton, TooltipLocation.RIGHT, false);
 
         ButtonAPI autoUpdateButton = tooltipMaker.addCheckbox(buttonWidth, buttonHeight, AUTO_UPDATE_BUTTON_TEXT, AUTO_UPDATE_BUTTON_ID, Fonts.ORBITRON_12, c1,
@@ -317,6 +333,7 @@ public class FleetPresetManagementListener extends ActionListener {
         theButtons.put(DELETE_BUTTON_ID, deleteButton);
         theButtons.put(OVERWRITE_PRESET_BUTTON_ID, overwriteToPresetButton);
         theButtons.put(AUTO_UPDATE_BUTTON_ID, autoUpdateButton);
+        theButtons.put(PARTIAL_RESTORE_BUTTON_ID, partialRestorePresetButton);
         // theButtons.put(KEEP_CARGO_RATIOS_BUTTON_ID, cargoRatiosButton);
         disableButtonsRequiringSelection();
         enableButtonsRequiringSelection();
@@ -364,14 +381,14 @@ public class FleetPresetManagementListener extends ActionListener {
         textFieldPanel.addUIElement(textFieldTooltipMaker).inTL(0f, 0f);
 
         UtilReflection.ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
-            0.66f,
             "graphics/illustrations/entering_hyperspace.jpg",
             SAVE_DIALOG_HEADER,
             SAVE_DIALOG_YES_TEXT,
             CANCEL_TEXT,
             CONFIRM_DIALOG_WIDTH / 1.5f,
             CONFIRM_DIALOG_HEIGHT / 2,
-            saveListener);
+            saveListener
+        );
 
         CustomPanelAPI imgButtonPanel = Global.getSettings().createCustom(172f, 172f, null);
         TooltipMakerAPI imageButtonTt = imgButtonPanel.createUIElement(172f, 172f, false);
@@ -492,6 +509,10 @@ public class FleetPresetManagementListener extends ActionListener {
                     enableButtonsRequiringSelection();
                     return;
 
+                case PARTIAL_RESTORE_BUTTON_ID:
+                    showFleetMemberRecoveryDialog(PresetUtils.getFleetPresets().get(selectedPresetName).getCampaignFleet());
+                    return;
+
                 case STORE_BUTTON_ID:
                     PresetUtils.storeFleetInStorage();
                     enableButtonsRequiringSelection();
@@ -607,9 +628,11 @@ public class FleetPresetManagementListener extends ActionListener {
         
     }
 
-    private void enableButtonsRequiringSelection() {
+    public void enableButtonsRequiringSelection() {
         if (selectedPresetName != EMPTY_STRING) {
-            if (dockingListener.getPlayerCurrentMarket() != null && dockingListener.canPlayerAccessStorage(dockingListener.getPlayerCurrentMarket())) {
+            if (dockingListener.canPlayerAccessStorage(dockingListener.getPlayerCurrentMarket())) {
+                theButtons.get(PARTIAL_RESTORE_BUTTON_ID).setEnabled(true);
+
                 if (Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy().size() > 1) {
                     theButtons.get(STORE_BUTTON_ID).setEnabled(true);
                 } else {
@@ -627,10 +650,11 @@ public class FleetPresetManagementListener extends ActionListener {
 
         } else {
             theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
+            theButtons.get(PARTIAL_RESTORE_BUTTON_ID).setEnabled(false);
             theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(false);
             theButtons.get(DELETE_BUTTON_ID).setEnabled(false);
 
-            if (dockingListener.getPlayerCurrentMarket() != null && dockingListener.canPlayerAccessStorage(dockingListener.getPlayerCurrentMarket())
+            if (dockingListener.canPlayerAccessStorage(dockingListener.getPlayerCurrentMarket())
                 && Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy().size() > 1) {
                 theButtons.get(STORE_BUTTON_ID).setEnabled(true);
             } else {
@@ -642,6 +666,7 @@ public class FleetPresetManagementListener extends ActionListener {
     private void disableButtonsRequiringSelection() {
         theButtons.get(DELETE_BUTTON_ID).setEnabled(false);
         theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
+        theButtons.get(PARTIAL_RESTORE_BUTTON_ID).setEnabled(false);
         theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(false);
 
         if (dockingListener.getPlayerCurrentMarket() != null && dockingListener.canPlayerAccessStorage(dockingListener.getPlayerCurrentMarket())
@@ -751,6 +776,7 @@ public class FleetPresetManagementListener extends ActionListener {
             if (selectedPresetName != EMPTY_STRING) {
                 // in case there is a matching member in storage with the same variant but not the exact same member the preset was saved with
                 Map<FleetMemberWrapper, FleetMemberAPI> neededMembers = PresetUtils.getIdAgnosticRequiredMembers(dockingListener.getPlayerCurrentMarket(), selectedPresetName);
+                Map<Integer, FleetMemberAPI> whichMembersAvailable = null;
 
                 if (PresetUtils.isPresetAvailableAtCurrentMarket(dockingListener.getPlayerCurrentMarket(), selectedPresetName, 
                     Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy())) {
@@ -776,11 +802,12 @@ public class FleetPresetManagementListener extends ActionListener {
                         isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet but the ship order or officer assignments are different."));
                         isSelectedPresetAvailablePara.setColor(TEXT_HIGHLIGHT_COLOR);
                     } else if (PresetUtils.isPresetContainedInPlayerFleet(selectedPresetName)) {
-                        isSelectedPresetAvailablePara.setText(String.format("Current fleet is partially comprised of the Selected Preset"));
+                        isSelectedPresetAvailablePara.setText(String.format("Selected Preset is part of the current fleet"));
                         isSelectedPresetAvailablePara.setColor(TEXT_HIGHLIGHT_COLOR);
                     } else {
                         isSelectedPresetAvailablePara.setText(String.format(isSelectedPresetAvailableParaFormat, "only partially available, or unavailable"));
                         isSelectedPresetAvailablePara.setColor(Misc.getNegativeHighlightColor());
+                        whichMembersAvailable = PresetUtils.whichMembersAvailable(dockingListener.getPlayerCurrentMarket(), currentTableMap.get(selectedPresetName).getCampaignFleet().getFleetData().getMembersListCopy());
                     }
                 }
 
@@ -790,20 +817,20 @@ public class FleetPresetManagementListener extends ActionListener {
                         mangledFleet = null;
                     }
                     mangledFleet = PresetUtils.mangleFleet(neededMembers, currentTableMap.get(selectedPresetName).getCampaignFleet());
-                    addShipList(mangledFleet);
+                    addShipList(mangledFleet, whichMembersAvailable);
                 } else {
-                    addShipList(currentTableMap.get(selectedPresetName).getCampaignFleet());
+                    addShipList(currentTableMap.get(selectedPresetName).getCampaignFleet(), whichMembersAvailable);
                 }
 
             } else {
                 isSelectedPresetAvailablePara.setText(EMPTY_STRING);
-                addShipList(null);
+                addShipList(null, null);
             };
 
             tableTipMaker.getExternalScroller().setYOffset(yScrollOffset);
         }
 
-        public void addShipList(CampaignFleetAPI fleet) {
+        public void addShipList(CampaignFleetAPI fleet, Map<Integer, FleetMemberAPI> whichMembersAvailable) {
             if (fleetInfoPanel != null && shipsPanel != null) {
                 shipsPanel.removeComponent(fleetInfoPanel);
                 fleetInfoPanel = null;
@@ -818,6 +845,10 @@ public class FleetPresetManagementListener extends ActionListener {
 
             TooltipMakerAPI fleetInfoPanelHolder = shipsPanel.createUIElement(SHIP_COLUMN_WIDTH, PANEL_HEIGHT, false);
             fleetInfoPanel = UtilReflection.getObfFleetInfoPanel(selectedPresetName, fleet); // Object casted to UIPanelAPI, fixed size 400x400 afaik
+            if (whichMembersAvailable != null && !whichMembersAvailable.isEmpty()) {
+                UtilReflection.disableUnavailableMemberButtons(fleetInfoPanel, whichMembersAvailable);
+            }
+
             fleetInfoPanelHolder.addComponent(fleetInfoPanel).inTL(0f, 0f);
             
             shipsPanel.addUIElement(fleetInfoPanelHolder).inTL(0f, 0f);
@@ -1197,4 +1228,26 @@ public class FleetPresetManagementListener extends ActionListener {
         }
 
     }
+
+    private void showFleetMemberRecoveryDialog(CampaignFleetAPI fleet) {
+        Map<Integer, FleetMemberAPI> whichFleetMembersAvailable = PresetUtils.whichMembersAvailable(dockingListener.getPlayerCurrentMarket(), fleet.getFleetData().getMembersInPriorityOrder());
+        new PartialRestorationDialog(whichFleetMembersAvailable, fleet, this);
+    }
+
+    public boolean isPartialSelecting() {
+        return this.isPartialSelecting;
+    }
+
+    public void setPartialSelecting(boolean isPartialSelecting) {
+        this.isPartialSelecting = isPartialSelecting;
+    }
+
+    public DockingListener getDockingListener() {
+        return this.dockingListener;
+    }
+
+    public TablePlugin getTablePlugin() {
+        return this.tablePlugin;
+    }
+
 }

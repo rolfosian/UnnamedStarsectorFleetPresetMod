@@ -68,33 +68,15 @@ public class FleetPresetsFleetPanelInjector {
     private Label currentPresetLabelHeader;
     private Label currentPresetLabel;
 
-    private RunningMembersList runningMembers; // we dont need the RunningMembers class for this because we don't care about the officer assignments here
+    private RunningMembers runningMembers; // we dont need the RunningMembers class for this because we don't care about the officer assignments here
     Map<String, Set<String>> storedMemberIds;
     private Map<String, List<FleetMemberWrapper>> presetMembers;
 
     private DockingListener dockingListener;
-
-    private class RunningMembersList extends ArrayList<FleetMemberAPI> {
-        public RunningMembersList(List<FleetMemberAPI> members) {
-            this.addAll(members);
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (!(obj instanceof List)) return false;
-            List<FleetMemberAPI> membersToCompare = (List<FleetMemberAPI>) obj;
-            if (membersToCompare.size() != this.size()) return false;
-
-            for (int i = 0; i < membersToCompare.size(); i++) {
-                if (!membersToCompare.get(i).getId().equals(this.get(i).getId())) return false;
-            }
-
-            return true;
-        }
-    }
+    private FleetPresetManagementListener masterPresetsDialog;
 
     public FleetPresetsFleetPanelInjector() {
-        this.runningMembers = new RunningMembersList(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
+        this.runningMembers = new RunningMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
         this.storedMemberIds = PresetUtils.getStoredFleetPresetsMemberIds();
         this.presetMembers = (Map<String, List<FleetMemberWrapper>>) Global.getSector().getPersistentData().get(PresetUtils.PRESET_MEMBERS_KEY);
     }
@@ -128,6 +110,7 @@ public class FleetPresetsFleetPanelInjector {
             fleetTab = null;
             fleetTabWrapped = null;
             fleetPanelClickHandler = null;
+            masterPresetsDialog = null;
             Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.FLEETINFOPANEL_KEY);
             return;
         }
@@ -153,7 +136,7 @@ public class FleetPresetsFleetPanelInjector {
                 // checking if members are sold so there's no memory leak for wrappedMembers
                 if (runningMembers.size() > playerFleetMembers.size()) {
                     if ((boolean)Global.getSector().getPersistentData().get(PresetUtils.IS_AUTO_UPDATE_KEY)) {
-                        for (FleetMemberAPI runningMember : runningMembers) {
+                        for (FleetMemberAPI runningMember : runningMembers.keySet()) {
                             if (!playerFleetMembers.contains(runningMember)) {
                                 
                                 if (mothballedShips != null && mothballedShips.contains(runningMember) && PresetUtils.getFleetPresetsMembers().get(runningMember.getId()) != null) {
@@ -163,10 +146,9 @@ public class FleetPresetsFleetPanelInjector {
                                     }
                                     storedMemberIds.get(market.getName()).add(runningMember.getId());
 
-                                } else if (PresetUtils.getFleetPresetsMembers().get(runningMember.getId()) != null && getPickedUpMember() == null) {
+                                } else if (PresetUtils.getFleetPresetsMembers().get(runningMember.getId()) != null && !masterPresetsDialog.isPartialSelecting() && getPickedUpMember() == null) {
                                     // member was sold or scuttled
                                     PresetUtils.cleanUpPerishedPresetMembers();
-
                                 }
                             }
                         }
@@ -179,7 +161,7 @@ public class FleetPresetsFleetPanelInjector {
                             if (storedMemberIds.get(market.getName()).isEmpty()) storedMemberIds.remove(market.getName());
                         }
                     }
-                // } else if (!runningMembers.equals(playerFleetMembers)) {
+                // } else if (!runningMembers.keySet().equals(new HashSet<>(playerFleetMembers))) {
 
                 }
             }
@@ -187,7 +169,7 @@ public class FleetPresetsFleetPanelInjector {
                 if (storeFleetButton.isEnabled()) storeFleetButton.setEnabled(false);
             }
         }
-        runningMembers = new RunningMembersList(playerFleetMembers);
+        runningMembers = new RunningMembers(playerFleetMembers);
 
         if (!injected) {
             injected = true;
@@ -205,9 +187,10 @@ public class FleetPresetsFleetPanelInjector {
                 addAuxStorageButtons(playerFleetMembers, officerAutoAssignButtonPosition, mothballedShips, market);
             }
 
+            masterPresetsDialog = new FleetPresetManagementListener();
             presetFleetsButton = UtilReflection.makeButton(
                     "   Fleet Presets Management",
-                    new FleetPresetManagementListener(),
+                    masterPresetsDialog,
                     Misc.getBasePlayerColor(),
                     Misc.getDarkPlayerColor(),
                     Alignment.LMID,
@@ -258,7 +241,7 @@ public class FleetPresetsFleetPanelInjector {
                     labelPos1 = fleetTabWrapped.add(currentPresetLabelHeader);
                     labelPos1.getInstance().belowMid((UIComponentAPI)getFleetPanel(), 5f).setXAlignOffset(215f);
                     labelPos2 = fleetTabWrapped.add(currentPresetLabel);
-                    labelPos2.getInstance().belowMid((UIComponentAPI)labbel1, 5f);
+                    labelPos2.getInstance().belowMid((UIComponentAPI)labbel1, 0f);
                 }
 
             } else {

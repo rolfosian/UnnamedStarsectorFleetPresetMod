@@ -15,6 +15,7 @@ import com.fs.starfarer.api.campaign.InteractionDialogPlugin;
 import com.fs.starfarer.api.campaign.OptionPanelAPI;
 import com.fs.starfarer.api.campaign.VisualPanelAPI;
 import com.fs.starfarer.api.combat.EngagementResultAPI;
+import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.impl.campaign.FleetInteractionDialogPluginImpl;
 import com.fs.starfarer.api.input.InputEventClass;
 import com.fs.starfarer.api.input.InputEventType;
@@ -24,6 +25,7 @@ import com.fs.starfarer.campaign.fleet.CampaignFleet;
 import data.scripts.ClassRefs;
 import data.scripts.ui.Button;
 import data.scripts.ui.Label;
+import data.scripts.ui.UIComponent;
 import data.scripts.ui.UIPanel;
 import data.scripts.util.ReflectionUtilis.ListenerFactory.ActionListener;
 import data.scripts.util.ReflectionUtilis.ListenerFactory.DialogDismissedListener;
@@ -131,8 +133,20 @@ public class UtilReflection {
                 (UIPanelAPI) confirmDialog);
     }
 
+    public static void addBackGroundImage(UIPanelAPI innerPanel, String backgroundImagePath) {
+        PositionAPI innerPanelPos = innerPanel.getPosition();
+        CustomPanelAPI bgImagePanel = Global.getSettings().createCustom(innerPanelPos.getWidth(), innerPanelPos.getHeight(), null);
+        TooltipMakerAPI imagePaneltt = bgImagePanel.createUIElement(innerPanelPos.getWidth(), innerPanelPos.getHeight(), false);
+    
+        imagePaneltt.addImage(backgroundImagePath, innerPanelPos.getWidth()-5f, innerPanelPos.getHeight()-5f, 0f);
+        bgImagePanel.addUIElement(imagePaneltt);
+    
+        innerPanel.addComponent((UIComponentAPI)bgImagePanel).inMid();
+        innerPanel.sendToBottom(bgImagePanel);
+        innerPanel.sendToBottom(imagePaneltt);
+    }
+
     public static ConfirmDialogData showConfirmationDialog(
-        float backgroundImageOpacity,
         String backgroundImagePath,
         String text,
         String confirmText,
@@ -149,20 +163,12 @@ public class UtilReflection {
     Button no = new Button((ButtonAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetButtonMethod, confirmDialog, 1), null, null);
 
     UIPanelAPI innerPanel = (UIPanelAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetInnerPanelMethod, confirmDialog);
-    PositionAPI innerPanelPos = innerPanel.getPosition();
-    CustomPanelAPI bgImagePanel = Global.getSettings().createCustom(innerPanelPos.getWidth(), innerPanelPos.getHeight(), null);
-    TooltipMakerAPI imagePaneltt = bgImagePanel.createUIElement(innerPanelPos.getWidth(), innerPanelPos.getHeight(), false);
-
-    imagePaneltt.addImage(backgroundImagePath, innerPanelPos.getWidth()-5f, innerPanelPos.getHeight()-5f, 0f);
-    bgImagePanel.setOpacity(backgroundImageOpacity);
-    bgImagePanel.addUIElement(imagePaneltt);
-
-    innerPanel.addComponent((UIComponentAPI)bgImagePanel).inMid();
-    innerPanel.sendToBottom(bgImagePanel);
-    innerPanel.sendToBottom(imagePaneltt);
+    
+    addBackGroundImage((UIPanelAPI)confirmDialog, backgroundImagePath);
     innerPanel.bringComponentToTop((UIComponentAPI)label);
     innerPanel.bringComponentToTop((UIComponentAPI)yes.getInstance());
     innerPanel.bringComponentToTop((UIComponentAPI)no.getInstance());
+ 
     return new ConfirmDialogData(
             label,
             yes,
@@ -206,6 +212,26 @@ public class UtilReflection {
         );
     }
 
+    public static void disableUnavailableMemberButtons(UIPanelAPI obfFleetInfoPanel, Map<Integer, FleetMemberAPI> whichFleetMembersAvailable) {
+        TreeTraverser traverser = new TreeTraverser(obfFleetInfoPanel);
+        int i = 0;
+        for (TreeTraverser.TreeNode node : traverser.getNodesAtDepth(8)) {
+            for (Object child : node.getChildren()) {
+                if (whichFleetMembersAvailable.get(i) == null) {
+                    ButtonAPI btn = (ButtonAPI) child;
+                    btn.setGlowBrightness(0f);
+                    btn.setEnabled(false);
+                    btn.setFlashBrightness(0f);
+                    btn.setHighlightBrightness(0f);
+                    btn.setOpacity(0.5f);
+                    btn.setShowTooltipWhileInactive(false);
+                    ReflectionUtilis.getMethodAndInvokeDirectly("setActive", btn, 1, false);
+                }
+                i++;
+            }
+        }
+    }
+
     public static Object createConfirmDialog(String text, String confirmText, String cancelText, float width, float height, DialogDismissedListener dialogListener) {
         return ReflectionUtilis.instantiateClass(
             ClassRefs.confirmDialogClass,
@@ -217,5 +243,136 @@ public class UtilReflection {
             text,
             new String[]{confirmText, cancelText}
         );
+    }
+
+    public static class TreeTraverser {
+
+        public static class TreeNode {
+            private Object parent;
+            private List<Object> children;
+            private int depth;
+
+            public TreeNode(Object parent, List<Object> children, int depth) {
+                this.parent = parent;
+                this.children = children;
+                this.depth = depth;
+            }
+
+            public Object getParent() {
+                return this.parent;
+            }
+            
+            public List<Object> getChildren() {
+                return this.children;
+            }
+
+            public int getDepth() {
+                return this.depth;
+            }
+
+            public boolean hasButtons() {
+                for (Object child : this.children) {
+                    if (ButtonAPI.class.isAssignableFrom(child.getClass())) return true;
+                }
+                return false;
+            }
+
+            public void printButtonsCount() {
+                int count = 0;
+                for (Object child : this.children) {
+                    if (ButtonAPI.class.isAssignableFrom(child.getClass())) count ++;
+                }
+                print("Depth:", this.depth, "Num buttons:", count);
+            }
+
+            public boolean hasLabels() {
+                for (Object child : this.children) {
+                    if (LabelAPI.class.isAssignableFrom(child.getClass())) return true;
+                }
+                return false;
+            }
+        }
+
+        private final Object parentPanel;
+        private List<TreeNode> nodes;
+        private int currentIndex;
+    
+        public TreeTraverser(Object parentPanel) {
+            this.parentPanel = parentPanel;
+            refresh();
+        }
+
+        public void removeBranch() {
+            TreeNode node = getCurrentNode();
+            Object parent = node.getParent();
+            UIPanel pp =  new UIPanel(parent);
+            if (parent == null) return;
+            for (Object child : node.getChildren()) {
+                pp.remove(new UIComponent(child));
+            }
+            refresh();
+        }
+    
+        public List<TreeNode> getNodes() {
+            return this.nodes;
+        }
+
+        public TreeNode getCurrentNode() {
+            return nodes.get(currentIndex);
+        }
+
+        public TreeNode getNode(int index) {
+            return this.nodes.get(index);
+        }
+
+        public List<TreeNode> getNodesAtDepth(int depth) {
+            List<TreeNode> result = new ArrayList<>(); 
+            for (TreeNode node : this.nodes) if (node.getDepth() == depth) result.add(node);
+            return result;
+        }
+        
+        public boolean goUpOneLevel() {
+            if (currentIndex == 0) return false;
+            currentIndex -= 1;
+            return true;
+        }
+        
+        public boolean goDownOneLevel() {
+            if (currentIndex >= nodes.size() - 1) return false;
+            currentIndex += 1;
+            return true;
+        }
+
+        public void toTop() {
+            currentIndex = nodes.size() - 1;
+        }
+        
+        public void toBottom() {
+            currentIndex = 0;
+        }
+    
+        public void refresh() {
+            this.nodes = new ArrayList<>();
+            this.currentIndex = 0;
+            this.getChildren(parentPanel, null, 0);
+        }
+        
+        private void getChildren(Object node, Object parent, int depth) {
+            List<Object> children = (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenCopy", node, 0);
+            depth++;
+
+            if (children != null && !children.isEmpty()) {
+                if (parent == null) {
+                    this.nodes.add(new TreeNode(node, children, depth));
+                } else {
+                    this.nodes.add(new TreeNode(parent, children, depth));
+                }
+
+                for (Object child : children) {
+                    this.getChildren(child, node, depth);
+                }
+            }
+            return;
+        }
     }
 }

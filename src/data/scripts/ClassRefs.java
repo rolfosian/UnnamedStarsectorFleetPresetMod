@@ -5,15 +5,18 @@ package data.scripts;
 import com.fs.starfarer.api.Global;
 
 import com.fs.starfarer.campaign.fleet.CampaignFleet;
+import com.fs.starfarer.ui.newui.FleetMemberRecoveryDialog;
 import com.fs.starfarer.api.campaign.BaseCampaignEventListener;
 import com.fs.starfarer.api.campaign.CampaignUIAPI;
 import com.fs.starfarer.api.campaign.FleetEncounterContextPlugin;
+import com.fs.starfarer.api.campaign.FleetMemberPickerListener;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;
 import com.fs.starfarer.api.campaign.InteractionDialogPlugin;
 import com.fs.starfarer.api.campaign.VisualPanelAPI;
 import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.combat.EngagementResultAPI;
-
+import com.fs.starfarer.api.fleet.FleetMemberAPI;
+import com.fs.starfarer.api.fleet.FleetMemberType;
 import com.fs.starfarer.api.input.InputEventClass;
 import com.fs.starfarer.api.input.InputEventType;
 
@@ -56,6 +59,9 @@ public class ClassRefs {
     public static Class<?> renderableUIElementInterface;
     /** Obfuscated UI panel class */
     public static Class<?> uiPanelClass;
+    public static Object uiPanelsetParentMethod;
+    public static Object uiPanelgetChildrenNonCopyMethod;
+    public static Object uiPanelgetChildrenCopyMethod;
 
     /** Obfuscated fleet info panel class from the VisualPanelAPI */
     public static Class<?> visualPanelFleetInfoClass; 
@@ -70,6 +76,10 @@ public class ClassRefs {
     public static Object visualPanelGetChildrenNonCopyMethod;
     public static Object optionPanelGetButtonToItemMapMethod;
     public static Object interactionDialogGetCoreUIMethod;
+    public static float FMRDialogWidth;
+    public static float FMRDialogHeight;
+    public static float FMRDialogPanelWidth;
+    public static float FMRDialogPanelHeight;
 
     /** Obfuscated ButtonAPI class */
     public static Class<?> buttonClass;
@@ -119,11 +129,26 @@ public class ClassRefs {
                 for (Object child : (List<Object>) ReflectionUtilis.invokeMethodDirectly(visualPanelGetChildrenNonCopyMethod, visualPanel)) {
                     if (UIPanelAPI.class.isAssignableFrom(child.getClass()) && ReflectionUtilis.doInstantiationParamsMatch(child.getClass(), visualPanelFleetInfoClassParamTypes)) {
                         visualPanelFleetInfoClass = child.getClass(); // found it
-                        dialog.dismiss();
-                        Global.getSector().removeListener(this);
-                        return;
+                        break;
                     }
                 }
+
+                dialog.showFleetMemberRecoveryDialog("", getDummyMembers(), new FleetMemberPickerListener() {
+                    @Override public void cancelledFleetMemberPicking() {}
+                    @Override public void pickedFleetMembers(List<FleetMemberAPI> arg0) {}});
+
+                for (Object child : (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.visualPanelGetChildrenNonCopyMethod, dialog.getVisualPanel())) {
+                    if (child instanceof FleetMemberRecoveryDialog) {
+                        FleetMemberRecoveryDialog FMRDialog = (FleetMemberRecoveryDialog) child;
+
+                        FMRDialogPanelWidth = FMRDialog.getInnerPanel().getPosition().getWidth();
+                        FMRDialogPanelHeight = FMRDialog.getInnerPanel().getPosition().getHeight();
+                        FMRDialogWidth = FMRDialog.getWidth();
+                        FMRDialogHeight = FMRDialog.getHeight();
+                        break;
+                    }
+                }
+                Global.getSector().removeListener(this);
                 dialog.dismiss();
             }
         });
@@ -207,6 +232,9 @@ public class ClassRefs {
         try {
             Object field = campaignUI.getClass().getDeclaredField("screenPanel");
             uiPanelClass = ReflectionUtilis.getFieldType(field);
+            uiPanelsetParentMethod = ReflectionUtilis.getMethod("setParent", uiPanelClass, 1);
+            uiPanelgetChildrenNonCopyMethod = ReflectionUtilis.getMethod("getChildrenNonCopy", uiPanelClass, 0);
+            uiPanelgetChildrenCopyMethod = ReflectionUtilis.getMethod("getChildrenCopy", uiPanelClass, 0);
         } catch (Exception e) {
             print(e);
         }
@@ -319,7 +347,7 @@ public class ClassRefs {
         throw new RuntimeException("Interface with only method " + methodName + " not found; perhaps invalid witness used?");
     }
 
-    private static class DummyInteractionDialogPlugin implements InteractionDialogPlugin {
+    public static class DummyInteractionDialogPlugin implements InteractionDialogPlugin {
         public void advance(float arg0) { return; }
         public void backFromEngagement(EngagementResultAPI arg0) { return; }
         public Object getContext() { return ""; }
@@ -327,5 +355,13 @@ public class ClassRefs {
         public void init(InteractionDialogAPI arg0) { return; }
         public void optionMousedOver(String arg0, Object arg1) { return; }
         public void optionSelected(String arg0, Object arg1) { return; }
+    }
+
+    public static List<FleetMemberAPI> getDummyMembers() {
+        List<FleetMemberAPI> members = new ArrayList<>();
+        for (int i = 0; i < 9; i++) {
+            members.add(Global.getFactory().createFleetMember(FleetMemberType.SHIP, Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder().get(0).getVariant()));
+        }
+        return members;
     }
 }

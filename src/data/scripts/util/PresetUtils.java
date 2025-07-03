@@ -45,23 +45,23 @@ public class PresetUtils {
         PresetMiscUtils.print(args);
     }
 
-    public static final String nexerelinVersion;
-    public static final String RATVersion;
+    public static final String NEXERELIN_VERSION;
+    public static final String RAT_VERSION;
     
     static {
-
+        
         ModSpecAPI nexerelinModSpec = Global.getSettings().getModManager().getModSpec("nexerelin");
         if (nexerelinModSpec != null) {
-            nexerelinVersion = nexerelinModSpec.getVersion();
+            NEXERELIN_VERSION = nexerelinModSpec.getVersion();
         } else {
-            nexerelinVersion = null;
+            NEXERELIN_VERSION = null;
         }
 
         ModSpecAPI RATModSpec = Global.getSettings().getModManager().getModSpec("assortment_of_things");
         if (RATModSpec != null) {
-            RATVersion = RATModSpec.getVersion();
+            RAT_VERSION = RATModSpec.getVersion();
         } else {
-            RATVersion = null;
+            RAT_VERSION = null;
         }
         
     }
@@ -94,11 +94,11 @@ public class PresetUtils {
         {"Combat", "graphics/icons/skills/strike_commander.png"},
         {"Carrier", "graphics/icons/skills/carrier_command.png"},
         {"Stealth", "graphics/icons/skills/phase_corps.png"},
-        // {"Invasion" , "graphics/icons/cargo/heavyweapons.png"},
+
         {"Invasion" , "graphics/icons/missions/tactical_bombardment.png"},
         {"Exploration", "graphics/icons/skills/sensors.png"},
         {"Automated", "graphics/icons/skills/automated_ships.png"},
-        // {"Automated", "graphics/icons/cargo/ai_core_alpha.png"},
+
         {"Salvage", "graphics/icons/skills/salvaging.png"},
         {"Trade", "graphics/icons/skills/recovery_ops.png"},
         {"Colony Expedition", "graphics/icons/skills/planetary_ops.png"}
@@ -204,8 +204,6 @@ public class PresetUtils {
             return Integer.compare(indexA, indexB);
         });
     }
-
-
 
     public static class RunningMembers extends HashMap<FleetMemberAPI, PersonAPI> {
         public RunningMembers(List<FleetMemberAPI> fleetMembers) {
@@ -396,6 +394,22 @@ public class PresetUtils {
         campaignFleet.setInflated(true);
         campaignFleet.setNoFactionInName(true);
         return campaignFleet;
+    }
+
+    public static CampaignFleetAPI createTempFleetCopy(List<FleetMemberAPI> members) {
+        CampaignFleetAPI tempFleet = createDummyPresetFleet();
+        for (int i = 0; i < members.size(); i++) {
+            FleetMemberAPI member = members.get(i);
+
+            FleetMemberWrapper wrapper = new FleetMemberWrapper(null, member, member.getVariant().clone(), member.getCaptain(), i);
+            tempFleet.getFleetData().addFleetMember(wrapper.getMember());
+            if (member.getCaptain().getId().equals(Global.getSector().getPlayerPerson().getId())) {
+                tempFleet.setCommander(wrapper.getCaptainCopy());
+                tempFleet.getFleetData().setFlagship(wrapper.getMember());
+            }
+        }
+
+        return tempFleet;
     }
 
     // for after game save. i dont know why we need to do this but we do
@@ -709,6 +723,42 @@ public class PresetUtils {
             }
         }
         return false;
+    }
+
+    public static Map<Integer, FleetMemberAPI> whichMembersAvailable(MarketAPI market, List<FleetMemberAPI> membersToCheck) {
+        SubmarketAPI storage = CargoPresetUtils.getStorageSubmarket(market);
+        SubmarketPlugin storagePlugin = storage.getPlugin();
+        if (!isPlayerPaidForStorage(storagePlugin)) return null;
+        
+        CargoAPI storageCargo = storage.getCargo();
+        initMothballedShips(storageCargo);
+
+        Map<Integer, FleetMemberAPI> seen = new HashMap<>();
+
+        Map<Integer, FleetMemberAPI> seenPlayer = new HashMap<>();
+        Map<Integer, FleetMemberAPI> seenStorage = new HashMap<>();
+        for (int i = 0; i < membersToCheck.size(); i++) {
+            boolean seent = false;
+            for (FleetMemberAPI playerMember : Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy()) {
+                if (!seenPlayer.values().contains(playerMember) && playerMember.getId().equals(membersToCheck.get(i).getId())) {
+                    seenPlayer.put(i, playerMember);
+                    seent = true;
+                    break;
+                }
+            }
+            if (seent) continue;
+
+            for (FleetMemberAPI storedMember : storageCargo.getMothballedShips().getMembersListCopy()) {
+                if (!seenStorage.values().contains(storedMember) && storedMember.getId().equals(membersToCheck.get(i).getId())) {
+                    seenStorage.put(i, storedMember);
+                    break;
+                }
+            }
+        }
+
+        seen.putAll(seenPlayer);
+        seen.putAll(seenStorage);
+        return seen;
     }
 
     public static boolean isPlayerFleetChanged(FleetPreset preset, List<FleetMemberAPI> playerFleetMembers) {
@@ -1468,6 +1518,19 @@ public class PresetUtils {
         return storageCargo.getMothballedShips().getMembersListCopy();
     }
 
+    public static FleetDataAPI getMothBalledShipsData(MarketAPI market) {
+        if (market == null) return null;
+        SubmarketAPI storage = CargoPresetUtils.getStorageSubmarket(market);
+        if (storage == null) return null;
+        SubmarketPlugin storagePlugin = storage.getPlugin();
+        if (!isPlayerPaidForStorage(storagePlugin)) return null;
+
+        CargoAPI storageCargo = storage.getCargo();
+        initMothballedShips(storageCargo);
+
+        return storageCargo.getMothballedShips();
+    }
+
     public static void autoAssignOfficers() {
         UtilReflection.clickButton(Global.getSector().getMemoryWithoutUpdate().get(OFFICER_AUTOASSIGN_BUTTON_KEY));
     }
@@ -1565,25 +1628,25 @@ public class PresetUtils {
 
     public static boolean areSameVariantPrinted(ShipVariantAPI variant1, ShipVariantAPI variant2) {
         // xstream serializer mangles weapon groups on game save/load or something? so we need to do this
-        List<WeaponGroupSpec> variant1WeaponGroups = variant1.getWeaponGroups();
-        List<WeaponGroupSpec> variant2WeaponGroups = variant2.getWeaponGroups();
+        // List<WeaponGroupSpec> variant1WeaponGroups = variant1.getWeaponGroups();
+        // List<WeaponGroupSpec> variant2WeaponGroups = variant2.getWeaponGroups();
 
-        // print("-------------------------------------------------------");
-        // print(variant1.getHullSpec().getHullSpec().getBaseHullId());
+        print("-------------------------------------------------------");
+        print(variant1.getHullSpec().getBaseHullId());
 
-        if (variant1WeaponGroups.size() != variant2WeaponGroups.size()) return false;
-        for (int i = 0; i < variant1WeaponGroups.size(); i++) {
-            List<String> slots1 = variant1WeaponGroups.get(i).getSlots();
-            List<String> slots2 = variant2WeaponGroups.get(i).getSlots();
-            // slots1.equals(slots2) doesnt work either, we actually have to go through it and compare each directly
+        // if (variant1WeaponGroups.size() != variant2WeaponGroups.size()) return false;
+        // for (int i = 0; i < variant1WeaponGroups.size(); i++) {
+        //     List<String> slots1 = variant1WeaponGroups.get(i).getSlots();
+        //     List<String> slots2 = variant2WeaponGroups.get(i).getSlots();
+        //     // slots1.equals(slots2) doesnt work either, we actually have to go through it and compare each directly
 
-            if (slots1.size() != slots2.size()) return false;
-            for (int j = 0; j < slots1.size(); j++) {
-                if (!slots1.get(j).equals(slots2.get(j))) return false;
-            }
-        }
+        //     if (slots1.size() != slots2.size()) return false;
+        //     for (int j = 0; j < slots1.size(); j++) {
+        //         if (!slots1.get(j).equals(slots2.get(j))) return false;
+        //     }
+        // }
 
-        print("Weapon groups are the same");
+        // print("Weapon groups are the same");
         print("hullId match:", variant1.getHullSpec().getBaseHullId().equals(variant2.getHullSpec().getBaseHullId()));
         print(variant1.getHullSpec().getBaseHullId(), variant2.getHullSpec().getBaseHullId());
         print("smods match:", variant1.getSMods().equals(variant2.getSMods()));
@@ -1614,36 +1677,23 @@ public class PresetUtils {
     // xstream is mangling half of this shit and i do not want to make rules for it
     public static boolean areSameVariant(ShipVariantAPI variant1, ShipVariantAPI variant2) {
         // xstream serializer mangles weapon groups on game save/load or something? so we need to do this
-        List<WeaponGroupSpec> variant1WeaponGroups = variant1.getWeaponGroups();
-        List<WeaponGroupSpec> variant2WeaponGroups = variant2.getWeaponGroups();
+        // List<WeaponGroupSpec> variant1WeaponGroups = variant1.getWeaponGroups();
+        // List<WeaponGroupSpec> variant2WeaponGroups = variant2.getWeaponGroups();
 
         // print("-------------------------------------------------------");
         // print(variant1.getHullSpec().getHullSpec().getBaseHullId());
 
-        if (variant1WeaponGroups.size() != variant2WeaponGroups.size()) return false;
-        for (int i = 0; i < variant1WeaponGroups.size(); i++) {
-            List<String> slots1 = variant1WeaponGroups.get(i).getSlots();
-            List<String> slots2 = variant2WeaponGroups.get(i).getSlots();
-            // slots1.equals(slots2) doesnt work either, we actually have to go through it and compare each directly
+        // if (variant1WeaponGroups.size() != variant2WeaponGroups.size()) return false;
+        // for (int i = 0; i < variant1WeaponGroups.size(); i++) {
+        //     List<String> slots1 = variant1WeaponGroups.get(i).getSlots();
+        //     List<String> slots2 = variant2WeaponGroups.get(i).getSlots();
+        //     // slots1.equals(slots2) doesnt work either, we actually have to go through it and compare each directly
 
-            if (slots1.size() != slots2.size()) return false;
-            for (int j = 0; j < slots1.size(); j++) {
-                if (!slots1.get(j).equals(slots2.get(j))) return false;
-            }
-        }
-
-        // print("Weapon groups are the same");
-        // print("hullId match:", variant1.getHullSpec().getHullSpec().getBaseHullId().equals(variant2.getHullSpec().getHullSpec().getBaseHullId()));
-        // print(variant1.getHullSpec().getHullSpec().getBaseHullId(), variant2.getHullSpec().getHullSpec().getBaseHullId());
-        // print("smods match:", variant1.getSMods().equals(variant2.getSMods()));
-        // print("hullmods match:", variant1.getHullMods().equals(variant2.getHullMods()));
-        // print("wings match:", variant1.getWings().equals(variant2.getWings()));
-        // print("fittedweaponslots match:", areSameWeaponSlots(variant1.getFittedWeaponSlots(), variant2.getFittedWeaponSlots()));
-        // // print("fittedweaponslots match raw:", variant1.getFittedWeaponSlots().equals(variant2.getFittedWeaponSlots()));
-        // print("smoddedbuiltins match:", variant1.getSModdedBuiltIns().equals(variant2.getSModdedBuiltIns()));
-        // print("fluxcapacitors match:", variant1.getNumFluxCapacitors() == variant2.getNumFluxCapacitors(), variant1.getNumFluxCapacitors(), variant2.getNumFluxCapacitors());
-        // print("fluxvents match:", variant1.getNumFluxVents() == variant2.getNumFluxVents(), variant1.getNumFluxVents(), variant2.getNumFluxVents());
-        // print("-------------------------------------------------------");
+        //     if (slots1.size() != slots2.size()) return false;
+        //     for (int j = 0; j < slots1.size(); j++) {
+        //         if (!slots1.get(j).equals(slots2.get(j))) return false;
+        //     }
+        // }
 
         return (variant1.getHullSpec().getBaseHullId().equals(variant2.getHullSpec().getBaseHullId())
             && variant1.getSMods().equals(variant2.getSMods())
@@ -1653,13 +1703,70 @@ public class PresetUtils {
             // && variant1.getFittedWeaponSlots().equals(variant2.getFittedWeaponSlots()) // THIS DOESNT WORK AFTER GAME SAVE I DONT FUCKING KNOW WHY
             && areSameWeaponSlots(variant1.getFittedWeaponSlots(), variant2.getFittedWeaponSlots()) // this inexplicably works though
             && variant1.getSModdedBuiltIns().equals(variant2.getSModdedBuiltIns())
-            // && variant1.getWeaponGroups().equals(variant2.getWeaponGroups()) // fuck you xstream
+            // && variant1.getWeaponGroups().equals(variant2.getWeaponGroups()) // fuck you xstream and ai shits
             && variant1.getNumFluxCapacitors() == variant2.getNumFluxCapacitors()
             && variant1.getNumFluxVents() == variant2.getNumFluxVents());
     }
 
     public static boolean areSameHullMods(ShipVariantAPI variant1, ShipVariantAPI variant2) {
         return (variant1.getHullMods().equals(variant2.getHullMods()));
+    }
+
+    public static boolean isPlayerInFleet(List<FleetMemberAPI> fleetMembers) {
+        for (FleetMemberAPI member : fleetMembers) {
+            if (member.getCaptain().getId().equals(Global.getSector().getPlayerPerson().getId())) return true;
+        }
+        return false;
+    }
+
+    public static void partRestorePreset(List<FleetMemberAPI> membersToRestore, Map<Integer, FleetMemberAPI> whichMembersAreAvailable, FleetDataAPI presetFleetData) {
+        CampaignFleetAPI playerFleet = Global.getSector().getPlayerFleet();
+        MarketAPI market = getPlayerCurrentMarket();
+        if (market == null) return;
+        
+        SubmarketAPI storage = CargoPresetUtils.getStorageSubmarket(market);
+        if (storage == null) return;
+
+        CargoAPI storageCargo = storage.getCargo();
+        initMothballedShips(storageCargo);
+
+        FleetDataAPI playerFleetData = playerFleet.getFleetData();
+        List<FleetMemberAPI> playerFleetMembers = playerFleet.getFleetData().getMembersListCopy();
+        FleetMemberAPI playerFleetMember = getPlayerFleetMember(playerFleetData);
+
+        Map<String, PersonAPI> captains = new HashMap<>();
+        for (FleetMemberAPI member : playerFleetMembers) {
+            captains.put(member.getId(), member.getCaptain());
+            member.setCaptain(null);
+            playerFleetData.removeFleetMember(member);
+            storageCargo.getMothballedShips().addFleetMember(member);
+        }
+        initMothballedShips(storageCargo);
+
+        for (FleetMemberAPI memberToRestore : membersToRestore) {
+            for (FleetMemberAPI availableMember : whichMembersAreAvailable.values()) {
+                if (availableMember.getId().equals(memberToRestore.getId())) {
+                    storageCargo.getMothballedShips().removeFleetMember(availableMember);
+                    availableMember.setCaptain(captains.get(availableMember.getId()));
+                    playerFleetData.addFleetMember(availableMember);
+                    break;
+                }
+            }
+        }
+
+        if (!isPlayerInFleet(playerFleetData.getMembersListCopy())) {
+            boolean isSet = false;
+            for (FleetMemberAPI member : playerFleetData.getMembersListCopy()) {
+                if (isOfficerNought(member.getCaptain())) {
+                    member.setCaptain(Global.getSector().getPlayerPerson());
+                    isSet = true;
+                    break;
+                }
+            }
+            if (!isSet) playerFleetData.getMembersInPriorityOrder().get(0).setCaptain(Global.getSector().getPlayerPerson());
+        }
+        playerFleetData.sortToMatchOrder(presetFleetData.getMembersListCopy());
+        refreshFleetUI();
     }
 
     // TODO Make D/SMOD Agnostic Settings, New Hulls? 
@@ -1756,7 +1863,7 @@ public class PresetUtils {
         }
 
 
-        if (playerFleetData.getMembersListCopy().size() < 1) {
+        if (!isPlayerInFleet(playerFleetData.getMembersInPriorityOrder())) {
             initMothballedShips(storageCargo);
             for (FleetMemberAPI storageMember : storageCargo.getMothballedShips().getMembersListCopy()) {
                 if (areSameVariant(storageMember.getVariant(), playerFleetMember.getVariant())) {
@@ -1853,10 +1960,13 @@ public class PresetUtils {
         MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
         if (mem.get(UNDOCKED_PRESET_KEY) != null && ((FleetPreset)mem.get(UNDOCKED_PRESET_KEY)).getName().equals(name)) mem.unset(UNDOCKED_PRESET_KEY);
 
-        Map<String, List<FleetMemberWrapper>> presetsMembers = getFleetPresetsMembers();
+        Map<String, List<FleetMemberWrapper>> presetsMembersLists = getFleetPresetsMembers();
         for (FleetMemberWrapper member : preset.getFleetMembers()) {
-            presetsMembers.get(member.getId()).remove(member);
-            if (presetsMembers.get(member.getId()).size() == 0) presetsMembers.remove(member.getId());
+            List<FleetMemberWrapper> presetMembers = presetsMembersLists.get(member.getId());
+            if (presetMembers == null) continue;
+
+            presetMembers.remove(member);
+            if (presetMembers.size() == 0) presetsMembersLists.remove(member.getId());
         }
 
         preset.getCampaignFleet().despawn();

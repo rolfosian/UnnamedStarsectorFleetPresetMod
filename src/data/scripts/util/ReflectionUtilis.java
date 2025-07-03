@@ -233,11 +233,15 @@ public class ReflectionUtilis {
         }
     }
 
-    public static boolean hasFieldOfType(Class<?> cls, Class<?> fieldType) throws Throwable {
-        for (Object field : cls.getDeclaredFields()) {
-            if (((Class<?>)getFieldTypeHandle.invoke(field)).equals(fieldType)) {
-                return true;
+    public static boolean hasFieldOfType(Class<?> cls, Class<?> fieldType) {
+        try {
+            for (Object field : cls.getDeclaredFields()) {
+                if (((Class<?>)getFieldTypeHandle.invoke(field)).equals(fieldType)) {
+                    return true;
+                }
             }
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
         }
         return false;
     }
@@ -554,8 +558,16 @@ public class ReflectionUtilis {
         print("---------------------------------");
         try {
             logConstructors(cls);
-            for (Object method : cls.getDeclaredMethods()) {
-                logMethod(method);
+            List<Class<?>> classHierarchy = new ArrayList<>();
+            Class<?> currentClass = cls;
+            while (currentClass != null) {
+                classHierarchy.add(0, currentClass);
+                currentClass = currentClass.getSuperclass();
+            }
+            for (Class<?> hierarchyClass : classHierarchy) {
+                for (Object method : hierarchyClass.getDeclaredMethods()) {
+                    logMethod(method);
+                }
             }
         } catch (Throwable e) {
             print(e);
@@ -600,6 +612,54 @@ public class ReflectionUtilis {
             }
         }
         return null;
+    }
+
+    public static Object getMethodByParamTypes(Object instance, Class<?>[] parameterTypes) {
+        for (Object method : instance.getClass().getDeclaredMethods()) {
+            try {
+                Class<?>[] targetParameterTypes = (Class<?>[]) getParameterTypesHandle.invoke(method);
+                if (targetParameterTypes.length != parameterTypes.length)
+                    continue;
+
+                boolean match = true;
+                for (int i = 0; i < targetParameterTypes.length; i++) {
+                    if (!targetParameterTypes[i].equals(parameterTypes[i])) {
+                        match = false;
+                        break;
+                    }
+                }
+
+                if (match) return method;
+            } catch (Throwable e) {
+                print(e);
+            }
+        }
+        return null;
+    }
+
+    public static List<Object> getMethodsByParamTypes(Object instance, Class<?>[] parameterTypes) {
+        List<Object> methods = new ArrayList<>();
+
+        for (Object method : instance.getClass().getDeclaredMethods()) {
+            try {
+                Class<?>[] targetParameterTypes = (Class<?>[]) getParameterTypesHandle.invoke(method);
+                if (targetParameterTypes.length != parameterTypes.length)
+                    continue;
+
+                boolean match = true;
+                for (int i = 0; i < targetParameterTypes.length; i++) {
+                    if (!targetParameterTypes[i].equals(parameterTypes[i])) {
+                        match = false;
+                        break;
+                    }
+                }
+
+                if (match) methods.add(method);
+            } catch (Throwable e) {
+                print(e);
+            }
+        }
+        return methods;
     }
 
     public static Object getMethodExplicit(String methodName, Object instance, Class<?>[] parameterTypes) {
@@ -652,6 +712,23 @@ public class ReflectionUtilis {
         return null;
     }
 
+    public static List<Object> getMethodsByReturnType(Class<?> cls, Class<?> returnType, int numArgs) {
+        List<Object> methods = new ArrayList<>();
+        for (Object method : cls.getDeclaredMethods()) {
+            try {
+                Class<?>[] targetParamTypes = (Class<?>[]) getParameterTypesHandle.invoke(method);
+                if (numArgs != targetParamTypes.length) continue;
+
+                Class<?> targetReturnType = (Class<?>) getReturnTypeHandle.invoke(method);
+                if (targetReturnType.equals(returnType)) methods.add(method);
+
+            } catch (Throwable e) {
+                print(e);
+            }
+        }
+        return methods;
+    }
+
     public static Object invokeMethod(String methodName, Object instance, Object... arguments) {
         try {
             Object method = instance.getClass().getMethod(methodName);
@@ -675,6 +752,15 @@ public class ReflectionUtilis {
 
     public static Object invokeMethodDirectly(Object method, Object instance, Object... arguments) {
         try {
+            return invokeMethodHandle.invoke(method, instance, arguments);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Object invokeNonPrivateMethodDirectly(Object method, Object instance, Object... arguments) {
+        try {
+            if (isPrivate((int)getModifiersHandle.invoke(method))) return null;
             return invokeMethodHandle.invoke(method, instance, arguments);
         } catch (Throwable e) {
             throw new RuntimeException(e);
@@ -1097,6 +1183,26 @@ public class ReflectionUtilis {
         }
     }
 
+    public static void setFieldAtIndex(Object instance, int index, Object value) {
+        try {
+            int i = 0;
+            Class<?> currentClass = instance.getClass();
+            while (currentClass != null) {
+                for (Object field : currentClass.getDeclaredFields()) {
+                    if (i == index) {
+                        setFieldAccessibleHandle.invoke(field, true);
+                        setFieldHandle.invoke(field, instance, value);
+                        return;
+                    }
+                    i++;
+                }
+                currentClass = currentClass.getSuperclass();
+            }
+        } catch (Throwable e) {
+            print(e);
+        }
+    }
+
     public static Class<?> getFieldTypeAtIndex(Object instance, int index) {
         try {
             int i = 0;
@@ -1127,6 +1233,7 @@ public class ReflectionUtilis {
     }
 
     public static void logFields(Object instance) {
+        if (instance == null) return;
         try {
             print("---------------------------------");
             print("FIELDS FOR:", instance.getClass());
@@ -1253,4 +1360,6 @@ public class ReflectionUtilis {
         if (isProtected(modifiers)) return "protected";
         return "package-private";
     }
+
+
 }
