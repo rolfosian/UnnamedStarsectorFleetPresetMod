@@ -59,8 +59,9 @@ public class TreeTraverser {
     public void removeBranch() {
         TreeNode node = getCurrentNode();
         Object parent = node.getParent();
-        UIPanel pp =  new UIPanel(parent);
         if (parent == null) return;
+        
+        UIPanel pp =  new UIPanel(parent);
         for (Object child : node.getChildren()) {
             pp.remove(new UIComponent(child));
         }
