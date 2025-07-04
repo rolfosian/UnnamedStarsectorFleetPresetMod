@@ -8,6 +8,7 @@ import data.scripts.util.PresetUtils.FleetPreset;
 import data.scripts.util.ReflectionUtilis;
 import data.scripts.util.ReflectionUtilis.ListenerFactory.ActionListener;
 import data.scripts.util.ReflectionUtilis.ListenerFactory.DialogDismissedListener;
+import data.scripts.util.UtilReflection.HoloVar;
 import data.scripts.util.UtilReflection;
 import data.scripts.ui.TreeTraverser;
 import data.scripts.ui.TreeTraverser.TreeNode;
@@ -56,7 +57,7 @@ public class PartialRestorationDialog {
     private List<FleetMemberAPI> pickedFleetMembers = new ArrayList<>();
     private List<FleetMemberAPI> originalOrder = new ArrayList<>();
     
-    
+    private HoloVar holoVar;
     private UtilReflection.ConfirmDialogData FMRDialog;
     private UIPanelAPI innerPanel;
     private UIPanelAPI fleetPanel;
@@ -117,6 +118,7 @@ public class PartialRestorationDialog {
                         default:
                             break;
                     }
+                    holoVar.resetColor();
                     master.getTablePlugin().rebuild();
                 }
             });
@@ -125,6 +127,9 @@ public class PartialRestorationDialog {
         }
         ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogSetBackgroundDimAmountMethod, FMRDialog.dialog, 0f);
         
+        holoVar = new HoloVar(FMRDialog.dialog);
+        holoVar.setColor(UtilReflection.DARK_RED);
+
         FMRDialog.confirmButton.setShortcut(Keyboard.KEY_G, false);
         FMRDialog.confirmButton.setEnabled(false);
         innerPanel = FMRDialog.panel;

@@ -383,7 +383,7 @@ public class UtilReflection {
         );
     }
 
-    private static class BackGroundImagePanelPlugin extends BaseCustomUIPanelPlugin {
+    public static class BackGroundImagePanelPlugin extends BaseCustomUIPanelPlugin {
         public TooltipMakerAPI tt;
 
         public BackGroundImagePanelPlugin() {
@@ -393,7 +393,67 @@ public class UtilReflection {
         public void init(TooltipMakerAPI tt) {
             this.tt = tt;
         }
+    }
 
+    public static class HoloVar {
+        private final Object masterVar;
+        private final List<Object> vars;
         
+        private Color originalColor;
+        private int colorIndex;
+
+        public HoloVar(UIPanelAPI dialog) {
+            this.masterVar = getHoloVar(dialog);
+            this.vars = ReflectionUtilis.getAllVariables(masterVar);
+
+            for (int i = 0; i < vars.size(); i++) {
+                Object var = vars.get(i);
+                if (Color.class.equals(var.getClass())) {
+                    Color varColor = (Color) var;
+                    if (varColor.getRed() == 40) {
+                        this.colorIndex = i;
+                        this.originalColor = varColor;
+                        break;
+                    }
+                }
+            }
+        }
+
+        public void setColor(Color color) {
+            ReflectionUtilis.setFieldAtIndex(masterVar, colorIndex, color);
+        }
+    
+        public void resetColor() {
+            ReflectionUtilis.setFieldAtIndex(masterVar, colorIndex, originalColor);
+        }
+
+        private Object getHoloVar(UIPanelAPI dialog) {
+            Object holo = ReflectionUtilis.getMethodAndInvokeDirectly("getHolo", dialog, 0);
+            for (Object variable : ReflectionUtilis.getAllVariables(holo)) {
+                if (variable != null && !ReflectionUtilis.isNativeJavaClass(variable.getClass())) {
+    
+                    List<Class<?>> clses = new ArrayList<>();
+                    for (Object nestedVariable : ReflectionUtilis.getAllVariables(variable)) {
+                        if (nestedVariable != null) {
+                            clses.add(nestedVariable.getClass());
+                        }
+                    }
+                    int floatCount = 0;
+                    int colorCount = 0;
+                    int longCount = 0;
+    
+                    for (Class<?> cls : clses) {
+                        if (cls == Float.class) floatCount++;
+                        else if (cls == java.awt.Color.class) colorCount++;
+                        else if (cls == Long.class) longCount++;
+                    }
+    
+                    if (longCount == 1 && floatCount == 2 && colorCount == 2) {
+                        return variable;
+                    }
+                }
+            }
+            return null;
+        }
     }
 }
