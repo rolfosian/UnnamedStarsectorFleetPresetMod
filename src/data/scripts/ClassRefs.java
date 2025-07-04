@@ -230,9 +230,6 @@ public class ClassRefs {
             confirmDialogGetLabelMethod = ReflectionUtilis.getMethod("getLabel", panel, 0);
             confirmDialogSetBackgroundDimAmountMethod = ReflectionUtilis.getMethod("setBackgroundDimAmount", confirmDialogClass, 1);
             confirmDialogOutsideClickAbsorbedMethod = ReflectionUtilis.getMethodDeclared("outsideClickAbsorbed", confirmDialogClass, 1);
-            print(confirmDialogOutsideClickAbsorbedMethod);
-            ReflectionUtilis.logMethods(confirmDialogClass);
-
 
             // we have the class, dismiss the dialog
 

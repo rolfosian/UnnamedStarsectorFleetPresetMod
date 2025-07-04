@@ -289,8 +289,8 @@ public class PartialRestorationDialog {
     }
 
     private FleetMemberAPI getMemberFromButton(ButtonAPI button) {
-        for (Object var : ReflectionUtilis.getAllFields(button)) {
-            for (Object nestedVar : ReflectionUtilis.getAllFields(var)) {
+        for (Object var : ReflectionUtilis.getAllVariables(button)) {
+            for (Object nestedVar : ReflectionUtilis.getAllVariables(var)) {
                 if (FleetMemberAPI.class.isAssignableFrom(nestedVar.getClass())) {
                     return (FleetMemberAPI) nestedVar;
                 }
@@ -316,7 +316,7 @@ public class PartialRestorationDialog {
     private Object[] getButtonLabelRenderers(Object labelCreator) {
         Object[] renderers = new Object[3];
         int i = 0;
-        for (Object v : ReflectionUtilis.getAllFields(labelCreator)) {
+        for (Object v : ReflectionUtilis.getAllVariables(labelCreator)) {
             if ( v != null && ReflectionUtilis.getMethodsByReturnType(v.getClass(), String.class, 0).size() == 2) {
                 renderers[i] = v;
                 i++;
