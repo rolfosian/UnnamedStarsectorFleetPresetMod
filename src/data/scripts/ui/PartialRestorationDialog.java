@@ -45,6 +45,7 @@ public class PartialRestorationDialog {
         PresetMiscUtils.print(args);
     }
 
+    private FleetPreset preset;
     private CampaignFleetAPI presetFleet;
     private CampaignFleetAPI tempFleet;
 
@@ -68,9 +69,10 @@ public class PartialRestorationDialog {
 
     private boolean all = false;
 
-    public PartialRestorationDialog(Map<Integer, FleetMemberAPI> whichFleetMembersAvailable, CampaignFleetAPI fleet, FleetPresetManagementListener master) {
+    public PartialRestorationDialog(Map<Integer, FleetMemberAPI> whichFleetMembersAvailable, FleetPreset preset, CampaignFleetAPI fleet, FleetPresetManagementListener master) {
         master.setPartialSelecting(true);
         this.master = master;
+        this.preset = preset;
         removeFleetMembersFromPlayerFleet();
         
         this.whichFleetMembersAvailable = whichFleetMembersAvailable;
@@ -136,25 +138,6 @@ public class PartialRestorationDialog {
 
         addVerticalSeedString(innerPanel, Global.getSector().getSeedString(), "left");
 
-        for (ButtonAPI btn : shipButtons.keySet()) {
-            buttonToRenderControllerMap = getButtonToRenderControllerMap(ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, btn));
-            break;
-        }
-        return;
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<ButtonAPI, Object> getButtonToRenderControllerMap(Object listener) {
-        for (Object field : listener.getClass().getDeclaredFields()) {
-            Class<?> fieldType = ReflectionUtilis.getFieldType(field);
-
-            for (Object nestedField : fieldType.getDeclaredFields()) {
-                if (Map.class.equals(ReflectionUtilis.getFieldType(nestedField))) {
-                    return (Map<ButtonAPI, Object>) ReflectionUtilis.getPrivateVariable(nestedField, ReflectionUtilis.getPrivateVariable(field, listener));
-                }
-            }
-        }
-        return null;
     }
 
     private void refShipButtons() {
@@ -186,15 +169,16 @@ public class PartialRestorationDialog {
         float yOffset = 5f;
 
         int i = 0;
-        for (ButtonAPI btn : shipButtons.keySet()) {
+        Set<ButtonAPI> shipBtns = shipButtons.keySet();
+        for (ButtonAPI btn : shipBtns) {
+            if (i == 0) {
+                buttonToRenderControllerMap = UtilReflection.getButtonToRenderControllerMap(ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, btn));
+            }
+
             if (whichFleetMembersAvailable.get(i) == null) {
-                btn.setGlowBrightness(0f);
                 btn.setEnabled(false);
-                btn.setFlashBrightness(0f);
-                btn.setHighlightBrightness(0f);
                 btn.setOpacity(0.5f);
-                btn.setShowTooltipWhileInactive(false);
-                ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetActiveMethod, btn, false);
+                UtilReflection.setShipButtonHighlightColor(buttonToRenderControllerMap.get(btn), UtilReflection.DARK_RED);
             }
             i++;
 
@@ -339,7 +323,7 @@ public class PartialRestorationDialog {
         removeAllMembersFromPlayerFleet();
         readdFleetMembersToPlayerFleet();
         
-        PresetUtils.partRestorePreset(membersToRestore, whichFleetMembersAvailable, presetFleet.getFleetData());
+        PresetUtils.partRestorePreset(membersToRestore, whichFleetMembersAvailable, preset);
 
         master.setPartialSelecting(false);
         master.enableButtonsRequiringSelection();
@@ -406,7 +390,7 @@ public class PartialRestorationDialog {
             public void buttonPressed(Object buttonId) {
                 if (!all) {
                     for (FleetMemberButton btn : shipButtons.values()) {
-                        if (!btn.getButton().isChecked()) {
+                        if (!btn.getButton().isChecked() && btn.getButton().isEnabled()) {
                             btn.getButton().setChecked(true);
                             btn.getListener().trigger("All", null);
                         }

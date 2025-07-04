@@ -42,6 +42,8 @@ public class UtilReflection {
     public static final void print(Object... args) {
         PresetMiscUtils.print(args);
     }
+    
+    public static final Color DARK_RED = new Color(139, 0, 0);
 
     public static Button makeButton(String text, ActionListener handler, Color base, Color bg, float width, float height, Object shortcutKey) {
         return makeButton(text, handler, base, bg, Alignment.MID, CutStyle.ALL, width, height, shortcutKey);
@@ -214,21 +216,49 @@ public class UtilReflection {
     }
 
     public static void disableUnavailableMemberButtons(UIPanelAPI obfFleetInfoPanel, Map<Integer, FleetMemberAPI> whichFleetMembersAvailable) {
+        Map<ButtonAPI, Object> buttonToRenderControllerMap = null;
         TreeTraverser traverser = new TreeTraverser(obfFleetInfoPanel);
         int i = 0;
         for (TreeTraverser.TreeNode node : traverser.getNodesAtDepth(7)) {
             for (Object child : node.getChildren()) {
+                ButtonAPI btn = (ButtonAPI) child;
+                if (i == 0) {
+                    buttonToRenderControllerMap = getButtonToRenderControllerMap(ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, btn));
+                }
+
                 if (whichFleetMembersAvailable.get(i) == null) {
-                    ButtonAPI btn = (ButtonAPI) child;
-                    btn.setGlowBrightness(0f);
                     btn.setEnabled(false);
-                    btn.setFlashBrightness(0f);
-                    btn.setHighlightBrightness(0f);
                     btn.setOpacity(0.5f);
-                    btn.setShowTooltipWhileInactive(false);
-                    ReflectionUtilis.getMethodAndInvokeDirectly("setActive", btn, 1, false);
+                    setShipButtonHighlightColor(buttonToRenderControllerMap.get(btn), DARK_RED);
                 }
                 i++;
+            }
+        }
+    }
+
+    public static Map<ButtonAPI, Object> getButtonToRenderControllerMap(Object listener) {
+        for (Object field : listener.getClass().getDeclaredFields()) {
+            Class<?> fieldType = ReflectionUtilis.getFieldType(field);
+
+            for (Object nestedField : fieldType.getDeclaredFields()) {
+                if (Map.class.equals(ReflectionUtilis.getFieldType(nestedField))) {
+                    return (Map<ButtonAPI, Object>) ReflectionUtilis.getPrivateVariable(nestedField, ReflectionUtilis.getPrivateVariable(field, listener));
+                }
+            }
+        }
+        return null;
+    }
+
+    public static void setShipButtonHighlightColor(Object renderController, Color colorToSet) {
+        for (Object field : renderController.getClass().getDeclaredFields()) {
+            if (Color.class.isAssignableFrom(ReflectionUtilis.getFieldType(field))) {
+                Color color = (Color) ReflectionUtilis.getPrivateVariable(field, renderController);
+                if (color == null) continue;
+
+                if (color.getGreen() == 255 && color.getRed() == 84) {
+                    ReflectionUtilis.setPrivateVariable(field, renderController, colorToSet);
+                    break;
+                }
             }
         }
     }

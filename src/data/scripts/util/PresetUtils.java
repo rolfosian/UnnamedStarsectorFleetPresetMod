@@ -429,7 +429,7 @@ public class PresetUtils {
         private List<String> shipIds = new ArrayList<>(); // this is redundant since refactoring but i cant be btohered changing related logic
 
         private Map<Integer, ShipVariantAPI> variantsMap = new HashMap<>();
-        private Map<Integer, OfficerVariantPair> officersMap = new HashMap<>();
+        private Map<Integer, OfficerVariantPair> officersMap = new HashMap<>(); // these are not copies, they are direct references to the officers including the player
         private Map<Integer, VariantWrapper> variantWrappers = new HashMap<>();
 
         public FleetPreset(String name, List<FleetMemberAPI> fleetMembers) {
@@ -1033,8 +1033,7 @@ public class PresetUtils {
         return null;
     }
 
-    public static boolean isPresetPlayerFleet(String presetName) {
-        FleetPreset preset = getFleetPresets().get(presetName);
+    public static boolean isPresetPlayerFleet(FleetPreset preset) {
         if (preset == null) return false;
 
         List<FleetMemberAPI> playerFleetMembers = Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy();
@@ -1085,8 +1084,7 @@ public class PresetUtils {
         return allShipsMatched;
     }
 
-    public static boolean isPresetPlayerFleetOfficerAgnostic(String presetName) {
-        FleetPreset preset = getFleetPresets().get(presetName);
+    public static boolean isPresetPlayerFleetOfficerAgnostic(FleetPreset preset) {
         if (preset == null) return false;
 
         List<FleetMemberAPI> playerFleetMembers = Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy();
@@ -1126,8 +1124,7 @@ public class PresetUtils {
         return allShipsMatched;
     }
 
-    public static boolean isPresetContainedInPlayerFleet(String presetName) {
-        FleetPreset preset = getFleetPresets().get(presetName);
+    public static boolean isPresetContainedInPlayerFleet(FleetPreset preset) {
         if (preset == null) return false;
 
         List<FleetMemberAPI> playerFleetMembers = Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy();
@@ -1719,7 +1716,7 @@ public class PresetUtils {
         return false;
     }
 
-    public static void partRestorePreset(List<FleetMemberAPI> membersToRestore, Map<Integer, FleetMemberAPI> whichMembersAreAvailable, FleetDataAPI presetFleetData) {
+    public static void partRestorePreset(List<FleetMemberAPI> membersToRestore, Map<Integer, FleetMemberAPI> whichMembersAreAvailable, FleetPreset preset) {
         CampaignFleetAPI playerFleet = Global.getSector().getPlayerFleet();
         MarketAPI market = getPlayerCurrentMarket();
         if (market == null) return;
@@ -1746,9 +1743,9 @@ public class PresetUtils {
                     storageCargo.getMothballedShips().removeFleetMember(availableMember);
                     playerFleetData.addFleetMember(availableMember);
 
-                    for (OfficerDataAPI officerData : playerFleet.getFleetData().getOfficersCopy()) {
-                        PersonAPI officer = officerData.getPerson();
-                        if (officer.getId().equals(memberToRestore.getId())) {
+                    for (OfficerVariantPair pair : preset.getOfficersMap().values()) {
+                        PersonAPI officer = pair.getOfficer();
+                        if (officer.getId().equals(memberToRestore.getCaptain().getId())) {
                             availableMember.setCaptain(officer);
                             break;
                         }
@@ -1757,9 +1754,11 @@ public class PresetUtils {
                 }
             }
         }
-
+        playerFleetData.sortToMatchOrder(preset.getCampaignFleet().getFleetData().getMembersListCopy());
+        
         if (!isPlayerInFleet(playerFleetData.getMembersListCopy())) {
             boolean isSet = false;
+
             for (FleetMemberAPI member : playerFleetData.getMembersListCopy()) {
                 if (isOfficerNought(member.getCaptain())) {
                     member.setCaptain(Global.getSector().getPlayerPerson());
@@ -1769,7 +1768,6 @@ public class PresetUtils {
             }
             if (!isSet) playerFleetData.getMembersInPriorityOrder().get(0).setCaptain(Global.getSector().getPlayerPerson());
         }
-        playerFleetData.sortToMatchOrder(presetFleetData.getMembersListCopy());
         refreshFleetUI();
     }
 
