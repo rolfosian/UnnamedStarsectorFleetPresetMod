@@ -15,8 +15,9 @@ import com.fs.starfarer.api.campaign.CargoAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
-
+import com.fs.starfarer.campaign.fleet.CampaignFleet;
 import com.fs.starfarer.campaign.fleet.FleetMember;
+import com.fs.starfarer.ui.impl.StandardTooltipV2;
 import com.fs.starfarer.ui.newui.FleetMemberRecoveryDialog;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
@@ -44,9 +45,12 @@ import data.scripts.ClassRefs;
 import data.scripts.listeners.DockingListener;
 
 import data.scripts.ui.BaseSelfRefreshingPanel;
+import data.scripts.ui.MessageBox;
 import data.scripts.ui.PartialRestorationDialog;
+import data.scripts.ui.TreeTraverser;
 import data.scripts.ui.UIComponent;
 import data.scripts.ui.UIPanel;
+import data.scripts.ui.TreeTraverser.TreeNode;
 import data.scripts.ui.UIConfig;
 
 import data.scripts.util.ReflectionUtilis;
@@ -714,10 +718,10 @@ public class FleetPresetManagementListener extends ActionListener {
         @Override
         public void render(float alphaMult) {}
 
-        private void processRow(UIPanelAPI row, String rowName, int id, PresetUtils.FleetPreset fleetpreset) {
+        private void processRow(UIPanelAPI row, String rowName, int id) {
             PositionAPI rowPos = row.getPosition();
             
-            TableRowListener rowListener = new TableRowListener(row, rowPos, rowName, id, fleetpreset.getFleetMembers());
+            TableRowListener rowListener = new TableRowListener(row, rowPos, rowName, id);
             CustomPanelAPI rowOverlayPanel = Global.getSettings().createCustom(NAME_COLUMN_WIDTH, 29f, rowListener);
             TooltipMakerAPI rowOverlayTooltipMaker = rowOverlayPanel.createUIElement(NAME_COLUMN_WIDTH, 29f, false);
 
@@ -773,7 +777,7 @@ public class FleetPresetManagementListener extends ActionListener {
                     );
                 } 
                 
-                processRow(row, rowName, id, fleetPreset);
+                processRow(row, rowName, id);
                 // id += tableUp ? 1 : -1;
                 id++;
             }
@@ -855,8 +859,11 @@ public class FleetPresetManagementListener extends ActionListener {
 
             TooltipMakerAPI fleetInfoPanelHolder = shipsPanel.createUIElement(SHIP_COLUMN_WIDTH, PANEL_HEIGHT, false);
             fleetInfoPanel = UtilReflection.getObfFleetInfoPanel(selectedPresetName, fleet); // Object casted to UIPanelAPI, fixed size 400x400 afaik
+            
             if (whichMembersAvailable != null && !whichMembersAvailable.isEmpty()) {
-                UtilReflection.disableUnavailableMemberButtons(fleetInfoPanel, whichMembersAvailable);
+                UtilReflection.setButtonTooltips(fleetInfoPanel, whichMembersAvailable, fleet.getFleetData().getMembersListCopy());
+            } else {
+                UtilReflection.setButtonTooltips(fleetInfoPanel, fleet.getFleetData().getMembersListCopy());
             }
 
             fleetInfoPanelHolder.addComponent(fleetInfoPanel).inTL(0f, 0f);
@@ -899,14 +906,12 @@ public class FleetPresetManagementListener extends ActionListener {
         public CustomPanelAPI panel;
         public PositionAPI rowPos;
         public TooltipMakerAPI tooltipMaker;
-        public List<PresetUtils.FleetMemberWrapper> fleetMembers;
 
-        public TableRowListener(Object row, PositionAPI rowPos, String rowPresetName, int id, List<PresetUtils.FleetMemberWrapper> fleetMembers) {
+        public TableRowListener(Object row, PositionAPI rowPos, String rowPresetName, int id) {
             this.row = row;
             this.id = id;
             this.rowName = rowPresetName;
-            this.rowPos = rowPos;
-            this.fleetMembers = fleetMembers;
+            this.rowPos = rowPos;;
         }
     
         public void init(CustomPanelAPI panel, TooltipMakerAPI tooltipMaker, PositionAPI rowPos) {
@@ -1062,7 +1067,6 @@ public class FleetPresetManagementListener extends ActionListener {
                     }
                     enableButtonsRequiringSelection();
                 } else {
-                    // FleetPreset possibleDuplicate = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
                     String text = saveNameField.getText();
                     if (!isEmptyOrWhitespace(text)) {
                         if (currentTableMap.containsKey(text)) {
@@ -1070,9 +1074,15 @@ public class FleetPresetManagementListener extends ActionListener {
                             openOverwriteDialog(false);
                         
                         // } else if (possibleDuplicate != null) { // someone can implement this if they want to i cant be bothered refactoring rn
-                        //     openOverwriteDialo
+                            // openOverwriteDialo
 
                         } else {
+                            FleetPreset possibleDuplicate = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
+                            if (possibleDuplicate != null) {
+                                new MessageBox("Duplicates are not allowed!");
+                                return;
+                            }
+
                             PresetUtils.saveFleetPreset(text);
                             refreshTableMap();
                             selectPreset(text, getTableMapIndex(text));

@@ -50,6 +50,8 @@ public class ClassRefs {
     public static Object confirmDialogGetInnerPanelMethod;
     public static Object confirmDialogShowMethod;
     public static Object confirmDialogGetLabelMethod;
+    public static Object confirmDialogSetBackgroundDimAmountMethod;
+    public static Object confirmDialogOutsideClickAbsorbedMethod;
 
     /** Interface that contains a single method: actionPerformed */
     public static Class<?> actionListenerInterface;
@@ -60,8 +62,13 @@ public class ClassRefs {
     /** Obfuscated UI panel class */
     public static Class<?> uiPanelClass;
     public static Object uiPanelsetParentMethod;
+    public static Object uiPanelsetOpacityMethod;
     public static Object uiPanelgetChildrenNonCopyMethod;
     public static Object uiPanelgetChildrenCopyMethod;
+    public static Object uiPanelShowTooltipMethod;
+    public static Object uiPanelHideTooltipMethod;
+    public static Object uiPanelSetTooltipMethod;
+    public static Object uiPanelGetTooltipMethod;
 
     /** Obfuscated fleet info panel class from the VisualPanelAPI */
     public static Class<?> visualPanelFleetInfoClass; 
@@ -220,7 +227,12 @@ public class ClassRefs {
             confirmDialogGetButtonMethod = ReflectionUtilis.getMethod("getButton", panel, 1);
             confirmDialogGetInnerPanelMethod = ReflectionUtilis.getMethod("getInnerPanel", panel, 0);
             confirmDialogShowMethod = ReflectionUtilis.getMethod("show", panel, 2);
-            confirmDialogGetLabelMethod = ReflectionUtilis.getMethod("getLabel", panel, 0);;
+            confirmDialogGetLabelMethod = ReflectionUtilis.getMethod("getLabel", panel, 0);
+            confirmDialogSetBackgroundDimAmountMethod = ReflectionUtilis.getMethod("setBackgroundDimAmount", confirmDialogClass, 1);
+            confirmDialogOutsideClickAbsorbedMethod = ReflectionUtilis.getMethodDeclared("outsideClickAbsorbed", confirmDialogClass, 1);
+            print(confirmDialogOutsideClickAbsorbedMethod);
+            ReflectionUtilis.logMethods(confirmDialogClass);
+
 
             // we have the class, dismiss the dialog
 
@@ -235,8 +247,13 @@ public class ClassRefs {
             Object field = campaignUI.getClass().getDeclaredField("screenPanel");
             uiPanelClass = ReflectionUtilis.getFieldType(field);
             uiPanelsetParentMethod = ReflectionUtilis.getMethod("setParent", uiPanelClass, 1);
+            uiPanelsetOpacityMethod = ReflectionUtilis.getMethod("setOpacity", uiPanelClass, 1);
             uiPanelgetChildrenNonCopyMethod = ReflectionUtilis.getMethod("getChildrenNonCopy", uiPanelClass, 0);
             uiPanelgetChildrenCopyMethod = ReflectionUtilis.getMethod("getChildrenCopy", uiPanelClass, 0);
+            uiPanelShowTooltipMethod = ReflectionUtilis.getMethod("showTooltip", uiPanelClass, 1);
+            uiPanelHideTooltipMethod = ReflectionUtilis.getMethod("hideTooltip", uiPanelClass, 1);
+            uiPanelSetTooltipMethod = ReflectionUtilis.getMethod("setTooltip", uiPanelClass, 2);
+            uiPanelGetTooltipMethod = ReflectionUtilis.getMethod("getTooltip", uiPanelClass, 0);
         } catch (Exception e) {
             print(e);
         }

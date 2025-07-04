@@ -60,6 +60,7 @@ public class ReflectionUtilis {
     private static final MethodHandle constructorNewInstanceHandle;
     private static final MethodHandle getConstructorDeclaringClassHandle;
     private static final MethodHandle getConstructorGenericParameterTypesHandle;
+    private static final MethodHandle getConstructorNameHandle;
 
     static {
         try {
@@ -93,6 +94,7 @@ public class ReflectionUtilis {
             constructorNewInstanceHandle = lookup.findVirtual(constructorClass, "newInstance", MethodType.methodType(Object.class, Object[].class));
             getConstructorDeclaringClassHandle = lookup.findVirtual(constructorClass, "getDeclaringClass", MethodType.methodType(Class.class));
             getConstructorGenericParameterTypesHandle = lookup.findVirtual(constructorClass, "getGenericParameterTypes", MethodType.methodType(typeArrayClass));
+            getConstructorNameHandle = lookup.findVirtual(constructorClass, "getName", MethodType.methodType(String.class));
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -293,12 +295,28 @@ public class ReflectionUtilis {
         }
     }
 
-    public static List<Object> getAllFields(Object instanceToGetFrom) {
+    public static List<Object> getAllVariables(Object instanceToGetFrom) {
         List<Object> lst = new ArrayList<>();
         Class<?> currentClass = instanceToGetFrom.getClass();
         while (currentClass != null) {
             for (Object field : currentClass.getDeclaredFields()) {
                 lst.add(getPrivateVariable(field, instanceToGetFrom));
+            }
+            currentClass = currentClass.getSuperclass();
+        }
+        return lst;
+    }
+
+    // public static List<Object> getAllFields(Object instance) {
+    //     return getAllFields(instance.getClass());
+    // }
+
+    public static List<Object> getAllFields(Class<?> cls) {
+        List<Object> lst = new ArrayList<>();
+        Class<?> currentClass = cls;
+        while (currentClass != null) {
+            for (Object field : currentClass.getDeclaredFields()) {
+                lst.add(field);
             }
             currentClass = currentClass.getSuperclass();
         }
@@ -618,6 +636,20 @@ public class ReflectionUtilis {
         return null;
     }
 
+    public static Object getMethodDeclared(String methodName, Class<?> cls, int paramCount) {
+        for (Object method : cls.getDeclaredMethods()) {
+            try {
+                if (((String)getMethodNameHandle.invoke(method)).equals(methodName) && 
+                    ((Object[])getParameterTypesHandle.invoke(method)).length == paramCount) {
+                    return method;
+                }
+            } catch (Throwable e) {
+                print(e);
+            }
+        }
+        return null;
+    }
+
     public static Object getMethodByParamTypes(Object instance, Class<?>[] parameterTypes) {
         for (Object method : instance.getClass().getDeclaredMethods()) {
             try {
@@ -756,6 +788,15 @@ public class ReflectionUtilis {
 
     public static Object invokeMethodDirectly(Object method, Object instance, Object... arguments) {
         try {
+            return invokeMethodHandle.invoke(method, instance, arguments);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Object invokePrivateMethodDirectly(Object method, Object instance, Object... arguments) {
+        try {
+            setMethodAccessable.invoke(method, true);
             return invokeMethodHandle.invoke(method, instance, arguments);
         } catch (Throwable e) {
             throw new RuntimeException(e);

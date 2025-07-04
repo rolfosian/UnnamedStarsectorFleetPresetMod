@@ -2,9 +2,11 @@
 
 package data.scripts.util;
 
+import com.fs.starfarer.D.I.Oo;
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCampaignEventListener;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.campaign.BattleAPI;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.campaign.CampaignUIAPI;
@@ -20,13 +22,18 @@ import com.fs.starfarer.api.impl.campaign.FleetInteractionDialogPluginImpl;
 import com.fs.starfarer.api.input.InputEventClass;
 import com.fs.starfarer.api.input.InputEventType;
 import com.fs.starfarer.api.ui.*;
+import com.fs.starfarer.api.util.Misc;
+import com.fs.starfarer.campaign.CharacterStats;
 import com.fs.starfarer.campaign.fleet.CampaignFleet;
+import com.fs.starfarer.campaign.fleet.FleetMember;
+import com.fs.starfarer.ui.impl.StandardTooltipV2;
 
 import data.scripts.ClassRefs;
 import data.scripts.ui.Button;
 import data.scripts.ui.Label;
 import data.scripts.ui.UIComponent;
 import data.scripts.ui.UIPanel;
+import data.scripts.ui.TreeTraverser.TreeNode;
 import data.scripts.ui.TreeTraverser;
 import data.scripts.util.ReflectionUtilis.ListenerFactory.ActionListener;
 import data.scripts.util.ReflectionUtilis.ListenerFactory.DialogDismissedListener;
@@ -114,6 +121,31 @@ public class UtilReflection {
         }
     }
 
+    public static void setConfirmDialogButtonInterceptor(Button btn, UIPanelAPI dialog, CustomPanelAPI bgImagePanel) {
+        Object oldListener = ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, btn.getInstance());
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, btn.getInstance(), new ActionListener() {
+            public void trigger(Object arg0, Object arg1) {
+                bgImagePanel.setOpacity(0f);
+                (((BackGroundImagePanelPlugin)bgImagePanel.getPlugin())).tt.setOpacity(0f);
+                bgImagePanel.removeComponent(((BackGroundImagePanelPlugin)bgImagePanel.getPlugin()).tt);
+                dialog.removeComponent(bgImagePanel);
+                ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldListener, arg0, arg1);
+            }
+        }.getProxy());
+    }
+
+    public static void clickOutsideAbsorb(UIPanelAPI confirmDialog) {
+        Object event = createInputEventInstance(
+            InputEventClass.MOUSE_EVENT,
+            InputEventType.MOUSE_DOWN,
+            9999,
+            9999,
+            0,
+            '\0'
+        );
+        ReflectionUtilis.invokePrivateMethodDirectly(ClassRefs.confirmDialogOutsideClickAbsorbedMethod, confirmDialog, event);
+    }
+
     public static ConfirmDialogData showConfirmationDialog(
             String text,
             String confirmText,
@@ -136,17 +168,22 @@ public class UtilReflection {
                 (UIPanelAPI) confirmDialog);
     }
 
-    public static void addBackGroundImage(UIPanelAPI innerPanel, String backgroundImagePath) {
-        PositionAPI innerPanelPos = innerPanel.getPosition();
-        CustomPanelAPI bgImagePanel = Global.getSettings().createCustom(innerPanelPos.getWidth(), innerPanelPos.getHeight(), null);
-        TooltipMakerAPI imagePaneltt = bgImagePanel.createUIElement(innerPanelPos.getWidth(), innerPanelPos.getHeight(), false);
+    public static CustomPanelAPI addBackGroundImage(UIPanelAPI confirmDialog, String backgroundImagePath) {
+        PositionAPI innerPanelPos = confirmDialog.getPosition();
+
+        BackGroundImagePanelPlugin plugin = new BackGroundImagePanelPlugin();
+        CustomPanelAPI bgImagePanel = Global.getSettings().createCustom(innerPanelPos.getWidth(), innerPanelPos.getHeight(), plugin);
+        TooltipMakerAPI imagePanelTooltip = bgImagePanel.createUIElement(innerPanelPos.getWidth(), innerPanelPos.getHeight(), false);
+        plugin.init(imagePanelTooltip);
     
-        imagePaneltt.addImage(backgroundImagePath, innerPanelPos.getWidth()-5f, innerPanelPos.getHeight()-5f, 0f);
-        bgImagePanel.addUIElement(imagePaneltt);
+        imagePanelTooltip.addImage(backgroundImagePath, innerPanelPos.getWidth()-5f, innerPanelPos.getHeight()-5f, 0f);
+        bgImagePanel.addUIElement(imagePanelTooltip);
     
-        innerPanel.addComponent((UIComponentAPI)bgImagePanel).inMid();
-        innerPanel.sendToBottom(bgImagePanel);
-        innerPanel.sendToBottom(imagePaneltt);
+        confirmDialog.addComponent((UIComponentAPI)bgImagePanel).inMid();
+        confirmDialog.sendToBottom(bgImagePanel);
+        confirmDialog.sendToBottom(imagePanelTooltip);
+
+        return bgImagePanel;
     }
 
     public static ConfirmDialogData showConfirmationDialog(
@@ -158,7 +195,7 @@ public class UtilReflection {
         float height,
         DialogDismissedListener dialogListener) {
 
-    Object confirmDialog = createConfirmDialog(text, confirmText, cancelText, width, height, dialogListener);
+    UIPanelAPI confirmDialog = (UIPanelAPI) createConfirmDialog(text, confirmText, cancelText, width, height, dialogListener);
     ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogShowMethod, confirmDialog, 0.25f, 0.25f);
 
     LabelAPI label = (LabelAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetLabelMethod, confirmDialog);
@@ -167,17 +204,20 @@ public class UtilReflection {
 
     UIPanelAPI innerPanel = (UIPanelAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetInnerPanelMethod, confirmDialog);
     
-    addBackGroundImage((UIPanelAPI)confirmDialog, backgroundImagePath);
+    CustomPanelAPI bgImagePanel = addBackGroundImage((UIPanelAPI)confirmDialog, backgroundImagePath);
     innerPanel.bringComponentToTop((UIComponentAPI)label);
     innerPanel.bringComponentToTop((UIComponentAPI)yes.getInstance());
     innerPanel.bringComponentToTop((UIComponentAPI)no.getInstance());
+
+    setConfirmDialogButtonInterceptor(no, confirmDialog, bgImagePanel);
+    setConfirmDialogButtonInterceptor(yes, confirmDialog, bgImagePanel);
  
     return new ConfirmDialogData(
             label,
             yes,
             no,
             innerPanel,
-            (UIPanelAPI) confirmDialog);
+            confirmDialog);
 }
 
     public static UIPanelAPI getCoreUI() {
@@ -215,7 +255,18 @@ public class UtilReflection {
         );
     }
 
-    public static void disableUnavailableMemberButtons(UIPanelAPI obfFleetInfoPanel, Map<Integer, FleetMemberAPI> whichFleetMembersAvailable) {
+    public static void setButtonTooltips(UIPanelAPI obfFleetInfoPanel, List<FleetMemberAPI> members) {
+        TreeTraverser traverser = new TreeTraverser(obfFleetInfoPanel);
+        int i = 0;
+        for (TreeTraverser.TreeNode node : traverser.getNodesAtDepth(7)) {
+            for (Object child : node.getChildren()) {
+                setButtonTooltip((ButtonAPI)child, members.get(i));
+                i++;
+            }
+        }
+    }
+
+    public static void setButtonTooltips(UIPanelAPI obfFleetInfoPanel, Map<Integer, FleetMemberAPI> whichFleetMembersAvailable, List<FleetMemberAPI> allFleetMembers) {
         Map<ButtonAPI, Object> buttonToRenderControllerMap = null;
         TreeTraverser traverser = new TreeTraverser(obfFleetInfoPanel);
         int i = 0;
@@ -228,25 +279,68 @@ public class UtilReflection {
 
                 if (whichFleetMembersAvailable.get(i) == null) {
                     btn.setEnabled(false);
-                    btn.setOpacity(0.5f);
-                    removeTooltipFromButton(btn);
+                    btn.setOpacity(0.66f);
+                    setButtonTooltipWithPostProcessing(btn, allFleetMembers.get(i));
                     setShipButtonHighlightColor(buttonToRenderControllerMap.get(btn), DARK_RED);
+                } else {
+                    setButtonTooltip(btn, allFleetMembers.get(i));
                 }
+                
                 i++;
             }
         }
     }
 
     public static void removeTooltipFromButton(ButtonAPI btn) {
-        List<Object> vars = ReflectionUtilis.getAllFields(btn);
+        List<Object> vars = ReflectionUtilis.getAllVariables(btn);
         for (int i = 0; i < vars.size(); i++) {
-            Object variable = vars.get(i);
+            Object var = vars.get(i);
 
-            if (variable != null && String.valueOf(variable).startsWith("com.fs.starfarer.ui.impl.StandardTooltipV2")) {
+            if (String.valueOf(var).startsWith("com.fs.starfarer.ui.impl.StandardTooltipV2")) {
                 ReflectionUtilis.setFieldAtIndex(btn, i, null);
                 break;
             }
         }
+    }
+
+    public static void setButtonTooltip(ButtonAPI btn, FleetMemberAPI member) {
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelSetTooltipMethod, btn, 5f, createShipButtonTooltip(member));
+    }
+
+    public static void setButtonTooltipWithPostProcessing(ButtonAPI btn, FleetMemberAPI member) {
+        StandardTooltipV2 tt = createShipButtonTooltip(member);
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelsetOpacityMethod, tt, 0.5f);
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelSetTooltipMethod, btn, 5f, tt);
+
+        UIPanel ttPa = new UIPanel(tt);
+
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelShowTooltipMethod, btn, tt);
+        tt.makeNonExpandable();
+        float width = ttPa.getPosition().getWidth() - 7f;
+        float height = ttPa.getPosition().getHeight() - 1f;
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelHideTooltipMethod, btn, tt);
+
+        CustomPanelAPI pane = Global.getSettings().createCustom(width, height, null);
+        TooltipMakerAPI ttB = pane.createUIElement(width, height, false);
+        ButtonAPI overlay = ttB.addButton("", "", DARK_RED, DARK_RED, Alignment.MID, CutStyle.NONE, width, height, 0f);
+        overlay.setOpacity(0.5f);
+        overlay.setMouseOverSound(null);
+        overlay.setButtonPressedSound(null);
+
+        pane.addUIElement(ttB);
+        ttPa.getInstance().addComponent(pane).inTL(-1f, 1f);
+    }
+
+
+    public static StandardTooltipV2 getButtonTooltip(ButtonAPI btn) {
+        return (StandardTooltipV2) ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelGetTooltipMethod, btn);
+    }
+
+    public static StandardTooltipV2 createShipButtonTooltip(FleetMemberAPI param) {
+        FleetMember member = (FleetMember) param;
+        CharacterStats stats = member.getCaptain().getStats();
+
+        return StandardTooltipV2.createFleetMemberExpandedTooltip(member, stats);
     }
 
     public static Map<ButtonAPI, Object> getButtonToRenderControllerMap(Object listener) {
@@ -287,5 +381,19 @@ public class UtilReflection {
             text,
             new String[]{confirmText, cancelText}
         );
+    }
+
+    private static class BackGroundImagePanelPlugin extends BaseCustomUIPanelPlugin {
+        public TooltipMakerAPI tt;
+
+        public BackGroundImagePanelPlugin() {
+            super();
+        }
+
+        public void init(TooltipMakerAPI tt) {
+            this.tt = tt;
+        }
+
+        
     }
 }

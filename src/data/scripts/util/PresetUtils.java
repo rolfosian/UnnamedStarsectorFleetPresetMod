@@ -2,6 +2,9 @@ package data.scripts.util;
 
 import java.util.*;
 import java.util.stream.Collectors;
+
+import org.lwjgl.input.Keyboard;
+
 import java.awt.Color;
 
 import com.fs.starfarer.api.Global;
@@ -36,7 +39,10 @@ import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 import com.fs.starfarer.api.util.Misc;
 
+import data.scripts.ClassRefs;
 import data.scripts.listeners.DockingListener;
+import data.scripts.ui.TreeTraverser;
+import data.scripts.ui.TreeTraverser.TreeNode;
 import data.scripts.util.CargoPresetUtils.CargoResourceRatios;
 
 @SuppressWarnings("unchecked")
@@ -472,7 +478,7 @@ public class PresetUtils {
             for (FleetMemberWrapper member : this.fleetMembers) {
                 order.add(member.getMember());
             }
-            this.campaignFleet.getFleetData().sortToMatchOrder(order);
+            this.getCampaignFleet().getFleetData().sortToMatchOrder(order);
         }
 
         public void updateWrappedMember(int index, FleetMemberAPI newMember) {
@@ -486,17 +492,17 @@ public class PresetUtils {
 
             ShipVariantAPI newVariant = newMember.getVariant().clone();
             FleetMemberWrapper newWrappedMember = new FleetMemberWrapper(this, newMember, newVariant, newMember.getCaptain(), index);
-            this.campaignFleet.getFleetData().removeFleetMember(this.fleetMembers.get(index).getMember());
+            this.getCampaignFleet().getFleetData().removeFleetMember(this.fleetMembers.get(index).getMember());
             this.fleetMembers.set(index, newWrappedMember);
             this.shipIds.set(index, newMember.getVariant().getHullSpec().getBaseHullId());
             this.variantsMap.put(index, newVariant);
             this.variantWrappers.put(index, new VariantWrapper(newVariant, index, this));
             this.officersMap.put(index, new OfficerVariantPair(newMember.getCaptain(), newVariant, index));
 
-            this.campaignFleet.getFleetData().addFleetMember(this.fleetMembers.get(index).getMember());
+            this.getCampaignFleet().getFleetData().addFleetMember(this.fleetMembers.get(index).getMember());
             if (newWrappedMember.getCaptainId().equals(Global.getSector().getPlayerPerson().getId())) {
-                this.campaignFleet.getFleetData().setFlagship(this.fleetMembers.get(index).getMember());
-                this.campaignFleet.setCommander(this.fleetMembers.get(index).getMember().getCaptain());
+                this.getCampaignFleet().getFleetData().setFlagship(this.fleetMembers.get(index).getMember());
+                this.getCampaignFleet().setCommander(this.fleetMembers.get(index).getMember().getCaptain());
             }
 
             presetsMembersMap.get(newMember.getId()).add(newWrappedMember);
@@ -522,8 +528,8 @@ public class PresetUtils {
             FleetMemberWrapper member = this.fleetMembers.get(index);
             member.updateCaptain(captain);
             if (captain.isPlayer()) {
-                this.campaignFleet.setCommander(member.getCaptainCopy());
-                this.campaignFleet.getFleetData().setFlagship(member.getMember());
+                this.getCampaignFleet().setCommander(member.getCaptainCopy());
+                this.getCampaignFleet().getFleetData().setFlagship(member.getMember());
             }
 
             if (!captain.getName().getFullName().equals("")) {
@@ -591,7 +597,7 @@ public class PresetUtils {
                 String hullId = member.getMember().getHullSpec().getBaseHullId();
                 
                 FleetMemberWrapper wrappedMember = new FleetMemberWrapper(this, member.getMember(), member.getMember().getVariant(), member.getMember().getCaptain(), i);
-                this.campaignFleet.getFleetData().addFleetMember(wrappedMember.getMember());
+                this.getCampaignFleet().getFleetData().addFleetMember(wrappedMember.getMember());
                 
                 this.fleetMembers.add(wrappedMember);
                 
@@ -603,8 +609,8 @@ public class PresetUtils {
                 if (!isOfficerNought(member.getMember().getCaptain())) {
                     this.officersMap.put(i, new OfficerVariantPair(member.getMember().getCaptain(), member.getMember().getVariant(), i));
                     if (Global.getSector().getPlayerPerson().getId().equals(member.getCaptainId())) {
-                        this.campaignFleet.setCommander(wrappedMember.getMember().getCaptain());
-                        this.campaignFleet.getFleetData().setFlagship(wrappedMember.getMember());
+                        this.getCampaignFleet().setCommander(wrappedMember.getMember().getCaptain());
+                        this.getCampaignFleet().getFleetData().setFlagship(wrappedMember.getMember());
                     }
                 }
             }
@@ -726,6 +732,8 @@ public class PresetUtils {
     }
 
     public static Map<Integer, FleetMemberAPI> whichMembersAvailable(MarketAPI market, List<FleetMemberAPI> membersToCheck) {
+        if (market == null) return whichMembersAvailable(membersToCheck);
+
         SubmarketAPI storage = CargoPresetUtils.getStorageSubmarket(market);
         SubmarketPlugin storagePlugin = storage.getPlugin();
         if (!isPlayerPaidForStorage(storagePlugin)) return null;
@@ -758,6 +766,19 @@ public class PresetUtils {
 
         seen.putAll(seenPlayer);
         seen.putAll(seenStorage);
+        return seen;
+    }
+
+    public static Map<Integer, FleetMemberAPI> whichMembersAvailable(List<FleetMemberAPI> membersToCheck) {
+        Map<Integer, FleetMemberAPI> seen = new HashMap<>();
+        for (int i = 0; i < membersToCheck.size(); i++) {
+            for (FleetMemberAPI playerMember : Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy()) {
+                if (!seen.values().contains(playerMember) && playerMember.getId().equals(membersToCheck.get(i).getId())) {
+                    seen.put(i, playerMember);
+                    break;
+                }
+            }
+        }
         return seen;
     }
 
@@ -1031,6 +1052,58 @@ public class PresetUtils {
             }
         }
         return null;
+    }
+
+    public static Set<FleetPreset> getPresetsOfMembers(List<FleetMemberAPI> targetMembers) {
+        Map<String, FleetPreset> presets = getFleetPresets();
+        Set<FleetPreset> found = new HashSet<>();
+
+        for (FleetPreset preset : presets.values()) {
+            if (targetMembers.size() != preset.getShipIds().size()) {
+                continue;
+            }
+
+            boolean allShipsMatched = true;
+
+            for (int i = 0; i < targetMembers.size(); i++) {
+                FleetMemberAPI playerMember = targetMembers.get(i);
+                ShipVariantAPI variant = playerMember.getVariant();
+                PersonAPI captain = playerMember.getCaptain();
+
+                ShipVariantAPI presetVariant = preset.getVariantsMap().get(i);
+                if (presetVariant == null) {
+                    allShipsMatched = false;
+                    break;
+                }
+
+                boolean variantMatched = false;
+                if (areSameVariant(presetVariant, variant)) {
+                    if (!isOfficerNought(captain) && preset.getOfficersMap().containsKey(i)) {
+                        OfficerVariantPair pair = preset.getOfficersMap().get(i);
+                        boolean officerMatched = false;
+
+                        if (areSameVariant(pair.getVariant(), variant) && (captain != null && pair.getOfficer().getId().equals(captain.getId()))) officerMatched = true;
+
+                        if (!officerMatched) {
+                            allShipsMatched = false;
+                            break;
+                        }
+                    }
+                    variantMatched = true;
+                    break;
+                }
+                
+                if (!variantMatched) {
+                    allShipsMatched = false;
+                    break;
+                }
+            }
+
+            if (allShipsMatched) {
+                found.add(preset);
+            }
+        }
+        return found;
     }
 
     public static boolean isPresetPlayerFleet(FleetPreset preset) {
@@ -1924,37 +1997,6 @@ public class PresetUtils {
         Object fleetPanel = ReflectionUtilis.invokeMethod("getFleetPanel", infoPanelParent);
 
         ReflectionUtilis.getMethodAndInvokeDirectly("recreateUI", fleetPanel, 1, false);
-
-        // ReflectionUtilis.logFields(fleetPanel);
-
-        // for (Object child : UtilReflection.getChildrenRecursive(fleetPanel)) {
-        //     // I DONT KNOW HOW TO RESET THE THING AFTER IT ADVANCES ONCE AFTER REBUILDING TO FIX THE TOOLTIP BULLSHIT AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-        //     // ReflectionUtilis.logFields(child);
-
-        //     Object field = ReflectionUtilis.getFieldAtIndex(child, 1);
-        //     if (field instanceof List) {
-        //         for (Object o : (List<Object>) field) {
-        //             for (Object child1 : (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", o, 0)) {
-        //                 ReflectionUtilis.logMethods(child1);
-        //             }
-        //             List<Object> lst = new ArrayList<>();
-        //             lst.add(UtilReflection.createInputEventInstance(InputEventClass.MOUSE_EVENT, InputEventType.MOUSE_MOVE, -1, -1, -1, '\0'));
-        //             lst.add(UtilReflection.createInputEventInstance(InputEventClass.MOUSE_EVENT, InputEventType.MOUSE_MOVE, -1, -1, -1, '\0'));
-        //             lst.add(UtilReflection.createInputEventInstance(InputEventClass.MOUSE_EVENT, InputEventType.MOUSE_MOVE, -1, -1, -1, '\0'));
-        //             ReflectionUtilis.getMethodExplicitAndInvokeDirectly("processInput", o, new Class<?>[]{List.class}, lst);
-        //             // ReflectionUtilis.logMethods(o);
-        //             // ReflectionUtilis.logFields(o);
-        //             break;
-        //         }
-        //     }
-            
-        //     // ReflectionUtilis.logMethods(child);
-        //     List<Object> lst = new ArrayList<>();
-        //     lst.add(UtilReflection.createInputEventInstance(InputEventClass.MOUSE_EVENT, InputEventType.MOUSE_MOVE, 1, 1, -1, '\0'));
-        //     lst.add(UtilReflection.createInputEventInstance(InputEventClass.MOUSE_EVENT, InputEventType.MOUSE_MOVE, 1, 1, -1, '\0'));
-        //     lst.add(UtilReflection.createInputEventInstance(InputEventClass.MOUSE_EVENT, InputEventType.MOUSE_MOVE, 1, 1, -1, '\0'));
-        //     ReflectionUtilis.getMethodExplicitAndInvokeDirectly("processInput", child, new Class<?>[]{List.class}, lst);
-        // }
     }
 
     public static void deleteFleetPreset(String name) {
