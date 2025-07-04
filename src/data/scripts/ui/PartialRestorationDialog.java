@@ -178,6 +178,7 @@ public class PartialRestorationDialog {
             if (whichFleetMembersAvailable.get(i) == null) {
                 btn.setEnabled(false);
                 btn.setOpacity(0.5f);
+                UtilReflection.removeTooltipFromButton(btn);
                 UtilReflection.setShipButtonHighlightColor(buttonToRenderControllerMap.get(btn), UtilReflection.DARK_RED);
             }
             i++;

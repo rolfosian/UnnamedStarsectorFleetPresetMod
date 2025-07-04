@@ -295,8 +295,12 @@ public class ReflectionUtilis {
 
     public static List<Object> getAllFields(Object instanceToGetFrom) {
         List<Object> lst = new ArrayList<>();
-        for (Object field : instanceToGetFrom.getClass().getDeclaredFields()) {
-            lst.add(getPrivateVariable(field, instanceToGetFrom));
+        Class<?> currentClass = instanceToGetFrom.getClass();
+        while (currentClass != null) {
+            for (Object field : currentClass.getDeclaredFields()) {
+                lst.add(getPrivateVariable(field, instanceToGetFrom));
+            }
+            currentClass = currentClass.getSuperclass();
         }
         return lst;
     }

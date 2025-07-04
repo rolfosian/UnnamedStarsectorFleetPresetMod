@@ -229,9 +229,22 @@ public class UtilReflection {
                 if (whichFleetMembersAvailable.get(i) == null) {
                     btn.setEnabled(false);
                     btn.setOpacity(0.5f);
+                    removeTooltipFromButton(btn);
                     setShipButtonHighlightColor(buttonToRenderControllerMap.get(btn), DARK_RED);
                 }
                 i++;
+            }
+        }
+    }
+
+    public static void removeTooltipFromButton(ButtonAPI btn) {
+        List<Object> vars = ReflectionUtilis.getAllFields(btn);
+        for (int i = 0; i < vars.size(); i++) {
+            Object variable = vars.get(i);
+
+            if (variable != null && String.valueOf(variable).startsWith("com.fs.starfarer.ui.impl.StandardTooltipV2")) {
+                ReflectionUtilis.setFieldAtIndex(btn, i, null);
+                break;
             }
         }
     }
