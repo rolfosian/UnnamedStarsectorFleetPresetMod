@@ -33,7 +33,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
     public static void print(Object... args) {
         PresetMiscUtils.print(args);
     }
-    private static final String ver = "0.1.0";
+    private static final String ver = "0.1.1";
     
     @Override
     public void onGameLoad(boolean newGame) {
