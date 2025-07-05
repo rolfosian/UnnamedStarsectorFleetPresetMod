@@ -69,6 +69,8 @@ public class PartialRestorationDialog {
     private PartialRestorationDialog self = this;
 
     private boolean all = false;
+    private int selected = 0;
+    private int available = 0;
 
     public PartialRestorationDialog(Map<Integer, FleetMemberAPI> whichFleetMembersAvailable, FleetPreset preset, CampaignFleetAPI fleet, FleetPresetManagementListener master) {
         master.setPartialSelecting(true);
@@ -190,6 +192,7 @@ public class PartialRestorationDialog {
                 UtilReflection.setShipButtonHighlightColor(buttonToRenderControllerMap.get(btn), UtilReflection.DARK_RED);
                 setListenerForDisabled(buttonWrapper);
             } else {
+                available++;
                 UtilReflection.setButtonTooltip(btn, originalOrder.get(i));
                 buttonWrapper.setListener(setListener(buttonWrapper));
             }
@@ -210,10 +213,10 @@ public class PartialRestorationDialog {
     }
 
     private void setListenerForDisabled(FleetMemberButton buttonWrapper) {
-        ButtonAPI btn = buttonWrapper.getButton();
-
-        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, btn, new ActionListener() {
+        ActionListener listener = new ActionListener() {
             public void trigger(Object arg0, Object arg1) {
+                if (String.valueOf(arg0).equals("All")) return;
+
                 holoVar.setColor(UtilReflection.DARK_RED);
                 holoVar.setOverride(false);
                 UtilReflection.clickOutsideAbsorb(FMRDialog.dialog);
@@ -239,9 +242,10 @@ public class PartialRestorationDialog {
                     } 
                 });
             }
-        }.getProxy());
-
-
+        };
+        ButtonAPI btn = buttonWrapper.getButton();
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, btn, listener.getProxy());
+        buttonWrapper.setListener(listener);
         return;
     }
 
@@ -256,6 +260,7 @@ public class PartialRestorationDialog {
                     buttonWrapper.addLabel();
                     pickedFleetMembers.add(member);
                     Global.getSector().getPlayerFleet().getFleetData().addFleetMember(tempToPresetMembersMap.get(member));
+                    selected++;
 
                     if (!FMRDialog.confirmButton.isEnabled()) FMRDialog.confirmButton.setEnabled(true);
 
@@ -265,6 +270,7 @@ public class PartialRestorationDialog {
                     Global.getSector().getPlayerFleet().getFleetData().removeFleetMember(tempToPresetMembersMap.get(member));
                     presetFleet.getFleetData().addFleetMember(tempToPresetMembersMap.get(member));
                     presetFleet.getFleetData().sortToMatchOrder(originalOrder);
+                    selected--;
                     
                     if (all) all = false;
                     if (pickedFleetMembers.isEmpty()) FMRDialog.confirmButton.setEnabled(false);
@@ -274,7 +280,7 @@ public class PartialRestorationDialog {
                 if (!String.valueOf(arg0).equals("All")) {
                     PresetUtils.refreshFleetUI();
                 }
-                
+                if (selected == available) all = true;
             }
         };
         
@@ -494,18 +500,17 @@ public class PartialRestorationDialog {
             this.dialogBottomBound = dialogPos.getCenterY() - dialogPos.getHeight() / 2;
         }
 
+        private boolean isOutsideDialogBounds(float mouseX, float mouseY) {
+            return (mouseX < dialogLeftBound || mouseX > dialogRightBound || 
+            mouseY < dialogBottomBound || mouseY > dialogTopBound);
+        }
+
         @Override
         public void processInput(List<InputEventAPI> events) {
             for (InputEventAPI event : events) {
-                if (event.isMouseDownEvent() && event.getEventValue() == 0) {
-                    float mouseX = event.getX();
-                    float mouseY = event.getY();
-                    
-                    if (mouseX < dialogLeftBound || mouseX > dialogRightBound || 
-                        mouseY < dialogBottomBound || mouseY > dialogTopBound) {
-                            holoVar.setOverride(true);
-                            break;
-                    }
+                if (event.isLMBDownEvent() && isOutsideDialogBounds(event.getX(), event.getY())) {
+                    holoVar.setOverride(true);
+                    break;
                 }
             }
         }

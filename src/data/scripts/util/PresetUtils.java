@@ -80,7 +80,7 @@ public class PresetUtils {
     public static final String KEEPCARGORATIOS_KEY = "$isPresetCargoRatios";
 
     // Non-persistent data keys
-    public static final String FLEETINFOPANEL_KEY = "$fleetInfoPanel";
+    public static final String FLEET_TAB_KEY = "$fleetCoreUiTabe";
     public static final String UNDOCKED_PRESET_KEY = "$presetUndocked";
     public static final String EXTRANEOUS_MEMBERS_KEY = "$extraneousPresetMembers";
     public static final String PLAYERCURRENTMARKET_KEY = "$playerCurrentMarket";
@@ -864,7 +864,7 @@ public class PresetUtils {
                     reason = "Fleet Member(s) were lost";
                 }
 
-                // for some reason the officers arent updated immediately before the FleetMonitor calls this function if ships are scuttled (or just destroyed?) with officers in them so we have to do THIS FUCKING BULLSHIT
+                // for some reason the officers arent updated immediately before the FleetMonitor calls this function if ships are scuttled (or just destroyed?) with officers in them so we have to do this
                 List<PersonAPI> officersToReassign = new ArrayList<>();
                 for (Map.Entry<FleetMemberAPI, PersonAPI> entry : runningMembers.entrySet()) {
                     FleetMemberAPI member = entry.getKey();
@@ -1990,13 +1990,21 @@ public class PresetUtils {
     }
 
     public static void refreshFleetUI() {
-        Object fleetInfoPanel = Global.getSector().getMemoryWithoutUpdate().get(FLEETINFOPANEL_KEY);
-        if (fleetInfoPanel == null) return;
-
-        Object infoPanelParent = ReflectionUtilis.invokeMethod("getParent", fleetInfoPanel);
-        Object fleetPanel = ReflectionUtilis.invokeMethod("getFleetPanel", infoPanelParent);
+        Object fleetPanel = ReflectionUtilis.getMethodAndInvokeDirectly("getFleetPanel", Global.getSector().getMemoryWithoutUpdate().get(FLEET_TAB_KEY), 0);
+        if (fleetPanel == null) return;
 
         ReflectionUtilis.getMethodAndInvokeDirectly("recreateUI", fleetPanel, 1, false);
+    }
+
+    public static boolean isMemberInAnyOtherPreset(String memberId, String nameOfPresetFrom) {
+        for (FleetPreset preset : getFleetPresets().values()) {
+            if (preset.getName().equals(nameOfPresetFrom)) continue;
+
+            for (FleetMemberWrapper member : preset.getFleetMembers()) {
+                if (member.getMember().getId().equals(memberId)) return true;
+            }
+        }
+        return false;
     }
 
     public static void deleteFleetPreset(String name) {
@@ -2008,6 +2016,12 @@ public class PresetUtils {
         for (FleetMemberWrapper member : preset.getFleetMembers()) {
             List<FleetMemberWrapper> presetMembers = presetsMembersLists.get(member.getId());
             if (presetMembers == null) continue;
+
+            if (!isMemberInAnyOtherPreset(member.getId(), name)) {
+                for (Set<String> storedMemberIds : getStoredFleetPresetsMemberIds().values()) {
+                    storedMemberIds.remove(member.getId());
+                }
+            }
 
             presetMembers.remove(member);
             if (presetMembers.size() == 0) presetsMembersLists.remove(member.getId());

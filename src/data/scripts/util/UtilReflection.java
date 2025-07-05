@@ -19,6 +19,7 @@ import com.fs.starfarer.api.campaign.VisualPanelAPI;
 import com.fs.starfarer.api.combat.EngagementResultAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.impl.campaign.FleetInteractionDialogPluginImpl;
+import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.input.InputEventClass;
 import com.fs.starfarer.api.input.InputEventType;
 import com.fs.starfarer.api.ui.*;
@@ -135,15 +136,14 @@ public class UtilReflection {
     }
 
     public static void clickOutsideAbsorb(UIPanelAPI confirmDialog) {
-        Object event = createInputEventInstance(
+        ReflectionUtilis.invokePrivateMethodDirectly(ClassRefs.confirmDialogOutsideClickAbsorbedMethod, confirmDialog, createInputEventInstance(
             InputEventClass.MOUSE_EVENT,
             InputEventType.MOUSE_DOWN,
             9999,
             9999,
             0,
             '\0'
-        );
-        ReflectionUtilis.invokePrivateMethodDirectly(ClassRefs.confirmDialogOutsideClickAbsorbedMethod, confirmDialog, event);
+        ));
     }
 
     public static ConfirmDialogData showConfirmationDialog(
@@ -168,15 +168,15 @@ public class UtilReflection {
                 (UIPanelAPI) confirmDialog);
     }
 
-    public static CustomPanelAPI addBackGroundImage(UIPanelAPI confirmDialog, String backgroundImagePath) {
-        PositionAPI innerPanelPos = confirmDialog.getPosition();
+    public static CustomPanelAPI addBackGroundImage(UIPanelAPI confirmDialog, ButtonAPI cancelButton, String backgroundImagePath) {
+        PositionAPI dialogPos = confirmDialog.getPosition();
 
-        BackGroundImagePanelPlugin plugin = new BackGroundImagePanelPlugin();
-        CustomPanelAPI bgImagePanel = Global.getSettings().createCustom(innerPanelPos.getWidth(), innerPanelPos.getHeight(), plugin);
-        TooltipMakerAPI imagePanelTooltip = bgImagePanel.createUIElement(innerPanelPos.getWidth(), innerPanelPos.getHeight(), false);
-        plugin.init(imagePanelTooltip);
+        BackGroundImagePanelPlugin plugin = new BackGroundImagePanelPlugin(dialogPos);
+        CustomPanelAPI bgImagePanel = Global.getSettings().createCustom(dialogPos.getWidth(), dialogPos.getHeight(), plugin);
+        TooltipMakerAPI imagePanelTooltip = bgImagePanel.createUIElement(dialogPos.getWidth(), dialogPos.getHeight(), false);
+        plugin.init(imagePanelTooltip, cancelButton);
     
-        imagePanelTooltip.addImage(backgroundImagePath, innerPanelPos.getWidth()-5f, innerPanelPos.getHeight()-5f, 0f);
+        imagePanelTooltip.addImage(backgroundImagePath, dialogPos.getWidth()-5f, dialogPos.getHeight()-5f, 0f);
         bgImagePanel.addUIElement(imagePanelTooltip);
     
         confirmDialog.addComponent((UIComponentAPI)bgImagePanel).inMid();
@@ -204,7 +204,7 @@ public class UtilReflection {
 
     UIPanelAPI innerPanel = (UIPanelAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetInnerPanelMethod, confirmDialog);
     
-    CustomPanelAPI bgImagePanel = addBackGroundImage((UIPanelAPI)confirmDialog, backgroundImagePath);
+    CustomPanelAPI bgImagePanel = addBackGroundImage((UIPanelAPI)confirmDialog, no.getInstance(), backgroundImagePath);
     innerPanel.bringComponentToTop((UIComponentAPI)label);
     innerPanel.bringComponentToTop((UIComponentAPI)yes.getInstance());
     innerPanel.bringComponentToTop((UIComponentAPI)no.getInstance());
@@ -255,10 +255,27 @@ public class UtilReflection {
         );
     }
 
-    public static void setButtonTooltips(UIPanelAPI obfFleetInfoPanel, List<FleetMemberAPI> members) {
+    public static void setButtonTooltips(String name, UIPanelAPI obfFleetInfoPanel, List<FleetMemberAPI> members) {
         TreeTraverser traverser = new TreeTraverser(obfFleetInfoPanel);
         int i = 0;
-        for (TreeTraverser.TreeNode node : traverser.getNodesAtDepth(7)) {
+
+        for (TreeNode node : traverser.getNodes()) {
+            List<LabelAPI> labels = node.getLabels();
+
+            if (labels != null) {
+                for (LabelAPI label : labels) {
+                    if (label.getText().equals(name)) {
+                        i++;
+                        label.setHighlightColor(Color.YELLOW);
+                        label.setHighlightOnMouseover(true);
+                        break;
+                    }
+                }
+            }
+        }
+
+        i = 0;
+        for (TreeNode node : traverser.getNodesAtDepth(7)) {
             for (Object child : node.getChildren()) {
                 setButtonTooltip((ButtonAPI)child, members.get(i));
                 i++;
@@ -266,9 +283,10 @@ public class UtilReflection {
         }
     }
 
-    public static void setButtonTooltips(UIPanelAPI obfFleetInfoPanel, Map<Integer, FleetMemberAPI> whichFleetMembersAvailable, List<FleetMemberAPI> allFleetMembers) {
+    public static void setButtonTooltips(String name, UIPanelAPI obfFleetInfoPanel, Map<Integer, FleetMemberAPI> whichFleetMembersAvailable, List<FleetMemberAPI> allFleetMembers) {
         Map<ButtonAPI, Object> buttonToRenderControllerMap = null;
         TreeTraverser traverser = new TreeTraverser(obfFleetInfoPanel);
+        
         int i = 0;
         for (TreeTraverser.TreeNode node : traverser.getNodesAtDepth(7)) {
             for (Object child : node.getChildren()) {
@@ -385,13 +403,41 @@ public class UtilReflection {
 
     public static class BackGroundImagePanelPlugin extends BaseCustomUIPanelPlugin {
         public TooltipMakerAPI tt;
+        public ButtonAPI cancelButton;
 
-        public BackGroundImagePanelPlugin() {
+        private final float dialogLeftBound;
+        private final float dialogRightBound;
+        private final float dialogTopBound;
+        private final float dialogBottomBound;
+
+        public BackGroundImagePanelPlugin(PositionAPI dialogPos) {
             super();
+
+            this.dialogLeftBound = dialogPos.getCenterX() - dialogPos.getWidth() / 2;
+            this.dialogRightBound = dialogPos.getCenterX() + dialogPos.getWidth() / 2;
+            this.dialogTopBound = dialogPos.getCenterY() + dialogPos.getHeight() / 2;
+            this.dialogBottomBound = dialogPos.getCenterY() - dialogPos.getHeight() / 2;
         }
 
-        public void init(TooltipMakerAPI tt) {
+        public void init(TooltipMakerAPI tt, ButtonAPI cancelButton) {
             this.tt = tt;
+            this.cancelButton = cancelButton;
+        }
+
+        private boolean isOutsideDialogBounds(float mouseX, float mouseY) {
+            return (mouseX < dialogLeftBound || mouseX > dialogRightBound || 
+            mouseY < dialogBottomBound || mouseY > dialogTopBound);
+        }
+
+        @Override
+        public void processInput(List<InputEventAPI> events) {
+            for (InputEventAPI event : events) {
+                if ((event.isKeyDownEvent() && Keyboard.isKeyDown(Keyboard.KEY_ESCAPE)) || (event.isRMBDownEvent() && isOutsideDialogBounds(event.getX(), event.getY()))) {
+                    clickButton(cancelButton);
+                    event.consume();
+                    break;
+                }
+            }
         }
     }
 

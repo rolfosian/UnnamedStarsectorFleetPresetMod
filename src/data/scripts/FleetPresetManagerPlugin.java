@@ -33,7 +33,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
     public static void print(Object... args) {
         PresetMiscUtils.print(args);
     }
-    private static final String ver = "0.0.11";
+    private static final String ver = "0.1.0";
     
     @Override
     public void onGameLoad(boolean newGame) {
@@ -83,7 +83,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
     @Override
     public void beforeGameSave() {
         MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
-        mem.unset(PresetUtils.FLEETINFOPANEL_KEY); // required or else game catches exception about reflection during load and kicks this stuff from memory
+        mem.unset(PresetUtils.FLEET_TAB_KEY); // required or else game catches exception about reflection during load and kicks this stuff from memory
         mem.unset(PresetUtils.COREUI_KEY); // its just smoother this way (its not actually a big deal i just dont like the look of the double loading info)
         mem.unset(PresetUtils.OFFICER_AUTOASSIGN_BUTTON_KEY);
     }

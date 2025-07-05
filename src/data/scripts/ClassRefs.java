@@ -22,9 +22,14 @@ import com.fs.starfarer.api.input.InputEventType;
 
 import com.fs.starfarer.api.ui.UIPanelAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 
+import data.scripts.ui.TreeTraverser;
+import data.scripts.ui.TreeTraverser.TreeNode;
+import data.scripts.ui.UIComponent;
+import data.scripts.ui.UIPanel;
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.ReflectionUtilis;
@@ -153,6 +158,24 @@ public class ClassRefs {
                         FMRDialogPanelHeight = FMRDialog.getInnerPanel().getPosition().getHeight();
                         FMRDialogWidth = FMRDialog.getWidth();
                         FMRDialogHeight = FMRDialog.getHeight();
+
+                        // TreeTraverser traverser = new TreeTraverser(FMRDialog.getInnerPanel());
+                        // for (TreeNode node : traverser.getNodes()) {
+                        //     List<LabelAPI> labels = node.getLabels();
+                        //     List<ButtonAPI> buttons = node.getButtons();
+
+
+                        //     if (labels != null) {
+                        //         for (LabelAPI label : labels) {
+                        //             if (label.getText().equals("")) {
+                        //
+                        //             }
+                        //         }
+                        //         break;
+                        //     }
+
+                        // }
+
                         break;
                     }
                 }

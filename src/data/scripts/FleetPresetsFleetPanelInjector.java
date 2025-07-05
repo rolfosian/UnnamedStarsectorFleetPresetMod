@@ -47,6 +47,7 @@ public class FleetPresetsFleetPanelInjector {
     private static Object fleetInfoPanelField;
     private static Object autoAssignButtonField;
     private static Object marketPickerMethod;
+    private static Object getFleetPanelMethod;
 
     private boolean injected = false;
 
@@ -111,7 +112,7 @@ public class FleetPresetsFleetPanelInjector {
             fleetTabWrapped = null;
             fleetPanelClickHandler = null;
             masterPresetsDialog = null;
-            Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.FLEETINFOPANEL_KEY);
+            Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.FLEET_TAB_KEY);
             return;
         }
 
@@ -175,7 +176,7 @@ public class FleetPresetsFleetPanelInjector {
             fleetTabLeftPane = new UIPanel(fleetInfoPanel);
             fleetDisengageableNotice = getDisengageableNotice(fleetInfoPanel);
 
-            Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.FLEETINFOPANEL_KEY, fleetInfoPanel);
+            Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.FLEET_TAB_KEY, fleetTab);
 
             autoAssignButton = (ButtonAPI) getAutoAssignButton(fleetInfoPanel);
             Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.OFFICER_AUTOASSIGN_BUTTON_KEY, getAutoAssignButton(fleetInfoPanel));

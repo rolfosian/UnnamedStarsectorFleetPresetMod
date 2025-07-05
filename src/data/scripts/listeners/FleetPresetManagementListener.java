@@ -45,7 +45,6 @@ import data.scripts.ClassRefs;
 import data.scripts.listeners.DockingListener;
 
 import data.scripts.ui.BaseSelfRefreshingPanel;
-import data.scripts.ui.MessageBox;
 import data.scripts.ui.PartialRestorationDialog;
 import data.scripts.ui.TreeTraverser;
 import data.scripts.ui.UIComponent;
@@ -57,6 +56,7 @@ import data.scripts.util.ReflectionUtilis;
 import data.scripts.util.ReflectionUtilis.ListenerFactory.DialogDismissedListener;
 import data.scripts.util.ReflectionUtilis.ListenerFactory.ActionListener;
 import data.scripts.util.UtilReflection;
+import data.scripts.util.UtilReflection.ConfirmDialogData;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.PresetUtils.FleetMemberWrapper;
 import data.scripts.util.PresetUtils.FleetPreset;
@@ -98,6 +98,7 @@ public class FleetPresetManagementListener extends ActionListener {
     private static final String DELETE_DIALOG_HEADER_PREFIX = "Are you sure you want to delete ";
     private static final String OVERWRITE_DIALOG_HEADE_PREFIX = "Are you sure you want to overwrite ";
     private static final String OVERWRITE_DIALOG_HEADE_SUFFIX = " with the current fleet?";
+    private static final String RENAME_DIALOG_HEADE_PREFIX = "Are you sure you want to rename ";
     
     private static final String SAVE_DIALOG_BUTTON_ID = "saveDialogButton";
     private static final String SAVE_DIALOG_BUTTON_TOOLTIP_PARA_TEXT = "Saves the current fleet as preset.";
@@ -124,7 +125,7 @@ public class FleetPresetManagementListener extends ActionListener {
     private static final String OVERWRITE_PRESET_BUTTON_TEXT = "UPDATE";
 
     private static final String AUTO_UPDATE_BUTTON_ID = "autoUpdateButton";
-    private static final String AUTO_UPDATE_BUTTON_TOOLTIP_PARA_TEXT = "Toggle to automatically update the preset when the fleet changes, if undocked with a preset fleet.";
+    private static final String AUTO_UPDATE_BUTTON_TOOLTIP_PARA_TEXT = "Toggle to automatically update the preset when the fleet changes, if undocked with a COMPLETE preset fleet.";
     private static final String AUTO_UPDATE_BUTTON_TEXT = "AUTO UPDATE";
 
     // the underlying function for this is broken and needs work and i cannot be bothered right now
@@ -229,7 +230,7 @@ public class FleetPresetManagementListener extends ActionListener {
     @Override
     public void trigger(Object arg0, Object arg1) {
         CustomPanelAPI tableMasterPanel = Global.getSettings().createCustom(PANEL_WIDTH - CANCEL_CONFIRM_BUTTON_WIDTH - 5f, PANEL_HEIGHT, new BaseCustomUIPanelPlugin() );
-        UtilReflection.ConfirmDialogData master = UtilReflection.showConfirmationDialog(
+        ConfirmDialogData master = UtilReflection.showConfirmationDialog(
             "graphics/illustrations/abyssal_light2.jpg",
             EMPTY_STRING,
             EMPTY_STRING,
@@ -295,37 +296,44 @@ public class FleetPresetManagementListener extends ActionListener {
     private void addTheButtons(TooltipMakerAPI tooltipMaker, PositionAPI confirmPosition, PositionAPI cancelPosition) {
         float buttonWidth = confirmPosition.getWidth();
         float buttonHeight = cancelPosition.getHeight();
-        
+        int i = 2;
+
         ButtonAPI saveDialogButton = tooltipMaker.addButton(SAVE_DIALOG_BUTTON_TEXT, SAVE_DIALOG_BUTTON_ID, c1, c2,
         Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
-        saveDialogButton.setShortcut(Keyboard.KEY_1, false);
+        saveDialogButton.setShortcut(i, false);
         tooltipMaker.addTooltipTo(tc(SAVE_DIALOG_BUTTON_TOOLTIP_PARA_TEXT), saveDialogButton, TooltipLocation.RIGHT, false);
+        i++;
 
         ButtonAPI restorePresetButton = tooltipMaker.addButton(RESTORE_BUTTON_TEXT, RESTORE_BUTTON_ID, c1, c2,
         Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
-        restorePresetButton.setShortcut(Keyboard.KEY_2, false);
+        restorePresetButton.setShortcut(i, false);
         tooltipMaker.addTooltipTo(tc(RESTORE_BUTTON_TOOLTIP_PARA_TEXT), restorePresetButton, TooltipLocation.RIGHT, false);
+        i++;
 
         ButtonAPI partialRestorePresetButton = tooltipMaker.addButton(PARTIAL_RESTORE_BUTTON_TEXT, PARTIAL_RESTORE_BUTTON_ID, c1, c2,
         Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
-        partialRestorePresetButton.setShortcut(Keyboard.KEY_3, false);
+        partialRestorePresetButton.setShortcut(i, false);
         tooltipMaker.addTooltipTo(tc(PARTIAL_RESTORE_BUTTON_TOOLTIP_PARA_TEXT), partialRestorePresetButton, TooltipLocation.RIGHT, false);
+        i++;
 
 
         ButtonAPI storeAllButton = tooltipMaker.addButton(STORE_BUTTON_TEXT, STORE_BUTTON_ID, c1, c2,
         Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
-        storeAllButton.setShortcut(Keyboard.KEY_4, false);
+        storeAllButton.setShortcut(i, false);
         tooltipMaker.addTooltipTo(tc(STORE_BUTTON_TOOLTIP_PARA_TEXT), storeAllButton, TooltipLocation.RIGHT, false);
+        i++;
 
         ButtonAPI deleteButton = tooltipMaker.addButton(DELETE_BUTTON_TEXT, DELETE_BUTTON_ID, c1, c2,
         Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
-        deleteButton.setShortcut(Keyboard.KEY_5, false);
+        deleteButton.setShortcut(i, false);
         tooltipMaker.addTooltipTo(tc(DELETE_BUTTON_TOOLTIP_PARA_TEXT), deleteButton, TooltipLocation.RIGHT, false);
+        i++;
 
         ButtonAPI overwriteToPresetButton = tooltipMaker.addButton(OVERWRITE_PRESET_BUTTON_TEXT, OVERWRITE_PRESET_BUTTON_ID, c1, c2,
         Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
-        overwriteToPresetButton.setShortcut(Keyboard.KEY_6, false);
+        overwriteToPresetButton.setShortcut(i, false);
         tooltipMaker.addTooltipTo(tc(OVERWRITE_PRESET_BUTTON_TOOLTIP_PARA_TEXT), overwriteToPresetButton, TooltipLocation.RIGHT, false);
+        i++;
 
         ButtonAPI autoUpdateButton = tooltipMaker.addCheckbox(buttonWidth, buttonHeight, AUTO_UPDATE_BUTTON_TEXT, AUTO_UPDATE_BUTTON_ID, Fonts.ORBITRON_12, c1,
         ButtonAPI.UICheckboxSize.SMALL, 5f);
@@ -351,34 +359,53 @@ public class FleetPresetManagementListener extends ActionListener {
         return;
     }
 
-    private void openOverwriteDialog(boolean overwrite) {
+    private void openRenameDialog(String oldName, String newName) {
+        UtilReflection.ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
+            RENAME_DIALOG_HEADE_PREFIX + oldName + " to " + newName + QUESTON_MARK,
+            CONFIRM_TEXT,
+            CANCEL_TEXT,
+            CONFIRM_DIALOG_WIDTH / 1.5f,
+            CONFIRM_DIALOG_HEIGHT / 4,
+            new DialogDismissedListener() {
+                @Override
+                public void trigger(Object arg0, Object arg1) {
+                    if ((int)arg1 == 0) {
+                        if (currentTableMap.containsKey(newName)) {
+                            selectPreset(newName, getTableMapIndex(newName));
+                            openOverwriteDialog(true);
+                        }
 
-        SaveListener saveListener = new SaveListener(true, overwrite);
-        CustomPanelAPI textFieldPanel = Global.getSettings().createCustom(CONFIRM_DIALOG_WIDTH / 2 / 6, CONFIRM_DIALOG_HEIGHT / 2 / 18, null);
+                        PresetUtils.deleteFleetPreset(oldName);
+                        PresetUtils.saveFleetPreset(newName);
+                        refreshTableMap();
+                        selectPreset(newName, getTableMapIndex(newName));
+                        tablePlugin.rebuild();
 
+                    }
+                }
+            });
+            subData.confirmButton.getInstance().setShortcut(Keyboard.KEY_G, false);
+    }
+
+    private void openOverwriteDialog(boolean rename) {
         UtilReflection.ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
             OVERWRITE_DIALOG_HEADE_PREFIX + selectedPresetName + OVERWRITE_DIALOG_HEADE_SUFFIX,
             CONFIRM_TEXT,
             CANCEL_TEXT,
             CONFIRM_DIALOG_WIDTH / 1.5f,
             CONFIRM_DIALOG_HEIGHT / 4,
-            saveListener);
-
-        // PositionAPI subPos = subData.panel.getPosition();
-        subData.panel.addComponent(textFieldPanel).inTL(0f, 0f);
+            new SaveListener(true, false, rename));
         subData.confirmButton.getInstance().setShortcut(Keyboard.KEY_G, false);
     }
 
     @SuppressWarnings("unchecked")
     private void openSaveDialog() {
-
-        SaveListener saveListener = new SaveListener(false, true);
         BaseCustomUIPanelPlugin textPanelPlugin = null; // new BaseCustomUIPanelPlugin() {
         //     @Override 
         //     public void processInput(List<InputEventAPI> events) {
         //         for (InputEventAPI event : events) {
         //             if (event.isKeyDownEvent() && (Keyboard.isKeyDown(Keyboard.KEY_RETURN) || Keyboard.isKeyDown(Keyboard.KEY_NUMPADENTER))) {
-        //                 // PresetMiscUtils.pressKey(Keyboard.KEY_RETURN); // THIS DOESNT EVEN WORK - THE TEXTFIELD CONSUMES THE EVENT BEFORE IT GETS HERE...
+        //                 // PresetMiscUtils.pressKey(Keyboard.KEY_RETURN); // THIS DOESNT EVEN WORK - THE TEXTFIELD CONSUMES THE EVENT BEFORE IT GETS HERE SO THE USER ALWAYS HAS TO PRESS ENTER TWICE - KIND OF ANNOYING
         //             }
         //         }
         //     };
@@ -397,7 +424,7 @@ public class FleetPresetManagementListener extends ActionListener {
             CANCEL_TEXT,
             CONFIRM_DIALOG_WIDTH / 1.5f,
             CONFIRM_DIALOG_HEIGHT / 2,
-            saveListener
+            new SaveListener(false, true, false)
         );
 
         CustomPanelAPI imgButtonPanel = Global.getSettings().createCustom(172f, 172f, null);
@@ -476,20 +503,14 @@ public class FleetPresetManagementListener extends ActionListener {
     }
 
     private void openDeleteDialog() {
-
-        DeleteListener deleteListener = new DeleteListener();
-        CustomPanelAPI textPanel = Global.getSettings().createCustom(CONFIRM_DIALOG_WIDTH / 2 / 10, CONFIRM_DIALOG_HEIGHT / 2 / 20, null);
-
         UtilReflection.ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
             DELETE_DIALOG_HEADER_PREFIX + selectedPresetName + QUESTON_MARK,
             CONFIRM_TEXT,
             CANCEL_TEXT,
             CONFIRM_DIALOG_WIDTH / 1.5f,
             CONFIRM_DIALOG_HEIGHT / 4,
-            deleteListener);
+            new DeleteListener());
         subData.confirmButton.setShortcut(Keyboard.KEY_G, false);
-
-        subData.panel.addComponent(textPanel).inTL(0f, 0f);
     }
 
     public static boolean isEmptyOrWhitespace(String s) {
@@ -720,6 +741,9 @@ public class FleetPresetManagementListener extends ActionListener {
 
         private void processRow(UIPanelAPI row, String rowName, int id) {
             PositionAPI rowPos = row.getPosition();
+
+            ButtonAPI button = (ButtonAPI) ReflectionUtilis.getMethodAndInvokeDirectly("getButton", row, 0);
+            button.setMouseOverSound(null);
             
             TableRowListener rowListener = new TableRowListener(row, rowPos, rowName, id);
             CustomPanelAPI rowOverlayPanel = Global.getSettings().createCustom(NAME_COLUMN_WIDTH, 29f, rowListener);
@@ -761,7 +785,6 @@ public class FleetPresetManagementListener extends ActionListener {
             UIPanelAPI selectedRow = null;
             for (Map.Entry<String, PresetUtils.FleetPreset> entry: currentTableMap.entrySet()) {
                 String rowName = entry.getKey();
-                PresetUtils.FleetPreset fleetPreset = entry.getValue();
 
                 UIPanelAPI row;
                 if (selectedRowIndex == id) {
@@ -861,9 +884,9 @@ public class FleetPresetManagementListener extends ActionListener {
             fleetInfoPanel = UtilReflection.getObfFleetInfoPanel(selectedPresetName, fleet); // Object casted to UIPanelAPI, fixed size 400x400 afaik
             
             if (whichMembersAvailable != null && !whichMembersAvailable.isEmpty()) {
-                UtilReflection.setButtonTooltips(fleetInfoPanel, whichMembersAvailable, fleet.getFleetData().getMembersListCopy());
+                UtilReflection.setButtonTooltips(selectedPresetName, fleetInfoPanel, whichMembersAvailable, fleet.getFleetData().getMembersListCopy());
             } else {
-                UtilReflection.setButtonTooltips(fleetInfoPanel, fleet.getFleetData().getMembersListCopy());
+                UtilReflection.setButtonTooltips(selectedPresetName, fleetInfoPanel, fleet.getFleetData().getMembersListCopy());
             }
 
             fleetInfoPanelHolder.addComponent(fleetInfoPanel).inTL(0f, 0f);
@@ -1046,11 +1069,14 @@ public class FleetPresetManagementListener extends ActionListener {
     }
 
     private class SaveListener extends DialogDismissedListener {
-        private boolean overwrite;
-        private boolean cancel;
-        public SaveListener(boolean overwrite, boolean cancel) {
+        private final boolean overwrite;
+        private final boolean cancel;
+        private final boolean rename;
+
+        public SaveListener(boolean overwrite, boolean cancel, boolean rename) {
             this.overwrite = overwrite;
             this.cancel = cancel;
+            this.rename = rename;
         }
     
         @Override
@@ -1073,13 +1099,10 @@ public class FleetPresetManagementListener extends ActionListener {
                             selectPreset(text, getTableMapIndex(text));
                             openOverwriteDialog(false);
                         
-                        // } else if (possibleDuplicate != null) { // someone can implement this if they want to i cant be bothered refactoring rn
-                            // openOverwriteDialo
-
                         } else {
                             FleetPreset possibleDuplicate = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
                             if (possibleDuplicate != null) {
-                                new MessageBox("Duplicates are not allowed!");
+                                openRenameDialog(possibleDuplicate.getName(), text);
                                 return;
                             }
 
@@ -1097,7 +1120,7 @@ public class FleetPresetManagementListener extends ActionListener {
                 tablePlugin.rebuild();
                 return;
             } else if (option == 1) {
-                if (overwrite && !cancel) {
+                if (overwrite && !cancel && !rename) {
                     openSaveDialog();
                 }
                 if (!selectedPresetName.equals(EMPTY_STRING)) enableButtonsRequiringSelection();
@@ -1269,4 +1292,46 @@ public class FleetPresetManagementListener extends ActionListener {
         return this.tablePlugin;
     }
 
+    private class MessageBox {
+        private ConfirmDialogData messageMaster;
+    
+        public MessageBox(String message, DialogDismissedListener listener) {
+            LabelAPI labbel = Global.getSettings().createLabel(message, Fonts.ORBITRON_16);
+            labbel.setAlignment(Alignment.MID);
+            labbel.setColor(Misc.getBasePlayerColor());
+            labbel.setHighlightColor(Misc.getBrightPlayerColor());
+            float width = labbel.computeTextWidth(message);
+            float height = labbel.computeTextHeight(message);
+    
+            messageMaster = UtilReflection.showConfirmationDialog("graphics/icons/industry/battlestation.png",
+            "",
+            "",
+            "Ok",
+            250f,
+            100f,
+            listener
+            );
+    
+            messageMaster.panel.removeComponent((UIComponentAPI)messageMaster.confirmButton.getInstance());
+            messageMaster.panel.removeComponent((UIComponentAPI)messageMaster.textLabel);
+            PositionAPI buttonPos = messageMaster.cancelButton.getInstance().getPosition();
+    
+            CustomPanelAPI labbelPanel = Global.getSettings().createCustom(width, height, null);
+            TooltipMakerAPI tt = labbelPanel.createUIElement(width, height, false);
+            tt.setParaFont(Fonts.ORBITRON_16);
+            LabelAPI messageText = tt.addPara(message, 0f);
+    
+            messageText.setColor(Misc.getBasePlayerColor());
+            messageText.setHighlightColor(Misc.getBrightPlayerColor());
+            messageText.setHighlightOnMouseover(true);
+            messageText.setAlignment(Alignment.MID);
+            labbelPanel.addUIElement(tt);
+    
+            messageMaster.panel.addComponent(labbelPanel).inMid().setYAlignOffset(0f);
+    
+            width = buttonPos.getWidth() / 2;
+            height = buttonPos.getHeight();
+            buttonPos.setSize(width, height);
+        }
+    }
 }

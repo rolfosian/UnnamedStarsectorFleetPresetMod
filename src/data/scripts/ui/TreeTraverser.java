@@ -32,18 +32,22 @@ public class TreeTraverser {
             return this.depth;
         }
 
-        public boolean hasButtons() {
+        public List<ButtonAPI> getButtons() {
+            List<ButtonAPI> buttons = new ArrayList<>();
+
             for (Object child : this.children) {
-                if (ButtonAPI.class.isAssignableFrom(child.getClass())) return true;
+                if (ButtonAPI.class.isAssignableFrom(child.getClass())) buttons.add((ButtonAPI)child);
             }
-            return false;
+            return buttons;
         }
 
-        public boolean hasLabels() {
+        public List<LabelAPI> getLabels() {
+            List<LabelAPI> labels = new ArrayList<>();
+
             for (Object child : this.children) {
-                if (LabelAPI.class.isAssignableFrom(child.getClass())) return true;
+                if (LabelAPI.class.isAssignableFrom(child.getClass())) labels.add((LabelAPI)child);
             }
-            return false;
+            return !labels.isEmpty() ? labels : null;
         }
     }
 
@@ -60,7 +64,7 @@ public class TreeTraverser {
         TreeNode node = getCurrentNode();
         Object parent = node.getParent();
         if (parent == null) return;
-        
+
         UIPanel pp =  new UIPanel(parent);
         for (Object child : node.getChildren()) {
             pp.remove(new UIComponent(child));
@@ -110,6 +114,17 @@ public class TreeTraverser {
         this.nodes = new ArrayList<>();
         this.currentIndex = 0;
         this.getChildren(parentPanel, null, 0);
+    }
+
+    public void clearPanel() { // this is dangerous to use and i cant be bothered debugging it, sometimes it goes above the top level for some reason idk. it's good for clearing ConfirmDialog panels though
+        while (this.goDownOneLevel()) {}
+        for (int i = 0; i < this.getNodes().size(); i++) {
+            UIPanel par = new UIPanel(this.getCurrentNode().getParent());
+            for (Object child : this.getCurrentNode().getChildren()) {
+                par.remove(new UIComponent(child));
+            }
+            this.goUpOneLevel();
+        }
     }
     
     @SuppressWarnings("unchecked")
