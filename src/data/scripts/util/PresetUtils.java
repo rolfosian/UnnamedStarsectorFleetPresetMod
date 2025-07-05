@@ -696,6 +696,7 @@ public class PresetUtils {
         }
     }
 
+    // note: this will return true if it's called after a player has picked up a fleet member with the mouse in the fleet tab of the coreui and before it is put back down again, so contingencies are required for that
     public static boolean isPresetMemberPerished(FleetMemberAPI member, boolean isStored) {
         if (isStored) {
             return false;
