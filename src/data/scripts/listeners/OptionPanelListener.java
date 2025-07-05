@@ -21,10 +21,7 @@ import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.ReflectionUtilis;
 import data.scripts.util.UtilReflection;
 
-import java.awt.Button;
 import java.util.*;
-
-import javax.tools.OptionChecker;
 
 @SuppressWarnings("unchecked")
 public abstract class OptionPanelListener {
@@ -105,6 +102,7 @@ public abstract class OptionPanelListener {
                     // val is Option 'data'
                     newOptions.add(val);
 
+                    // add the interceptor listener for the option
                     ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, entry.getKey(), new ReflectionUtilis.ListenerFactory.ActionListener() {
                         @Override
                         public void trigger(Object arg0, Object arg1) {
