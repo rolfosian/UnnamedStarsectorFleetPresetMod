@@ -373,6 +373,7 @@ public class FleetPresetManagementListener extends ActionListener {
                         if (currentTableMap.containsKey(newName)) {
                             selectPreset(newName, getTableMapIndex(newName));
                             openOverwriteDialog(true);
+                            return;
                         }
 
                         PresetUtils.deleteFleetPreset(oldName);
