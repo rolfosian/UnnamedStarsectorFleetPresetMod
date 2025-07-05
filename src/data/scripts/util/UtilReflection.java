@@ -398,13 +398,16 @@ public class UtilReflection {
     public static class HoloVar {
         private final Object masterVar;
         private final List<Object> vars;
-        
+        private final List<Object> floatGetters;
+
         private Color originalColor;
         private int colorIndex;
+        private boolean override = false;
 
         public HoloVar(UIPanelAPI dialog) {
             this.masterVar = getHoloVar(dialog);
             this.vars = ReflectionUtilis.getAllVariables(masterVar);
+            this.floatGetters = getFloatMethods();
 
             for (int i = 0; i < vars.size(); i++) {
                 Object var = vars.get(i);
@@ -425,6 +428,23 @@ public class UtilReflection {
     
         public void resetColor() {
             ReflectionUtilis.setFieldAtIndex(masterVar, colorIndex, originalColor);
+        }
+
+        public boolean isRendering() {
+            for (Object method : floatGetters) {
+                float val = (float)ReflectionUtilis.invokeMethodDirectly(method, masterVar);
+                if (val == 0f) {
+                    return false;
+                }
+            }
+            if (!override) {
+                return true;
+            }
+            return false;
+        }
+
+        public void setOverride(boolean override) {
+            this.override = override;
         }
 
         private Object getHoloVar(UIPanelAPI dialog) {
@@ -454,6 +474,10 @@ public class UtilReflection {
                 }
             }
             return null;
+        }
+
+        private List<Object> getFloatMethods() {
+            return ReflectionUtilis.getMethodsByReturnType(masterVar.getClass(), float.class, 0);
         }
     }
 }

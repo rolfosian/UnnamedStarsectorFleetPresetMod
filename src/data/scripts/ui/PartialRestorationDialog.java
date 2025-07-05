@@ -13,6 +13,7 @@ import data.scripts.util.UtilReflection;
 import data.scripts.ui.TreeTraverser;
 import data.scripts.ui.TreeTraverser.TreeNode;
 
+import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCampaignEventListener;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
@@ -23,7 +24,7 @@ import com.fs.starfarer.api.campaign.FleetMemberPickerListener;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;
 import com.fs.starfarer.api.campaign.SectorEntityToken.VisibilityLevel;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
-
+import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.UIComponentAPI;
 import com.fs.starfarer.api.ui.Alignment;
 import com.fs.starfarer.api.ui.ButtonAPI;
@@ -128,7 +129,8 @@ public class PartialRestorationDialog {
         ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogSetBackgroundDimAmountMethod, FMRDialog.dialog, 0f);
         
         holoVar = new HoloVar(FMRDialog.dialog);
-        holoVar.setColor(UtilReflection.DARK_RED);
+        CustomPanelAPI holoVarOverrideOverlay = Global.getSettings().createCustom(UIConfig.DISPLAY_WIDTH, UIConfig.DISPLAY_HEIGHT, new HoloVarOverrideOverlayPlugin());
+        FMRDialog.dialog.addComponent(holoVarOverrideOverlay);
 
         FMRDialog.confirmButton.setShortcut(Keyboard.KEY_G, false);
         FMRDialog.confirmButton.setEnabled(false);
@@ -212,7 +214,30 @@ public class PartialRestorationDialog {
 
         ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, btn, new ActionListener() {
             public void trigger(Object arg0, Object arg1) {
+                holoVar.setColor(UtilReflection.DARK_RED);
+                holoVar.setOverride(false);
                 UtilReflection.clickOutsideAbsorb(FMRDialog.dialog);
+
+                Global.getSector().addTransientScript(new EveryFrameScript() {
+                    private boolean isDone = false;
+
+                    @Override
+                    public void advance(float arg0) {
+                        if (!holoVar.isRendering()) {
+                            holoVar.resetColor();
+                            Global.getSector().removeScript(this);
+                            isDone = true;
+                        }
+                    }
+                    @Override
+                    public boolean isDone() {
+                        return isDone;
+                    }
+                    @Override
+                    public boolean runWhilePaused() {
+                        return true;
+                    } 
+                });
             }
         }.getProxy());
 
@@ -345,6 +370,11 @@ public class PartialRestorationDialog {
     private void pickedFleetMembers(List<FleetMemberAPI> membersToRestore) {
         removeAllMembersFromPlayerFleet();
         readdFleetMembersToPlayerFleet();
+        if (pickedFleetMembers.size() == 0) {
+            master.setPartialSelecting(false);
+            master.enableButtonsRequiringSelection();
+            return;
+        }
         
         PresetUtils.partRestorePreset(membersToRestore, whichFleetMembersAvailable, preset);
 
@@ -447,5 +477,37 @@ public class PartialRestorationDialog {
         innerPanel.addComponent(panel).leftOfMid((UIComponentAPI)FMRDialog.cancelButton.getInstance(), 10f);
 
         FMRDialog.confirmButton.getPosition().leftOfMid(panel, 0f);
+    }
+
+    private class HoloVarOverrideOverlayPlugin extends BaseCustomUIPanelPlugin {
+        private final float dialogLeftBound;
+        private final float dialogRightBound;
+        private final float dialogTopBound;
+        private final float dialogBottomBound;
+        
+        public HoloVarOverrideOverlayPlugin() {
+            super();
+            PositionAPI dialogPos = FMRDialog.dialog.getPosition();
+            this.dialogLeftBound = dialogPos.getCenterX() - dialogPos.getWidth() / 2;
+            this.dialogRightBound = dialogPos.getCenterX() + dialogPos.getWidth() / 2;
+            this.dialogTopBound = dialogPos.getCenterY() + dialogPos.getHeight() / 2;
+            this.dialogBottomBound = dialogPos.getCenterY() - dialogPos.getHeight() / 2;
+        }
+
+        @Override
+        public void processInput(List<InputEventAPI> events) {
+            for (InputEventAPI event : events) {
+                if (event.isMouseDownEvent() && event.getEventValue() == 0) {
+                    float mouseX = event.getX();
+                    float mouseY = event.getY();
+                    
+                    if (mouseX < dialogLeftBound || mouseX > dialogRightBound || 
+                        mouseY < dialogBottomBound || mouseY > dialogTopBound) {
+                            holoVar.setOverride(true);
+                            break;
+                    }
+                }
+            }
+        }
     }
 }
