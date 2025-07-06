@@ -19,10 +19,15 @@ public class UIConfig {
     public static final float SHIP_COLUMN_WIDTH_DIVISOR;
     public static final float SHIPLIST_Y_OFFSET_MULTIPLIER;
 
-    // values for fleet tab injector requirements for lower resolutions
+    // fleet tab injector requirements for lower resolutions (only relevant if display resolution height is lower than 900)
     public static final float STORE_SHIPS_BTN_X_OFFSET;
     public static final float TAKE_SHIPS_BTN_X_OFFSET;
+
     public static final float MANAGEMENT_BTN_X_OFFSET;
+    public static final float MANAGEMENT_BTN_Y_OFFSET;
+
+    public static final float CURRENT_PRESET_LABEL_X_OFFSET;
+    public static final float CURRENT_PRESET_LABEL_Y_OFFSET;
     public static final boolean IS_SET_CURRENT_PRESET_LABEL;
 
     // These are teh values for 1080p
@@ -51,10 +56,20 @@ public class UIConfig {
 
         if (DISPLAY_WIDTH < 1360) {
             IS_SET_CURRENT_PRESET_LABEL = false;
-            MANAGEMENT_BTN_X_OFFSET = 365f;
+            MANAGEMENT_BTN_X_OFFSET = 1005f;
+            CURRENT_PRESET_LABEL_X_OFFSET = 0f;
         } else {
             IS_SET_CURRENT_PRESET_LABEL = true;
-            MANAGEMENT_BTN_X_OFFSET = 435f;
+            MANAGEMENT_BTN_X_OFFSET = 1070f;
+            CURRENT_PRESET_LABEL_X_OFFSET = MANAGEMENT_BTN_X_OFFSET - 170f;
+        }
+
+        if (DISPLAY_HEIGHT < 800) {
+            MANAGEMENT_BTN_Y_OFFSET = 670f;
+            CURRENT_PRESET_LABEL_Y_OFFSET = MANAGEMENT_BTN_Y_OFFSET;
+        } else {
+            MANAGEMENT_BTN_Y_OFFSET = 702f;
+            CURRENT_PRESET_LABEL_Y_OFFSET = MANAGEMENT_BTN_Y_OFFSET;
         }
 
         double ratio = (double)DISPLAY_HEIGHT / (double)DISPLAY_WIDTH;

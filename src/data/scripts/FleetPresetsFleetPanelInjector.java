@@ -206,8 +206,9 @@ public class FleetPresetsFleetPanelInjector {
                 pos.getInstance().belowMid(fleetDisengageableNotice, 10f);
 
             } else {
-                Position pos = new UIPanel(fleetTab).add(presetFleetsButton);
-                pos.getInstance().belowMid((UIComponentAPI)getFleetPanel(), 5f).setXAlignOffset(UIConfig.MANAGEMENT_BTN_X_OFFSET);
+                Position pos = fleetTabLeftPane.add(presetFleetsButton);
+                pos.getInstance().inTL(UIConfig.MANAGEMENT_BTN_X_OFFSET, UIConfig.MANAGEMENT_BTN_Y_OFFSET);
+                // print(pos.getInstance().getX(), pos.getInstance().getY());
             }
 
             PresetUtils.updateFleetPresetStats(playerFleetMembers);
@@ -239,8 +240,8 @@ public class FleetPresetsFleetPanelInjector {
                     labelPos2 = fleetTabLeftPane.add(currentPresetLabel);
                     labelPos2.getInstance().belowMid((UIComponentAPI)labbel1, 5f);
                 } else {
-                    labelPos1 = fleetTabWrapped.add(currentPresetLabelHeader);
-                    labelPos1.getInstance().belowMid((UIComponentAPI)getFleetPanel(), 5f).setXAlignOffset(215f);
+                    labelPos1 = fleetTabLeftPane.add(currentPresetLabelHeader);
+                    labelPos1.getInstance().inTL(UIConfig.CURRENT_PRESET_LABEL_X_OFFSET, UIConfig.CURRENT_PRESET_LABEL_Y_OFFSET);
                     labelPos2 = fleetTabWrapped.add(currentPresetLabel);
                     labelPos2.getInstance().belowMid((UIComponentAPI)labbel1, 0f);
                 }
@@ -258,8 +259,8 @@ public class FleetPresetsFleetPanelInjector {
                 fleetTabLeftPane.remove(currentPresetLabelHeader);
                 fleetTabLeftPane.remove(currentPresetLabel);
             } else {
-                fleetTabWrapped.remove(currentPresetLabelHeader);
-                fleetTabWrapped.remove(currentPresetLabel);
+                fleetTabLeftPane.remove(currentPresetLabelHeader);
+                fleetTabLeftPane.remove(currentPresetLabel);
             }
             currentPresetLabelHeader = null;
             currentPresetLabel = null;

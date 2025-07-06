@@ -50,7 +50,6 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
             persistentData.put(PresetUtils.KEEPCARGORATIOS_KEY, false);
             persistentData.put("$fleetPresetsManagerVer", ver);
         }
-        mem.set(PresetUtils.MESSAGEQUEUE_KEY, new ArrayList<>());
         mem.unset(PresetUtils.UNDOCKED_PRESET_KEY);
 
         FleetPreset activePreset = PresetUtils.getPresetOfMembers(sector.getPlayerFleet().getFleetData().getMembersListCopy());
