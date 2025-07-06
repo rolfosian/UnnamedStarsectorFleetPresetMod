@@ -78,8 +78,6 @@ public class DockingListener extends BaseCampaignEventListener {
         MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
         mem.unset(PLAYERCURRENTMARKET_KEY);
         mem.unset(ISPLAYERPAIDFORSTORAGE_KEY);
-        
-        PresetUtils.addMessagesToCampaignUI();
         setUndockedPreset();
     }
 

@@ -7,6 +7,7 @@ import org.lwjgl.input.Keyboard;
 
 import java.awt.Color;
 
+import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.ModSpecAPI;
 import com.fs.starfarer.api.campaign.CampaignEventListener;
@@ -37,6 +38,7 @@ import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 import com.fs.starfarer.api.loading.WeaponGroupSpec;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
+import com.fs.starfarer.api.util.IntervalUtil;
 import com.fs.starfarer.api.util.Misc;
 
 import data.scripts.ClassRefs;
@@ -86,7 +88,6 @@ public class PresetUtils {
     public static final String PLAYERCURRENTMARKET_KEY = "$playerCurrentMarket";
     public static final String COREUI_KEY = "$coreUI";
     public static final String ISPLAYERPAIDFORSTORAGE_KEY = "$isPlayerPaidForStorage";
-    public static final String MESSAGEQUEUE_KEY = "$presetsMessageQueue";
     public static final String VISUALFLEETINFOPANEL_KEY = "$visualFleetInfoPanelClass";
     public static final String OFFICER_AUTOASSIGN_BUTTON_KEY = "$officerAutoAssignButton";
     
@@ -1881,7 +1882,7 @@ public class PresetUtils {
         }
         initMothballedShips(storageCargo);
 
-        List<CampaignUIMessage> messageQueue = (List<CampaignUIMessage>) Global.getSector().getMemoryWithoutUpdate().get(MESSAGEQUEUE_KEY);
+        List<CampaignUIMessage> messageQueue = new ArrayList<>();
         List<FleetMemberAPI> membersDone = new ArrayList<>();
         boolean allFound = true;
 
@@ -1904,7 +1905,6 @@ public class PresetUtils {
                             if (!storedMember.getId().equals(preset.getFleetMembers().get(i).getId())) {
                                 preset.updateWrappedMember(i, storedMember);
                             }
-                            // CargoPresetUtils.refit(storedMember, variant, playerCargo, storageCargo);
                             found = true;
                             break;
                         }
@@ -1917,7 +1917,6 @@ public class PresetUtils {
                         if (!storedMember.getId().equals(preset.getFleetMembers().get(i).getId())) {
                             preset.updateWrappedMember(i, storedMember);
                         }
-                        // CargoPresetUtils.refit(storedMember, variant, playerCargo, storageCargo);
                         found = true;
                         break;
                     }
@@ -1957,6 +1956,7 @@ public class PresetUtils {
             if (messageQueue.contains(msg)) messageQueue.remove(msg);
             messageQueue.add(msg);
         }
+        addMessagesToCampaignUI(messageQueue);
     }
 
     public static class CampaignUIMessage {
@@ -1982,12 +1982,39 @@ public class PresetUtils {
         }
     }
 
-    public static void addMessagesToCampaignUI() {
-        List<CampaignUIMessage> messageQueue = (List<CampaignUIMessage>) Global.getSector().getMemoryWithoutUpdate().get(MESSAGEQUEUE_KEY);
-        for (CampaignUIMessage message : messageQueue) {
-            Global.getSector().getCampaignUI().addMessage(message.getMessage(), message.getColor());
-        }
-        messageQueue.clear();
+    public static void addMessagesToCampaignUI(List<CampaignUIMessage> messageQueue) {
+        CampaignUIMessage msg = messageQueue.remove(messageQueue.size()-1);
+        Global.getSector().getCampaignUI().getMessageDisplay().addMessage(msg.getMessage(), msg.getColor());
+
+        Global.getSector().addTransientScript(new EveryFrameScript() {
+            private boolean isDone = false;
+            private IntervalUtil interval = new IntervalUtil(1.5f, 1.5f);
+
+            @Override
+            public void advance(float arg0) {
+                interval.advance(arg0);
+                if (interval.intervalElapsed()) {
+                    if (messageQueue.isEmpty()) {
+                        this.isDone = true;
+                        Global.getSector().removeScript(this);
+                        return;
+                    }
+                    CampaignUIMessage msg = messageQueue.remove(messageQueue.size()-1);
+                    Global.getSector().getCampaignUI().getMessageDisplay().addMessage(msg.getMessage(), msg.getColor());
+                }
+            }
+
+            @Override
+            public boolean isDone() {
+                return this.isDone;
+            }
+
+            @Override
+            public boolean runWhilePaused() {
+                return true;
+            }
+            
+        });
     }
 
     public static void refreshFleetUI() {
