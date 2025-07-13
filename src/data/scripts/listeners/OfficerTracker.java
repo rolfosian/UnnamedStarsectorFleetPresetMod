@@ -2,7 +2,6 @@ package data.scripts.listeners;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.EveryFrameScript;
-import com.fs.starfarer.api.characters.MutableCharacterStatsAPI;
 import com.fs.starfarer.api.characters.OfficerDataAPI;
 import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.util.IntervalUtil;
@@ -17,6 +16,7 @@ import java.util.*;
 public class OfficerTracker implements EveryFrameScript {
     private class Officers extends HashMap<String, PersonAPI> {
         public Officers(List<OfficerDataAPI> officerDataList) {
+            super();
             for (OfficerDataAPI officerData : officerDataList) {
                 this.put(officerData.getPerson().getId(), officerData.getPerson());
             }

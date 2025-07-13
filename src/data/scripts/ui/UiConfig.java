@@ -1,7 +1,5 @@
 package data.scripts.ui;
 
-import java.util.List;
-
 import com.fs.starfarer.api.Global;
 
 import data.scripts.util.PresetMiscUtils;
@@ -44,6 +42,7 @@ public class UIConfig {
     // SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
 
     // THERE HAS TO BE A BETTER WAY TO DO THIS
+    
     // TODO ULTRAWIDE RESOLUTIONS
     static {
         if (DISPLAY_WIDTH >= 1600) {

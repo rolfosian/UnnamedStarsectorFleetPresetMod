@@ -33,7 +33,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
     public static void print(Object... args) {
         PresetMiscUtils.print(args);
     }
-    private static final String ver = "0.1.1";
+    private static final String ver = "0.1.1a";
     
     @Override
     public void onGameLoad(boolean newGame) {
@@ -75,7 +75,7 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         persistentData.put(PresetUtils.PRESET_MEMBERS_KEY, new HashMap<String, List<FleetMemberWrapper>>());
         persistentData.put(PresetUtils.STORED_PRESET_MEMBERIDS_KEY, new HashMap<String, Set<String>>());
         persistentData.put(PresetUtils.IS_AUTO_UPDATE_KEY, true);
-        persistentData.put(PresetUtils.KEEPCARGORATIOS_KEY, false);
+        // persistentData.put(PresetUtils.KEEPCARGORATIOS_KEY, false);
         persistentData.put("$fleetPresetsManagerVer", ver);
     }
 

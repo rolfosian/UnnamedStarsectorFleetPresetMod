@@ -1,11 +1,8 @@
 package data.scripts.listeners;
 
-import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
-import com.fs.starfarer.api.characters.PersonAPI;
+import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.util.IntervalUtil;
-import com.fs.starfarer.api.util.Misc;
-import com.fs.starfarer.api.fleet.FleetMemberAPI;
 
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;

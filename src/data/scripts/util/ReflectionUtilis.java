@@ -10,9 +10,7 @@ import java.lang.invoke.MethodType;
 import java.lang.invoke.CallSite;
 import java.lang.invoke.LambdaMetafactory;
 import java.lang.invoke.MethodHandle;
-import java.lang.invoke.VarHandle;
 
-import java.awt.Color;
 import java.util.*;
 
 import org.apache.log4j.Logger;
@@ -1405,6 +1403,4 @@ public class ReflectionUtilis {
         if (isProtected(modifiers)) return "protected";
         return "package-private";
     }
-
-
 }

@@ -1,10 +1,9 @@
 // Code taken and modified from Officer Extension mod
-
 package data.scripts.util;
 
-import com.fs.starfarer.D.I.Oo;
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
+
 import com.fs.starfarer.api.campaign.BaseCampaignEventListener;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.campaign.BattleAPI;
@@ -16,16 +15,17 @@ import com.fs.starfarer.api.campaign.InteractionDialogAPI;
 import com.fs.starfarer.api.campaign.InteractionDialogPlugin;
 import com.fs.starfarer.api.campaign.OptionPanelAPI;
 import com.fs.starfarer.api.campaign.VisualPanelAPI;
+
 import com.fs.starfarer.api.combat.EngagementResultAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
-import com.fs.starfarer.api.impl.campaign.FleetInteractionDialogPluginImpl;
+
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.input.InputEventClass;
 import com.fs.starfarer.api.input.InputEventType;
+
 import com.fs.starfarer.api.ui.*;
 import com.fs.starfarer.api.util.Misc;
 import com.fs.starfarer.campaign.CharacterStats;
-import com.fs.starfarer.campaign.fleet.CampaignFleet;
 import com.fs.starfarer.campaign.fleet.FleetMember;
 import com.fs.starfarer.ui.impl.StandardTooltipV2;
 
@@ -71,15 +71,14 @@ public class UtilReflection {
     }
 
     public static Object createButtonClickEventInstance(PositionAPI buttonPosition) {
-        return ReflectionUtilis.instantiateClass(ClassRefs.inputEventClass,
-        ClassRefs.inputEventClassParamTypes,
+        return createInputEventInstance(
         InputEventClass.MOUSE_EVENT,
         InputEventType.MOUSE_DOWN,
         (int)buttonPosition.getCenterX(),
         (int)buttonPosition.getCenterY(),
         0, // LMB
         '\0' // unused?
-        ); 
+        );
     }
 
     public static Object createInputEventInstance(InputEventClass eventClass, InputEventType eventType, int x, int y, int val, char char_) {
@@ -91,14 +90,14 @@ public class UtilReflection {
         y,
         val, // keyboard key or mouse button
         char_ // char is only appicable for keyboard keys afaik
-        ); 
+        );
     }
 
     public static void clickButton(Object button) {
         if (button == null) return;
 
         Object listener = ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, button);
-        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, listener, UtilReflection.createButtonClickEventInstance(((ButtonAPI)button).getPosition()), button);
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, listener, createButtonClickEventInstance(((ButtonAPI)button).getPosition()), button);
     }
 
     public static List<Object> getChildren(Object parent) {
@@ -348,7 +347,6 @@ public class UtilReflection {
         pane.addUIElement(ttB);
         ttPa.getInstance().addComponent(pane).inTL(-1f, 1f);
     }
-
 
     public static StandardTooltipV2 getButtonTooltip(ButtonAPI btn) {
         return (StandardTooltipV2) ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelGetTooltipMethod, btn);
