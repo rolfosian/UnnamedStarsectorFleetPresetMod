@@ -242,7 +242,7 @@ public class FleetPresetsFleetPanelInjector {
                 } else {
                     labelPos1 = fleetTabLeftPane.add(currentPresetLabelHeader);
                     labelPos1.getInstance().inTL(UIConfig.CURRENT_PRESET_LABEL_X_OFFSET, UIConfig.CURRENT_PRESET_LABEL_Y_OFFSET);
-                    labelPos2 = fleetTabWrapped.add(currentPresetLabel);
+                    labelPos2 = fleetTabLeftPane.add(currentPresetLabel);
                     labelPos2.getInstance().belowMid((UIComponentAPI)labbel1, 0f);
                 }
 
