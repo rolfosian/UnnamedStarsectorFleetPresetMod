@@ -2,8 +2,6 @@ package data.scripts.ui;
 
 import com.fs.starfarer.api.Global;
 
-import data.scripts.util.PresetMiscUtils;
-
 public class UIConfig {
     public static final int DISPLAY_WIDTH = (int)Global.getSettings().getScreenWidthPixels();
     public static final int DISPLAY_HEIGHT = (int)Global.getSettings().getScreenHeightPixels();
@@ -42,8 +40,6 @@ public class UIConfig {
     // SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
 
     // THERE HAS TO BE A BETTER WAY TO DO THIS
-    
-    // TODO ULTRAWIDE RESOLUTIONS
     static {
         if (DISPLAY_WIDTH >= 1600) {
             STORE_SHIPS_BTN_X_OFFSET = 1352f;
@@ -363,6 +359,30 @@ public class UIConfig {
                     SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
 
                     SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                
+                // ultrawide
+                } else if (ratio <= 0.4286) {
+                    CONFIRM_DIALOG_WIDTH_DIVISOR_ = 4.216f;
+                    CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 2.365f;
+
+                    PANEL_WIDTH_SUBTRACTOR_ = (DISPLAY_WIDTH / 100 * 0.4f) + 10f;
+                    PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.4f);
+
+                    NAME_COLUMN_WIDTH_DIVISOR_ = 5.32f;
+                    SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
+
+                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
+
+                    if (DISPLAY_HEIGHT > 1080 && DISPLAY_HEIGHT <= 1440) {
+                        CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 3.0f;
+                        PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.1f);
+                        SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                        
+                    } else if (DISPLAY_HEIGHT > 1440) {
+                        CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 4.5f;
+                        PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.5f);
+                        SHIPLIST_Y_OFFSET_MULTIPLIER_ = 20f;
+                    }
 
                 } else {
                     // fallback using 1080p values
