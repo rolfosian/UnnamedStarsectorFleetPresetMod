@@ -509,7 +509,9 @@ public class FleetPresetManagementListener extends ActionListener {
 
         private class TtHideEnsurer implements EveryFrameScript {
             private boolean isDone = false;
-            private IntervalUtil interval = new IntervalUtil(10f, 10f);
+            private boolean isActive = false;
+
+            private IntervalUtil interval = new IntervalUtil(0.33f, 0.33f);
 
             @Override
             public void advance(float arg0) {
@@ -545,6 +547,14 @@ public class FleetPresetManagementListener extends ActionListener {
             public void resetInterval() {
                 this.interval.setElapsed(0f);
             }
+
+            public boolean isActive() {
+                return this.isActive;
+            }
+
+            public void setIsActive(boolean isActive) {
+                this.isActive = isActive;
+            }
         }
 
         @Override
@@ -555,7 +565,8 @@ public class FleetPresetManagementListener extends ActionListener {
                     float mouseX = event.getX();
                     float mouseY = event.getY();
 
-                    if (!isShowingTt && isInsideBounds(mouseX, mouseY)) {
+                    if (!isShowingTt && isInsideBounds(mouseX, mouseY) && !hideEnsurer.isActive()) {
+                        hideEnsurer.setIsActive(true);
                         hideEnsurer.setIsDone(false);
                         Global.getSector().addTransientScript(hideEnsurer);
 
@@ -563,6 +574,7 @@ public class FleetPresetManagementListener extends ActionListener {
                         ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelHideTooltipMethod, ptsLabbelTt, tt);
                         isShowingTt = false;
                         hideEnsurer.setIsDone(true);
+                        hideEnsurer.setIsActive(false);
                         Global.getSector().removeScript(hideEnsurer);
                         hideEnsurer.resetInterval();
                     }
