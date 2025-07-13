@@ -1,24 +1,22 @@
 package data.scripts.listeners;
 
+import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
 
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.campaign.FleetMemberPickerListener;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;
-import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.campaign.BaseCampaignEventListener;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.campaign.CampaignEventListener;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.campaign.CampaignUIAPI;
 import com.fs.starfarer.api.campaign.CargoAPI;
+import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 import com.fs.starfarer.api.combat.ShipAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
-import com.fs.starfarer.campaign.fleet.CampaignFleet;
-import com.fs.starfarer.campaign.fleet.FleetMember;
-import com.fs.starfarer.ui.impl.StandardTooltipV2;
-import com.fs.starfarer.ui.newui.FleetMemberRecoveryDialog;
+
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipCreator;
@@ -38,7 +36,7 @@ import com.fs.starfarer.api.ui.TextFieldAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.input.InputEventClass;
 import com.fs.starfarer.api.input.InputEventType;
-
+import com.fs.starfarer.api.util.IntervalUtil;
 import com.fs.starfarer.api.util.Misc;
 
 import data.scripts.ClassRefs;
@@ -63,7 +61,6 @@ import data.scripts.util.PresetUtils.FleetPreset;
 import data.scripts.util.PresetMiscUtils;
 
 import java.awt.Color;
-import java.awt.Desktop.Action;
 import java.util.*;
 
 import org.apache.log4j.Logger;
@@ -316,7 +313,6 @@ public class FleetPresetManagementListener extends ActionListener {
         tooltipMaker.addTooltipTo(tc(PARTIAL_RESTORE_BUTTON_TOOLTIP_PARA_TEXT), partialRestorePresetButton, TooltipLocation.RIGHT, false);
         i++;
 
-
         ButtonAPI storeAllButton = tooltipMaker.addButton(STORE_BUTTON_TEXT, STORE_BUTTON_ID, c1, c2,
         Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
         storeAllButton.setShortcut(i, false);
@@ -360,7 +356,7 @@ public class FleetPresetManagementListener extends ActionListener {
     }
 
     private void openRenameDialog(String oldName, String newName) {
-        UtilReflection.ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
+        ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
             RENAME_DIALOG_HEADE_PREFIX + oldName + " to " + newName + QUESTON_MARK,
             CONFIRM_TEXT,
             CANCEL_TEXT,
@@ -381,7 +377,7 @@ public class FleetPresetManagementListener extends ActionListener {
                         refreshTableMap();
                         selectPreset(newName, getTableMapIndex(newName));
                         tablePlugin.rebuild();
-
+                        enableButtonsRequiringSelection();
                     }
                 }
             });
@@ -389,7 +385,7 @@ public class FleetPresetManagementListener extends ActionListener {
     }
 
     private void openOverwriteDialog(boolean rename) {
-        UtilReflection.ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
+        ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
             OVERWRITE_DIALOG_HEADE_PREFIX + selectedPresetName + OVERWRITE_DIALOG_HEADE_SUFFIX,
             CONFIRM_TEXT,
             CANCEL_TEXT,
@@ -401,24 +397,12 @@ public class FleetPresetManagementListener extends ActionListener {
 
     @SuppressWarnings("unchecked")
     private void openSaveDialog() {
-        BaseCustomUIPanelPlugin textPanelPlugin = null; // new BaseCustomUIPanelPlugin() {
-        //     @Override 
-        //     public void processInput(List<InputEventAPI> events) {
-        //         for (InputEventAPI event : events) {
-        //             if (event.isKeyDownEvent() && (Keyboard.isKeyDown(Keyboard.KEY_RETURN) || Keyboard.isKeyDown(Keyboard.KEY_NUMPADENTER))) {
-        //                 // PresetMiscUtils.pressKey(Keyboard.KEY_RETURN); // THIS DOESNT EVEN WORK - THE TEXTFIELD CONSUMES THE EVENT BEFORE IT GETS HERE SO THE USER ALWAYS HAS TO PRESS ENTER TWICE - KIND OF ANNOYING
-        //             }
-        //         }
-        //     };
-        // };
-
-        CustomPanelAPI textFieldPanel = Global.getSettings().createCustom(CONFIRM_DIALOG_WIDTH / 2 / 6, CONFIRM_DIALOG_HEIGHT / 2 / 12, textPanelPlugin);
+        CustomPanelAPI textFieldPanel = Global.getSettings().createCustom(CONFIRM_DIALOG_WIDTH / 2 / 6, CONFIRM_DIALOG_HEIGHT / 2 / 12, null);
         TooltipMakerAPI textFieldTooltipMaker = textFieldPanel.createUIElement(CONFIRM_DIALOG_WIDTH / 2 / 5, CONFIRM_DIALOG_HEIGHT / 2 / 10, false);
         saveNameField = textFieldTooltipMaker.addTextField(CONFIRM_DIALOG_WIDTH/3, CONFIRM_DIALOG_HEIGHT/2/3, "graphics/fonts/orbitron24aabold.fnt", 10f);
-
         textFieldPanel.addUIElement(textFieldTooltipMaker).inTL(0f, 0f);
 
-        UtilReflection.ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
+        ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
             "graphics/illustrations/entering_hyperspace.jpg",
             SAVE_DIALOG_HEADER,
             SAVE_DIALOG_YES_TEXT,
@@ -427,6 +411,9 @@ public class FleetPresetManagementListener extends ActionListener {
             CONFIRM_DIALOG_HEIGHT / 2,
             new SaveListener(false, true, false)
         );
+
+        SaveNameFieldInputInterceptor plugin = new SaveNameFieldInputInterceptor();
+        ((UIPanelAPI)saveNameField).addComponent(Global.getSettings().createCustom(0f, 0f, plugin)); // we arent done with the interceptor yet. refer to plugin.init
 
         CustomPanelAPI imgButtonPanel = Global.getSettings().createCustom(172f, 172f, null);
         TooltipMakerAPI imageButtonTt = imgButtonPanel.createUIElement(172f, 172f, false);
@@ -490,21 +477,133 @@ public class FleetPresetManagementListener extends ActionListener {
         TooltipMakerAPI ptsLabbelTooltip = ptsLabbelPanel.createUIElement(width + 20f, height, false);
         ptsLabbelTooltip.setParaOrbitronVeryLarge();
 
-        LabelAPI ptsLabbel = ptsLabbelTooltip.addPara(deployPts, Misc.getHighlightColor(), 10f);
+        LabelAPI ptsLabbel = ptsLabbelTooltip.addPara(deployPts, new Color(0, 177, 211), 10f);
         ptsLabbel.setHighlightOnMouseover(true);
-        ptsLabbel.setHighlightColor(new Color(255, 255, 230));
+        ptsLabbel.setHighlightColor(new Color(51, 193, 220));
 
         ptsLabbelTooltip.addTooltipTo(getPtsLabelTt((Map<String, String>)deployPtsBreakdown[1], Fonts.ORBITRON_16), ptsLabbelTooltip, TooltipLocation.RIGHT);
         ptsLabbelPanel.addUIElement(ptsLabbelTooltip);
+        Object ptsLabbelTt = ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelGetTooltipMethod, ptsLabbelTooltip);
 
         subData.panel.addComponent(ptsLabbelPanel).inTL(0f, subData.panel.getPosition().getHeight() - height - 8f);
         subData.panel.addComponent(textFieldPanel).inTL(0f, 0f).setXAlignOffset(CONFIRM_DIALOG_WIDTH / 2 / 2 / 2 / 2 - 20f).setYAlignOffset(-CONFIRM_DIALOG_HEIGHT / 2 / 2 / 2);
 
+        plugin.init(ptsLabbelTt, ptsLabbelPanel, ptsLabbelTooltip, subData);
+
         saveNameField.grabFocus();
     }
 
+    private class SaveNameFieldInputInterceptor extends BaseCustomUIPanelPlugin {
+        private Object tt;
+        private boolean isShowingTt = false;
+
+        private ConfirmDialogData subData;
+        private CustomPanelAPI ptsLabbelPanel;
+        private TooltipMakerAPI ptsLabbelTt;
+        private TtHideEnsurer hideEnsurer = new TtHideEnsurer();
+
+        private float topBound;
+        private float btmBound;
+        private float leftBound;
+        private float rightBound;
+
+        private class TtHideEnsurer implements EveryFrameScript {
+            private boolean isDone = false;
+            private IntervalUtil interval = new IntervalUtil(10f, 10f);
+
+            @Override
+            public void advance(float arg0) {
+                interval.advance(arg0);
+
+                if (interval.intervalElapsed() && !isShowingTt) {
+                    isShowingTt = true;
+                    ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelShowTooltipMethod, ptsLabbelTt, tt);
+                }
+
+                if (!saveNameField.hasFocus()) {
+                    ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelHideTooltipMethod, ptsLabbelTt, tt);
+                    isShowingTt = false;
+                    isDone = true;
+                    Global.getSector().removeScript(this);
+                }
+            }
+
+            @Override
+            public boolean isDone() {
+                return this.isDone;
+            }
+
+            @Override
+            public boolean runWhilePaused() {
+                return true;
+            }
+
+            public void setIsDone(boolean isDone) {
+                this.isDone = isDone;
+            }
+
+            public void resetInterval() {
+                this.interval.setElapsed(0f);
+            }
+        }
+
+        @Override
+        public void processInput(List<InputEventAPI> events) {
+            for (InputEventAPI event : events) {
+                // as the tooltip for the label sibling does not show when the text field is focused for some reason, although the highlighting fader for mouseover still does its job???
+                if (saveNameField.hasFocus() && event.isMouseMoveEvent()) {
+                    float mouseX = event.getX();
+                    float mouseY = event.getY();
+
+                    if (!isShowingTt && isInsideBounds(mouseX, mouseY)) {
+                        hideEnsurer.setIsDone(false);
+                        Global.getSector().addTransientScript(hideEnsurer);
+
+                    } else if (isShowingTt && !isInsideBounds(mouseX, mouseY)) {
+                        ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelHideTooltipMethod, ptsLabbelTt, tt);
+                        isShowingTt = false;
+                        hideEnsurer.setIsDone(true);
+                        Global.getSector().removeScript(hideEnsurer);
+                        hideEnsurer.resetInterval();
+                    }
+                }
+
+                // natively, pressing enter/escape with the text field focused will hand over focus to its parent, and then consume the event
+                // with this we intercept the enter/escape inputs and synthetically click the confirm or cancel buttons so the player does not have to press enter/esc twice
+                if (event.isKeyDownEvent() && saveNameField.hasFocus()) {
+                    if (event.getEventValue() == Keyboard.KEY_RETURN) {
+                        UtilReflection.clickButton(subData.confirmButton.getInstance());
+                        break;
+                    }
+                    else if (event.getEventValue() == Keyboard.KEY_ESCAPE) {
+                        UtilReflection.clickButton(subData.cancelButton.getInstance());
+                        break;
+                    }
+                }
+            }
+        }
+
+        private boolean isInsideBounds(float mouseX, float mouseY) {
+            return (mouseX >= leftBound && mouseX <= rightBound &&
+                    mouseY >= btmBound && mouseY <= topBound);
+        }
+
+        public void init(Object tt, CustomPanelAPI ptsLabbelPanel, TooltipMakerAPI ptsLabbelTt, ConfirmDialogData subData) {
+            this.tt = tt;
+            this.ptsLabbelPanel = ptsLabbelPanel;
+            this.ptsLabbelTt = ptsLabbelTt;
+            this.subData = subData;
+
+            PositionAPI pos = ptsLabbelPanel.getPosition();
+            this.leftBound = pos.getCenterX() - pos.getWidth() / 2;
+            this.rightBound = pos.getCenterX() + pos.getWidth() / 2;
+            this.topBound = pos.getCenterY() + pos.getHeight() / 2;
+            this.btmBound = pos.getCenterY() - pos.getHeight() / 2;
+        }
+    }
+
     private void openDeleteDialog() {
-        UtilReflection.ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
+        ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
             DELETE_DIALOG_HEADER_PREFIX + selectedPresetName + QUESTON_MARK,
             CONFIRM_TEXT,
             CANCEL_TEXT,
@@ -904,16 +1003,6 @@ public class FleetPresetManagementListener extends ActionListener {
         public void advancePostCreation(float amount) {
         }
     
-        private String trimName(String name, String prefix) {
-            String trimmed = prefix;
-    
-            if (name.length() > 6) {
-                trimmed += name.toUpperCase().substring(0, 5) + "...";
-            } else trimmed += name.toUpperCase();
-    
-            return trimmed;
-        }
-    
         @Override
         public void processInput(List<InputEventAPI> events) {
         }
@@ -951,16 +1040,6 @@ public class FleetPresetManagementListener extends ActionListener {
 
         @Override
         public void advance(float arg0) {}
-
-        private String trimName(String name, String prefix) {
-            String trimmed = prefix;
-
-            if (name.length() > 6) {
-                trimmed += name.toUpperCase().substring(0, 5) + "...";
-            } else trimmed += name.toUpperCase();
-
-            return trimmed;
-        }
 
         @Override
         public void processInput(List<InputEventAPI> arg0) {
@@ -1223,13 +1302,11 @@ public class FleetPresetManagementListener extends ActionListener {
         for (Map.Entry<String, String> entry : breakdown.entrySet()) {
             LabelAPI shipLabbel = Global.getSettings().createLabel(entry.getKey(), Fonts.ORBITRON_12);
             shipLabbel.setColor(Misc.getBrightPlayerColor());
-            shipLabbel.setHighlightColor(Misc.getHighlightedOptionColor());
 
             LabelAPI ptsLabbel = Global.getSettings().createLabel(entry.getValue(), Fonts.ORBITRON_16);
-            ptsLabbel.setColor(Misc.getHighlightColor());
-            ptsLabbel.setHighlightColor(new Color(255, 255, 230));
+            ptsLabbel.setColor(new Color(0, 177, 211));
 
-            tt.addRow(Alignment.MID, Misc.getBrightPlayerColor(), shipLabbel, Alignment.MID, Misc.getHighlightColor(), ptsLabbel);
+            tt.addRow(Alignment.MID, Misc.getBrightPlayerColor(), shipLabbel, Alignment.MID, new Color(0, 177, 211), ptsLabbel);
         }
 
         tt.addTable("", 0, 0f);
