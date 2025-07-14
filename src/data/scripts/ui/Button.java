@@ -5,13 +5,11 @@ package data.scripts.ui;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+
 import data.scripts.ClassRefs;
 import data.scripts.util.UtilReflection;
-import data.scripts.util.ReflectionUtilis.ListenerFactory.ActionListener;
-import data.scripts.ui.Renderable;
-import data.scripts.ui.UIComponent;
 import data.scripts.util.ReflectionUtilis;
-import data.scripts.util.PresetMiscUtils;
+import data.scripts.util.ReflectionUtilis.ListenerFactory.ActionListener;
 
 @SuppressWarnings("unused")
 public class Button extends UIComponent implements Renderable {

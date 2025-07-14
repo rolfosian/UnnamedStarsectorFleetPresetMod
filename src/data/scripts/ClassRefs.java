@@ -62,8 +62,11 @@ public class ClassRefs {
     public static Class<?> actionListenerInterface;
     /** Interface that contains a single method: dialogDismissed */
     public static Class<?> dialogDismissedInterface;
+
     /** Interface for renderable UI elements */
     public static Class<?> renderableUIElementInterface;
+    public static Object renderableSetOpacityMethod;
+
     /** Obfuscated UI panel class */
     public static Class<?> uiPanelClass;
     public static Object uiPanelsetParentMethod;
@@ -74,6 +77,9 @@ public class ClassRefs {
     public static Object uiPanelHideTooltipMethod;
     public static Object uiPanelSetTooltipMethod;
     public static Object uiPanelGetTooltipMethod;
+    public static Object uiPanelAddMethod;
+    public static Object uiPanelRemoveMethod;
+    public static Object positionSetMethod;
 
     /** Obfuscated fleet info panel class from the VisualPanelAPI */
     public static Class<?> visualPanelFleetInfoClass; 
@@ -266,6 +272,7 @@ public class ClassRefs {
         try {
             Object field = campaignUI.getClass().getDeclaredField("screenPanel");
             uiPanelClass = ReflectionUtilis.getFieldType(field);
+
             uiPanelsetParentMethod = ReflectionUtilis.getMethod("setParent", uiPanelClass, 1);
             uiPanelsetOpacityMethod = ReflectionUtilis.getMethod("setOpacity", uiPanelClass, 1);
             uiPanelgetChildrenNonCopyMethod = ReflectionUtilis.getMethod("getChildrenNonCopy", uiPanelClass, 0);
@@ -274,6 +281,10 @@ public class ClassRefs {
             uiPanelHideTooltipMethod = ReflectionUtilis.getMethod("hideTooltip", uiPanelClass, 1);
             uiPanelSetTooltipMethod = ReflectionUtilis.getMethod("setTooltip", uiPanelClass, 2);
             uiPanelGetTooltipMethod = ReflectionUtilis.getMethod("getTooltip", uiPanelClass, 0);
+            uiPanelAddMethod = ReflectionUtilis.getMethodExplicit("add", uiPanelClass, new Class<?>[]{ClassRefs.renderableUIElementInterface});
+            uiPanelRemoveMethod = ReflectionUtilis.getMethodExplicit("remove", uiPanelClass, new Class<?>[]{ClassRefs.renderableUIElementInterface});
+
+            positionSetMethod = ReflectionUtilis.getMethod("set", ReflectionUtilis.getReturnType(uiPanelAddMethod), 1);
         } catch (Exception e) {
             print(e);
         }
@@ -289,6 +300,7 @@ public class ClassRefs {
             for (Object method : cls.getDeclaredMethods()) {
                 if (ReflectionUtilis.getMethodName(method).equals("render")) {
                     renderableUIElementInterface = cls;
+                    renderableSetOpacityMethod = ReflectionUtilis.getMethod("setOpacity", renderableUIElementInterface, 1);
                     return;
                 }
             }
@@ -328,11 +340,11 @@ public class ClassRefs {
         if (actionListenerInterface == null) {
             findActionListenerInterface(campaignUI);
         }
-        if (uiPanelClass == null) {
-            findUIPanelClass();
-        }
         if (renderableUIElementInterface == null) {
             findRenderableUIElementInterface(ReflectionUtilis.getPrivateVariable("screenPanel", campaignUI));
+        }
+        if (uiPanelClass == null) {
+            findUIPanelClass();
         }
         if (visualPanelFleetInfoClass == null) {
             findFleetInfoClass();
