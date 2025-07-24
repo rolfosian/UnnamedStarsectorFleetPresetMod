@@ -640,42 +640,6 @@ public class FleetPresetManagementListener extends ActionListener {
                         break;
                     }
                 }
-
-                if (event.isLMBDownEvent()) {
-                    boolean doGrabFocus = true;
-                    for (Object child : UtilReflection.getChildren(subData.panel)) {
-                        if (isInsideBounds((UIComponentAPI)child, event.getX(), event.getY())) {
-                            doGrabFocus = false;
-                            break;
-                        }
-                    }
-
-                    if (doGrabFocus) {
-                        Global.getSector().addTransientScript(new EveryFrameScript() {
-                            private boolean isDone = false;
-    
-                            @Override
-                            public void advance(float arg0) {
-                                if (saveNameField != null && !saveNameField.hasFocus()) {
-                                    saveNameField.grabFocus(false);
-                                }
-                                this.isDone = true;
-                                Global.getSector().removeScript(this);
-                            }
-    
-                            @Override
-                            public boolean isDone() {
-                                return isDone;
-                            }
-    
-                            @Override
-                            public boolean runWhilePaused() {
-                                return true;
-                            }
-                        });
-                        break;
-                    }
-                }
             }
         }
 
