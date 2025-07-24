@@ -2,6 +2,7 @@ package data.scripts.listeners;
 
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
+
 import com.fs.starfarer.api.campaign.CampaignEventListener;
 import com.fs.starfarer.api.campaign.BaseCampaignEventListener;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;
@@ -10,10 +11,9 @@ import com.fs.starfarer.api.campaign.OrbitalStationAPI;
 import com.fs.starfarer.api.campaign.PlanetAPI;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.campaign.rules.MemoryAPI;
-import com.fs.starfarer.api.impl.campaign.FleetInteractionDialogPluginImpl;
+
 import com.fs.starfarer.api.impl.campaign.RuleBasedInteractionDialogPluginImpl;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
-import com.fs.starfarer.api.combat.EngagementResultAPI;
 
 import data.scripts.util.CargoPresetUtils;
 import data.scripts.util.PresetMiscUtils;
@@ -76,14 +76,20 @@ public class DockingListener extends BaseCampaignEventListener {
         setUndockedPreset();
     }
 
-    // @Override
-    // public void reportPlayerEngagement(EngagementResultAPI result) {
-    //     if (getPlayerCurrentMarket() != null) {
-    //         MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
-    //         mem.unset(PLAYERCURRENTMARKET_KEY);
-    //         mem.unset(PresetUtils.ISPLAYERPAIDFORSTORAGE_KEY);
-    //     }
-    // }
+    private boolean isHostileTimeout(InteractionDialogAPI dialog) {
+        if (dialog == null) return false;
+    
+        InteractionDialogPlugin plugin = dialog.getPlugin();
+        if (plugin == null) return false;
+    
+        Map<String, MemoryAPI> memoryMap = plugin.getMemoryMap();
+        if (memoryMap == null) return false;
+    
+        MemoryAPI marketMemory = memoryMap.get("market");
+        if (marketMemory == null) return false;
+    
+        return marketMemory.get("$playerHostileTimeout") != null;
+    }
 
     @Override
     public void reportShownInteractionDialog(InteractionDialogAPI dialog) {
@@ -91,11 +97,7 @@ public class DockingListener extends BaseCampaignEventListener {
         MarketAPI originalMarket = dialog.getInteractionTarget().getMarket();
         boolean isSettlement = false;
 
-        if (dialog.getPlugin().getMemoryMap().get("market").get("$playerHostileTimeout") != null) {
-            isHostileTimeout = true;
-        } else {
-            isHostileTimeout = false;
-        }
+        isHostileTimeout = isHostileTimeout(dialog);
 
         if (originalMarket.getName().endsWith(" Settlement") && !(dialog.getPlugin() instanceof RuleBasedInteractionDialogPluginImpl)) {
             reportPlayerClosedMarket(((FrontiersData)Global.getSector().getMemoryWithoutUpdate().get("$rat_frontiers_data")).getActiveSettlement().getPrimaryPlanet().getMarket());
@@ -137,6 +139,8 @@ public class DockingListener extends BaseCampaignEventListener {
                     case "Back":
                         if (this.settlement != null) {
                             reportPlayerClosedMarket(this.settlement.getSettlementEntity().getMarket());
+
+                            isHostileTimeout = isHostileTimeout(dialog);
 
                             if (!this.settlement.getAutoDescend()) {
                                 reportPlayerOpenedMarket(this.settlement.getPrimaryPlanet().getMarket());
