@@ -3,13 +3,12 @@ package data.scripts.util;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import org.lwjgl.input.Keyboard;
-
 import java.awt.Color;
 
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.ModSpecAPI;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.campaign.CampaignEventListener;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.campaign.CargoAPI;
@@ -25,6 +24,7 @@ import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.input.InputEventClass;
 import com.fs.starfarer.api.input.InputEventType;
+
 import com.fs.starfarer.api.characters.OfficerDataAPI;
 import com.fs.starfarer.api.characters.PersonAPI;
 
@@ -37,6 +37,7 @@ import com.fs.starfarer.api.combat.ShipAPI.HullSize;
 
 import com.fs.starfarer.api.loading.WeaponGroupSpec;
 import com.fs.starfarer.api.ui.ButtonAPI;
+import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 import com.fs.starfarer.api.util.IntervalUtil;
 import com.fs.starfarer.api.util.Misc;
@@ -44,6 +45,7 @@ import com.fs.starfarer.api.util.Misc;
 import data.scripts.ClassRefs;
 import data.scripts.listeners.DockingListener;
 import data.scripts.ui.TreeTraverser;
+import data.scripts.ui.UIPanel;
 import data.scripts.ui.TreeTraverser.TreeNode;
 import data.scripts.util.CargoPresetUtils.CargoResourceRatios;
 
@@ -51,27 +53,6 @@ import data.scripts.util.CargoPresetUtils.CargoResourceRatios;
 public class PresetUtils {
     public static void print(Object... args) {
         PresetMiscUtils.print(args);
-    }
-
-    public static final String NEXERELIN_VERSION;
-    public static final String RAT_VERSION;
-    
-    static {
-        
-        ModSpecAPI nexerelinModSpec = Global.getSettings().getModManager().getModSpec("nexerelin");
-        if (nexerelinModSpec != null) {
-            NEXERELIN_VERSION = nexerelinModSpec.getVersion();
-        } else {
-            NEXERELIN_VERSION = null;
-        }
-
-        ModSpecAPI RATModSpec = Global.getSettings().getModManager().getModSpec("assortment_of_things");
-        if (RATModSpec != null) {
-            RAT_VERSION = RATModSpec.getVersion();
-        } else {
-            RAT_VERSION = null;
-        }
-        
     }
 
     // Persistent data keys
@@ -2017,11 +1998,49 @@ public class PresetUtils {
         });
     }
 
+    public static void suppressFleetPanelTooltips(Object fleetPanel) {
+        Object list = ReflectionUtilis.invokeMethodDirectly(ClassRefs.fleetPanelGetListMethod, fleetPanel);
+        List<UIPanelAPI> items = (List<UIPanelAPI>)  ReflectionUtilis.invokeMethodDirectly(ClassRefs.fleetPanelListGetItemsMethod, list);
+
+        Global.getSector().addTransientScript(new EveryFrameScript() {
+            private boolean isDone;
+            private int frameCount = 0;
+
+            @Override
+            public void advance(float arg0) {
+                for (UIPanelAPI item : items) {
+                    for (TreeNode node :  new TreeTraverser(item).getNodes()) { // if we dont reinstantiate the traverser every frame then it doesnt work for some reason
+                        for (Object child : node.getChildren()) {
+                            Object tt = ReflectionUtilis.getMethodAndInvokeDirectly("getTooltip", child, 0);
+                            if (tt != null) ReflectionUtilis.getMethodAndInvokeDirectly("hideTooltip", child, 1, tt);
+                        }
+                    }
+                }
+                if (frameCount == 1) { // dont ask me why it needs to run for 2 frames for it to keep them down until they stay down, i wouldnt know
+                    Global.getSector().removeScript(this);
+                    isDone = true;
+                }
+                frameCount++;
+            }
+
+            @Override
+            public boolean isDone() {
+                return isDone;
+            }
+
+            @Override
+            public boolean runWhilePaused() {
+                return true;
+            }
+        });
+    }
+
     public static void refreshFleetUI() {
-        Object fleetPanel = ReflectionUtilis.getMethodAndInvokeDirectly("getFleetPanel", Global.getSector().getMemoryWithoutUpdate().get(FLEET_TAB_KEY), 0);
+        Object fleetPanel = ReflectionUtilis.invokeMethodDirectly(ClassRefs.fleetTabGetFleetPanelMethod, Global.getSector().getMemoryWithoutUpdate().get(FLEET_TAB_KEY));
         if (fleetPanel == null) return;
 
-        ReflectionUtilis.getMethodAndInvokeDirectly("recreateUI", fleetPanel, 1, false);
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.fleetPanelRecreateUIMethod, fleetPanel, false);
+        suppressFleetPanelTooltips(fleetPanel); // WE FINALLY FIGURED IT OUT
     }
 
     public static boolean isMemberInAnyOtherPreset(String memberId, String nameOfPresetFrom) {

@@ -12,6 +12,8 @@ import java.lang.invoke.LambdaMetafactory;
 import java.lang.invoke.MethodHandle;
 
 import java.util.*;
+import java.util.jar.JarFile;
+import java.util.jar.JarEntry;
 
 import org.apache.log4j.Logger;
 public class ReflectionUtilis {
@@ -230,6 +232,31 @@ public class ReflectionUtilis {
                 default:
                     throw new IllegalArgumentException("Unsupported method: " + targetMethodName);
             }
+        }
+    }
+
+    public static List<Class<?>> getAllObfClasses() {
+        try {
+            JarFile jarFile = new JarFile("starfarer_obf.jar");
+            Enumeration<JarEntry> entries = jarFile.entries();
+            List<Class<?>> obfClasses = new ArrayList<>();
+    
+            while (entries.hasMoreElements()) {
+                JarEntry entry = entries.nextElement();
+                if (entry.isDirectory()) continue;
+    
+                String name = entry.getName();
+                if (name.endsWith(".class")) {
+                    String className = name.replace("/", ".").substring(0, name.length() - ".class".length());
+                    obfClasses.add(Class.forName(className, false, Global.class.getClassLoader()));
+                }
+            }
+    
+            jarFile.close();
+            return obfClasses;
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -763,6 +790,19 @@ public class ReflectionUtilis {
         return methods;
     }
 
+    public static List<Object> getMethodsByReturnType(Class<?> cls, Class<?> returnType) {
+        List<Object> methods = new ArrayList<>();
+        for (Object method : cls.getDeclaredMethods()) {
+            try {
+                Class<?> targetReturnType = (Class<?>) getReturnTypeHandle.invoke(method);
+                if (targetReturnType.equals(returnType)) methods.add(method);
+            } catch (Throwable e) {
+                print(e);
+            }
+        }
+        return methods;
+    }
+
     public static Object invokeMethod(String methodName, Object instance, Object... arguments) {
         try {
             Object method = instance.getClass().getMethod(methodName);
@@ -776,6 +816,12 @@ public class ReflectionUtilis {
         Object method = getMethod(methodName, instance, argumentsNum);
         if (method == null) return null;
         return invokeMethodDirectly(method, instance, arguments);
+    }
+
+    public static Object getMethodDeclaredAndInvokeDirectly(String methodName, Object instance, int argumentsNum, Object... arguments) {
+        Object method = getMethodDeclared(methodName, instance.getClass(), argumentsNum);
+        if (method == null) return null;
+        return invokePrivateMethodDirectly(method, instance, arguments);
     }
 
     public static Object getMethodExplicitAndInvokeDirectly(String methodName, Object instance, Class<?>[] parameterTypes, Object... arguments) {
@@ -847,9 +893,8 @@ public class ReflectionUtilis {
         }
     }
 
-    public static void logEnumConstantNames(String canonicalName) {
+    public static void logEnumConstantNames(Class<?> clazz) {
         try {
-            Class<?> clazz = Class.forName(canonicalName);
             if (!clazz.isEnum()) throw new IllegalArgumentException("Not an enum");
     
             Object[] constants = clazz.getEnumConstants();

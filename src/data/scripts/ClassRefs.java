@@ -1,13 +1,16 @@
 // Code taken and modified from Officer Extension mod
 package data.scripts;
 
-
 import com.fs.starfarer.api.Global;
 
 import com.fs.starfarer.campaign.fleet.CampaignFleet;
+// import com.fs.graphics.Sprite;
+// import com.fs.starfarer.campaign.fleet.FleetMember;
+
 import com.fs.starfarer.ui.newui.FleetMemberRecoveryDialog;
 import com.fs.starfarer.api.campaign.BaseCampaignEventListener;
 import com.fs.starfarer.api.campaign.CampaignUIAPI;
+import com.fs.starfarer.api.campaign.CoreUITabId;
 import com.fs.starfarer.api.campaign.FleetEncounterContextPlugin;
 import com.fs.starfarer.api.campaign.FleetMemberPickerListener;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;
@@ -28,8 +31,7 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 
 import data.scripts.ui.TreeTraverser;
 import data.scripts.ui.TreeTraverser.TreeNode;
-import data.scripts.ui.UIComponent;
-import data.scripts.ui.UIPanel;
+
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.ReflectionUtilis;
@@ -38,6 +40,7 @@ import data.scripts.util.UtilReflection;
 import java.util.*;
 
 import org.apache.log4j.Logger;
+import org.lwjgl.input.Keyboard;
 
 /** Stores references to class objects in the obfuscated game files */
 @SuppressWarnings("unchecked")
@@ -109,10 +112,29 @@ public class ClassRefs {
     public static Object buttonSetButtonPressedSoundMethod;
     public static Object buttonSetActiveMethod;
 
+    // public static Class<?> buttonFactoryClass;
+    // public static Object memberButtonFactoryMethod;
+    // public static Object spriteButtonFactoryMethod;
+    // public static class memberButtonEnums {
+    //     public static Object FRIEND;
+    //     public static Object NEUTRAL;
+    //     public static Object ENEMY;
+    // }
+
     public static Object tablePanelsetItemsSelectableMethod;
     public static Object tablePanelSelectMethod;
 
     public static Object campaignUIGetCoreMethod;
+    public static Object coreUIgetCurrentTabMethod;
+
+    public static Object fleetTabGetMarketPickerMethod;
+    public static Object fleetTabGetFleetPanelMethod;
+
+    public static Object fleetPanelGetListMethod;
+    public static Object fleetPanelListGetItemsMethod;
+    public static Object fleetPanelRecreateUIMethod;
+    public static Object fleetPanelgetClickAndDropHandlerMethod;
+    public static Object fleetPanelClickAndDropHandlerGetPickedUpMemberMethod;
 
     /** Obfuscated InputEvent class */
     public static Class<?> inputEventClass;
@@ -122,7 +144,7 @@ public class ClassRefs {
         int.class, // x
         int.class, // y
         int.class, // key/mouse button, is -1 for mouse move
-        char.class // unused for mouse afaik
+        char.class // unused for mouse afaik, give '\0' for mouse prob
     };
 
     private static boolean foundAllClasses = false;
@@ -164,24 +186,6 @@ public class ClassRefs {
                         FMRDialogPanelHeight = FMRDialog.getInnerPanel().getPosition().getHeight();
                         FMRDialogWidth = FMRDialog.getWidth();
                         FMRDialogHeight = FMRDialog.getHeight();
-
-                        // TreeTraverser traverser = new TreeTraverser(FMRDialog.getInnerPanel());
-                        // for (TreeNode node : traverser.getNodes()) {
-                        //     List<LabelAPI> labels = node.getLabels();
-                        //     List<ButtonAPI> buttons = node.getButtons();
-
-
-                        //     if (labels != null) {
-                        //         for (LabelAPI label : labels) {
-                        //             if (label.getText().equals("")) {
-                        //
-                        //             }
-                        //         }
-                        //         break;
-                        //     }
-
-                        // }
-
                         break;
                     }
                 }
@@ -240,6 +244,49 @@ public class ClassRefs {
             }
         }
     }
+    
+    // this must be called after buttonClass is found
+    // public static void findButtonFactoryClass(List<Class<?>> classes) {
+    //     for (Class<?> cls : classes) {
+    //         List<Object> methods = ReflectionUtilis.getMethodsByReturnType(cls, buttonClass);
+
+    //         if (methods.size() > 10) {
+    //             buttonFactoryClass = cls;
+    //             // ReflectionUtilis.logMethods(cls);
+
+    //             for (Object method : methods) {
+    //                 Class<?>[] paramTypes = ReflectionUtilis.getMethodParamTypes(method);
+
+    //                 for (Class<?> type : paramTypes) {
+    //                     if (type.isEnum()) {
+    //                         Object[] constants = type.getEnumConstants();
+    //                         for (Object constant : constants) {
+    //                             if (String.valueOf(constant) == "NEUTRAL") {
+    //                                 memberButtonFactoryMethod = method;
+
+    //                                 List<Object> sorted = Arrays.stream(new String[] {"FRIEND", "NEUTRAL", "ENEMY"})
+    //                                     .map(ord -> Arrays.stream(constants)
+    //                                         .filter(o -> String.valueOf(o).equals(ord))
+    //                                         .findFirst()
+    //                                         .orElse(null))
+    //                                     .toList();
+                                    
+    //                                 memberButtonEnums.FRIEND = sorted.get(0);
+    //                                 memberButtonEnums.NEUTRAL = sorted.get(1);
+    //                                 memberButtonEnums.ENEMY = sorted.get(2);
+    //                                 break;
+    //                             }
+    //                         }
+    //                     } else if (type.equals(Sprite.class)) {
+    //                         spriteButtonFactoryMethod = method;
+    //                         break;
+    //                     }
+    //                 }
+    //             }
+    //             return;
+    //         }
+    //     }
+    // }
 
     public static void findConfirmDialogClass() {
         CampaignUIAPI campaignUI = Global.getSector().getCampaignUI();
@@ -321,10 +368,36 @@ public class ClassRefs {
         dialogDismissedInterface = findInterfaceByMethod(witness.getClass().getInterfaces(), "dialogDismissed");
     }
 
+    public static void findFleetPanelMethods(CampaignUIAPI campaignUI) {
+        UIPanelAPI core = UtilReflection.getCoreUI();
+        if (core != null) {
+            ReflectionUtilis.getMethodAndInvokeDirectly("showCoreUITab", campaignUI, 1, CoreUITabId.FLEET);
+
+            coreUIgetCurrentTabMethod = ReflectionUtilis.getMethod("getCurrentTab", core, 0);
+            Object fleetTab = ReflectionUtilis.invokeMethodDirectly(coreUIgetCurrentTabMethod, core);
+
+            fleetTabGetFleetPanelMethod = ReflectionUtilis.getMethod("getFleetPanel", fleetTab, 0);
+            fleetTabGetMarketPickerMethod = ReflectionUtilis.getMethod("getMarketPicker", fleetTab, 0);
+    
+            Object fleetPanel = ReflectionUtilis.invokeMethodDirectly(fleetTabGetFleetPanelMethod, fleetTab);
+            fleetPanelgetClickAndDropHandlerMethod = ReflectionUtilis.getMethod("getClickAndDropHandler", fleetPanel, 0);
+            fleetPanelRecreateUIMethod = ReflectionUtilis.getMethod("recreateUI", fleetPanel, 1);
+            fleetPanelGetListMethod = ReflectionUtilis.getMethod("getList", fleetPanel, 0);
+
+            Object clickAndDropHandler = ReflectionUtilis.invokeMethodDirectly(fleetPanelgetClickAndDropHandlerMethod, fleetPanel);
+            fleetPanelClickAndDropHandlerGetPickedUpMemberMethod = ReflectionUtilis.getMethod("getPickedUpMember", clickAndDropHandler, 0);
+            
+            Object fleetPanelList = ReflectionUtilis.invokeMethodDirectly(fleetPanelGetListMethod, fleetPanel);
+            fleetPanelListGetItemsMethod = ReflectionUtilis.getMethod("getItems", fleetPanelList, 0);
+            
+            ReflectionUtilis.getMethodAndInvokeDirectly("dismiss", core, 1, 1);
+        }
+    }
+
     public static void findAllClasses() {
         if (foundAllClasses) return;
         CampaignUIAPI campaignUI = Global.getSector().getCampaignUI();
-        
+
         if (campaignUIGetCoreMethod == null) {
             campaignUIGetCoreMethod = ReflectionUtilis.getMethod("getCore", campaignUI, 0);
         }
@@ -351,13 +424,19 @@ public class ClassRefs {
         }
         if (buttonClass == null) {
             findButtonClass();
+            // findButtonFactoryClass(ReflectionUtilis.getAllObfClasses());
         }
         if (inputEventClass == null) {
             findInputEventClass();
         }
+        
+        if (fleetPanelGetListMethod == null) {
+            findFleetPanelMethods(campaignUI);
+        }
 
-        if (campaignUIGetCoreMethod != null
-                &&tablePanelSelectMethod != null
+        if (fleetPanelGetListMethod != null
+                && campaignUIGetCoreMethod != null
+                && tablePanelSelectMethod != null
                 && confirmDialogClass != null
                 && dialogDismissedInterface != null
                 && actionListenerInterface != null
