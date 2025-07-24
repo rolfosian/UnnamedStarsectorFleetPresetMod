@@ -88,8 +88,8 @@ public class UtilReflection {
         eventType,
         x,
         y,
-        val, // keyboard key or mouse button
-        char_ // char is only appicable for keyboard keys afaik
+        val, // keyboard key or mouse button, is -1 for mouse move
+        char_ // char is only appicable for keyboard keys afaik, give '\0' for mouse prob
         );
     }
 
@@ -123,12 +123,15 @@ public class UtilReflection {
 
     public static void setConfirmDialogButtonInterceptor(Button btn, UIPanelAPI dialog, CustomPanelAPI bgImagePanel) {
         Object oldListener = ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, btn.getInstance());
+
         ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, btn.getInstance(), new ActionListener() {
             public void trigger(Object arg0, Object arg1) {
                 bgImagePanel.setOpacity(0f);
                 (((BackGroundImagePanelPlugin)bgImagePanel.getPlugin())).tt.setOpacity(0f);
+
                 bgImagePanel.removeComponent(((BackGroundImagePanelPlugin)bgImagePanel.getPlugin()).tt);
                 dialog.removeComponent(bgImagePanel);
+
                 ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldListener, arg0, arg1);
             }
         }.getProxy());
@@ -241,6 +244,20 @@ public class UtilReflection {
             this.dialog = dialog;
         }
     }
+
+    // This needs to have post processing initialization that a parent class needs to do to add officer portraits and CR/HP bars - grep "addIconFor\(FleetMember" in decompiled obf codebase to find the relevant class
+    // These buttons CAN be grafted to a panel and be used just fine but they won't have officer portraits, CR/HP bars, or tooltips
+    // Tooltips aren't hard to add but I couldn't easily find out how to do postprocessing for officer portraits in a vacuum
+    // What these buttons DO do that the ones processed by the obf fleet info panel class don't are account for their members being mothballed in real time
+    // I didnt bother trying to find out why, I decided it wasn't worth the trouble. May revisit this at some stage
+    // public static ButtonAPI createFleetMemberButton(FleetMemberAPI member, Object enumType, ActionListener listener, float size) {
+    //     ButtonAPI button = (ButtonAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.memberButtonFactoryMethod, null,
+    //     member,
+    //     enumType,
+    //     listener.getProxy());
+
+    //     return button;
+    // }
 
     public static UIPanelAPI getObfFleetInfoPanel(String name, CampaignFleetAPI fleet) {
         return (UIPanelAPI) ReflectionUtilis.instantiateClass(ClassRefs.visualPanelFleetInfoClass,

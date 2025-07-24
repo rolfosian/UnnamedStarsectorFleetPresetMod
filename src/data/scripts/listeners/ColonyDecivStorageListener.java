@@ -2,9 +2,7 @@ package data.scripts.listeners;
 
 import java.util.Set;
 
-import com.fs.starfarer.api.campaign.CargoAPI;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
-import com.fs.starfarer.api.campaign.econ.SubmarketAPI;
 import com.fs.starfarer.api.campaign.listeners.ColonyDecivListener;
 
 import data.scripts.util.PresetUtils;
