@@ -117,9 +117,9 @@ public class FleetPresetManagementListener extends ActionListener {
     private static final String DELETE_BUTTON_TOOLTIP_PARA_TEXT = "Deletes the selected preset.";
     private static final String DELETE_BUTTON_TEXT = "DELETE";
 
-    private static final String OVERWRITE_PRESET_BUTTON_ID = "overwriteToPresetButton";
-    private static final String OVERWRITE_PRESET_BUTTON_TOOLTIP_PARA_TEXT = "Overwrites the selected preset with the current fleet.";
-    private static final String OVERWRITE_PRESET_BUTTON_TEXT = "UPDATE";
+    // private static final String OVERWRITE_PRESET_BUTTON_ID = "overwriteToPresetButton";
+    // private static final String OVERWRITE_PRESET_BUTTON_TOOLTIP_PARA_TEXT = "Overwrites the selected preset with the current fleet.";
+    // private static final String OVERWRITE_PRESET_BUTTON_TEXT = "UPDATE";
 
     private static final String AUTO_UPDATE_BUTTON_ID = "autoUpdateButton";
     private static final String AUTO_UPDATE_BUTTON_TOOLTIP_PARA_TEXT = "Toggle to automatically update the preset when the fleet changes, if undocked with a COMPLETE preset fleet.";
@@ -243,6 +243,8 @@ public class FleetPresetManagementListener extends ActionListener {
         if (master == null) {
             return;
         }
+        PresetUtils.updateFleetPresetStats(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
+
         overlordPanel = master.panel;
         overlordPanelPos = master.panel.getPosition();
 
@@ -325,11 +327,11 @@ public class FleetPresetManagementListener extends ActionListener {
         tooltipMaker.addTooltipTo(tc(DELETE_BUTTON_TOOLTIP_PARA_TEXT), deleteButton, TooltipLocation.RIGHT, false);
         i++;
 
-        ButtonAPI overwriteToPresetButton = tooltipMaker.addButton(OVERWRITE_PRESET_BUTTON_TEXT, OVERWRITE_PRESET_BUTTON_ID, c1, c2,
-        Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
-        overwriteToPresetButton.setShortcut(i, false);
-        tooltipMaker.addTooltipTo(tc(OVERWRITE_PRESET_BUTTON_TOOLTIP_PARA_TEXT), overwriteToPresetButton, TooltipLocation.RIGHT, false);
-        i++;
+        // ButtonAPI overwriteToPresetButton = tooltipMaker.addButton(OVERWRITE_PRESET_BUTTON_TEXT, OVERWRITE_PRESET_BUTTON_ID, c1, c2,
+        // Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
+        // overwriteToPresetButton.setShortcut(i, false);
+        // tooltipMaker.addTooltipTo(tc(OVERWRITE_PRESET_BUTTON_TOOLTIP_PARA_TEXT), overwriteToPresetButton, TooltipLocation.RIGHT, false);
+        // i++;
 
         ButtonAPI autoUpdateButton = tooltipMaker.addCheckbox(buttonWidth, buttonHeight, AUTO_UPDATE_BUTTON_TEXT, AUTO_UPDATE_BUTTON_ID, Fonts.ORBITRON_12, c1,
         ButtonAPI.UICheckboxSize.SMALL, 5f);
@@ -345,7 +347,7 @@ public class FleetPresetManagementListener extends ActionListener {
         theButtons.put(RESTORE_BUTTON_ID, restorePresetButton);
         theButtons.put(STORE_BUTTON_ID, storeAllButton);
         theButtons.put(DELETE_BUTTON_ID, deleteButton);
-        theButtons.put(OVERWRITE_PRESET_BUTTON_ID, overwriteToPresetButton);
+        // theButtons.put(OVERWRITE_PRESET_BUTTON_ID, overwriteToPresetButton);
         theButtons.put(AUTO_UPDATE_BUTTON_ID, autoUpdateButton);
         theButtons.put(PARTIAL_RESTORE_BUTTON_ID, partialRestorePresetButton);
         // theButtons.put(KEEP_CARGO_RATIOS_BUTTON_ID, cargoRatiosButton);
@@ -355,7 +357,7 @@ public class FleetPresetManagementListener extends ActionListener {
         return;
     }
 
-    private void openRenameDialog(String oldName, String newName) {
+    private void openRenameDialog(String oldName, String newName, Object oldSaveButtonListener, ButtonAPI saveButton, Object cancelButtonListener, ButtonAPI cancelButton) {
         ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
             RENAME_DIALOG_HEADE_PREFIX + oldName + " to " + newName + QUESTON_MARK,
             CONFIRM_TEXT,
@@ -366,9 +368,10 @@ public class FleetPresetManagementListener extends ActionListener {
                 @Override
                 public void trigger(Object arg0, Object arg1) {
                     if ((int)arg1 == 0) {
+                        // confirm
                         if (currentTableMap.containsKey(newName)) {
                             selectPreset(newName, getTableMapIndex(newName));
-                            openOverwriteDialog(true);
+                            openOverwriteDialog(oldSaveButtonListener, saveButton);
                             return;
                         }
 
@@ -378,20 +381,43 @@ public class FleetPresetManagementListener extends ActionListener {
                         selectPreset(newName, getTableMapIndex(newName));
                         tablePlugin.rebuild();
                         enableButtonsRequiringSelection();
+
+                        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod,
+                        cancelButtonListener,
+                        UtilReflection.createButtonClickEventInstance(cancelButton.getPosition()),
+                        cancelButton);
+                        return;
                     }
+                    if (saveNameField != null) saveNameField.grabFocus(false);
                 }
             });
             subData.confirmButton.getInstance().setShortcut(Keyboard.KEY_G, false);
     }
 
-    private void openOverwriteDialog(boolean rename) {
+    private void openOverwriteDialog(Object oldSaveButtonListener, ButtonAPI saveButton) {
+
         ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
             OVERWRITE_DIALOG_HEADE_PREFIX + selectedPresetName + OVERWRITE_DIALOG_HEADE_SUFFIX,
             CONFIRM_TEXT,
             CANCEL_TEXT,
             CONFIRM_DIALOG_WIDTH / 1.5f,
             CONFIRM_DIALOG_HEIGHT / 4,
-            new SaveListener(true, false, rename));
+            new DialogDismissedListener() {
+                @Override
+                public void trigger(Object arg0, Object arg1) {
+                    if ((int)arg1 == 0) {
+                        // confirm
+
+                        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod,
+                        oldSaveButtonListener,
+                        UtilReflection.createButtonClickEventInstance(saveButton.getPosition()),
+                        saveButton);
+                        return;
+                    }
+
+                    if (saveNameField != null) saveNameField.grabFocus(false);
+                }
+            });
         subData.confirmButton.getInstance().setShortcut(Keyboard.KEY_G, false);
     }
 
@@ -409,8 +435,9 @@ public class FleetPresetManagementListener extends ActionListener {
             CANCEL_TEXT,
             CONFIRM_DIALOG_WIDTH / 1.5f,
             CONFIRM_DIALOG_HEIGHT / 2,
-            new SaveListener(false, true, false)
+            new SaveListener()
         );
+        setSaveButtonListenerInterceptor(subData.confirmButton.getInstance(), subData.cancelButton.getInstance());
 
         SaveNameFieldInputInterceptor plugin = new SaveNameFieldInputInterceptor();
         ((UIPanelAPI)saveNameField).addComponent(Global.getSettings().createCustom(0f, 0f, plugin)); // we arent done with the interceptor yet. refer to plugin.init
@@ -490,7 +517,33 @@ public class FleetPresetManagementListener extends ActionListener {
 
         plugin.init(ptsLabbelTt, ptsLabbelPanel, ptsLabbelTooltip, subData);
 
-        saveNameField.grabFocus();
+        saveNameField.grabFocus(false);
+    }
+
+    private void setSaveButtonListenerInterceptor(ButtonAPI saveButton, ButtonAPI cancelButton) {
+        Object oldSaveButtonListener = ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, saveButton);
+        Object cancelButtonListener = ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, cancelButton);
+
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, saveButton, new ActionListener() {
+            @Override
+            public void trigger(Object arg0, Object arg1) {
+                String text = saveNameField.getText();
+                if (!isEmptyOrWhitespace(text)) {
+                    if (currentTableMap.containsKey(text)) {
+                        selectPreset(text, getTableMapIndex(text));
+                        openOverwriteDialog(oldSaveButtonListener, saveButton);
+                        return;
+                    }
+
+                    FleetPreset possibleDuplicate = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
+                    if (possibleDuplicate != null) {
+                        openRenameDialog(possibleDuplicate.getName(), text, oldSaveButtonListener, saveButton, cancelButtonListener, cancelButton);
+                        return;
+                    }
+                }
+                ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldSaveButtonListener, saveButton, arg1);
+            }
+        }.getProxy());
     }
 
     private class SaveNameFieldInputInterceptor extends BaseCustomUIPanelPlugin {
@@ -501,11 +554,6 @@ public class FleetPresetManagementListener extends ActionListener {
         private CustomPanelAPI ptsLabbelPanel;
         private TooltipMakerAPI ptsLabbelTt;
         private TtHideEnsurer hideEnsurer = new TtHideEnsurer();
-
-        private float topBound;
-        private float btmBound;
-        private float leftBound;
-        private float rightBound;
 
         private class TtHideEnsurer implements EveryFrameScript {
             private boolean isDone = false;
@@ -565,12 +613,12 @@ public class FleetPresetManagementListener extends ActionListener {
                     float mouseX = event.getX();
                     float mouseY = event.getY();
 
-                    if (!isShowingTt && isInsideBounds(mouseX, mouseY) && !hideEnsurer.isActive()) {
+                    if (!isShowingTt && isInsideBounds(ptsLabbelPanel, mouseX, mouseY) && !hideEnsurer.isActive()) {
                         hideEnsurer.setIsActive(true);
                         hideEnsurer.setIsDone(false);
                         Global.getSector().addTransientScript(hideEnsurer);
 
-                    } else if (isShowingTt && !isInsideBounds(mouseX, mouseY)) {
+                    } else if (isShowingTt && !isInsideBounds(ptsLabbelPanel, mouseX, mouseY)) {
                         ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelHideTooltipMethod, ptsLabbelTt, tt);
                         isShowingTt = false;
                         hideEnsurer.setIsDone(true);
@@ -592,10 +640,52 @@ public class FleetPresetManagementListener extends ActionListener {
                         break;
                     }
                 }
+
+                if (event.isLMBDownEvent()) {
+                    boolean doGrabFocus = true;
+                    for (Object child : UtilReflection.getChildren(subData.panel)) {
+                        if (isInsideBounds((UIComponentAPI)child, event.getX(), event.getY())) {
+                            doGrabFocus = false;
+                            break;
+                        }
+                    }
+
+                    if (doGrabFocus) {
+                        Global.getSector().addTransientScript(new EveryFrameScript() {
+                            private boolean isDone = false;
+    
+                            @Override
+                            public void advance(float arg0) {
+                                if (saveNameField != null && !saveNameField.hasFocus()) {
+                                    saveNameField.grabFocus(false);
+                                }
+                                this.isDone = true;
+                                Global.getSector().removeScript(this);
+                            }
+    
+                            @Override
+                            public boolean isDone() {
+                                return isDone;
+                            }
+    
+                            @Override
+                            public boolean runWhilePaused() {
+                                return true;
+                            }
+                        });
+                        break;
+                    }
+                }
             }
         }
 
-        private boolean isInsideBounds(float mouseX, float mouseY) {
+        private boolean isInsideBounds(UIComponentAPI elem, float mouseX, float mouseY) {
+            PositionAPI pos = elem.getPosition();
+            float leftBound = pos.getCenterX() - pos.getWidth() / 2;
+            float rightBound = pos.getCenterX() + pos.getWidth() / 2;
+            float topBound = pos.getCenterY() + pos.getHeight() / 2;
+            float btmBound = pos.getCenterY() - pos.getHeight() / 2;
+
             return (mouseX >= leftBound && mouseX <= rightBound &&
                     mouseY >= btmBound && mouseY <= topBound);
         }
@@ -605,12 +695,6 @@ public class FleetPresetManagementListener extends ActionListener {
             this.ptsLabbelPanel = ptsLabbelPanel;
             this.ptsLabbelTt = ptsLabbelTt;
             this.subData = subData;
-
-            PositionAPI pos = ptsLabbelPanel.getPosition();
-            this.leftBound = pos.getCenterX() - pos.getWidth() / 2;
-            this.rightBound = pos.getCenterX() + pos.getWidth() / 2;
-            this.topBound = pos.getCenterY() + pos.getHeight() / 2;
-            this.btmBound = pos.getCenterY() - pos.getHeight() / 2;
         }
     }
 
@@ -665,9 +749,9 @@ public class FleetPresetManagementListener extends ActionListener {
                     openDeleteDialog();
                     return;
                     
-                case OVERWRITE_PRESET_BUTTON_ID:
-                    openOverwriteDialog(false);
-                    return;
+                // case OVERWRITE_PRESET_BUTTON_ID:
+                //     openOverwriteDialog(false);
+                //     return;
 
                 case AUTO_UPDATE_BUTTON_ID:
                     if (theButtons.get(AUTO_UPDATE_BUTTON_ID).isChecked()) {
@@ -789,13 +873,13 @@ public class FleetPresetManagementListener extends ActionListener {
                     theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
                 }
             }
-            theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(true);
+            // theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(true);
             theButtons.get(DELETE_BUTTON_ID).setEnabled(true);
 
         } else {
             theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
             theButtons.get(PARTIAL_RESTORE_BUTTON_ID).setEnabled(false);
-            theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(false);
+            // theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(false);
             theButtons.get(DELETE_BUTTON_ID).setEnabled(false);
 
             if (dockingListener.canPlayerAccessStorage(dockingListener.getPlayerCurrentMarket())
@@ -811,7 +895,7 @@ public class FleetPresetManagementListener extends ActionListener {
         theButtons.get(DELETE_BUTTON_ID).setEnabled(false);
         theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
         theButtons.get(PARTIAL_RESTORE_BUTTON_ID).setEnabled(false);
-        theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(false);
+        // theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(false);
 
         if (dockingListener.getPlayerCurrentMarket() != null && dockingListener.canPlayerAccessStorage(dockingListener.getPlayerCurrentMarket())
             && Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy().size() > 1) {
@@ -1151,72 +1235,40 @@ public class FleetPresetManagementListener extends ActionListener {
         currentPresetsNum = currentTableMap.size();
     }
 
-    private int getTableMapIndex(String text) {
+    private int getTableMapIndex(String presetName) {
         List<String> keys = new ArrayList<>(currentTableMap.keySet());
         if (!tableUp) Collections.reverse(keys);
         for (int i = 0; i < keys.size(); i++) {
-            if (keys.get(i).equals(text)) return i;
+            if (keys.get(i).equals(presetName)) return i;
         }
         return -1;
     }
 
     private class SaveListener extends DialogDismissedListener {
-        private final boolean overwrite;
-        private final boolean cancel;
-        private final boolean rename;
-
-        public SaveListener(boolean overwrite, boolean cancel, boolean rename) {
-            this.overwrite = overwrite;
-            this.cancel = cancel;
-            this.rename = rename;
-        }
-    
         @Override
         public void trigger(Object arg0, Object arg1) {
             int option = (int) arg1;
 
             if (option == 0) {
                 // confirm
-                if (overwrite && !cancel) {
+                String text = saveNameField.getText();
+                if (!isEmptyOrWhitespace(text)) {
+                    selectedPresetName = text;
                     PresetUtils.saveFleetPreset(selectedPresetName);
-                    currentTableMap = PresetUtils.getFleetPresetsMapForTable(tableUp, tableRight);
+                    refreshTableMap();
+
                     if (Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY) == null) {
                         Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, PresetUtils.getFleetPresets().get(selectedPresetName));
                     }
+
                     enableButtonsRequiringSelection();
-                } else {
-                    String text = saveNameField.getText();
-                    if (!isEmptyOrWhitespace(text)) {
-                        if (currentTableMap.containsKey(text)) {
-                            selectPreset(text, getTableMapIndex(text));
-                            openOverwriteDialog(false);
-                        
-                        } else {
-                            FleetPreset possibleDuplicate = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
-                            if (possibleDuplicate != null) {
-                                openRenameDialog(possibleDuplicate.getName(), text);
-                                return;
-                            }
-
-                            PresetUtils.saveFleetPreset(text);
-                            refreshTableMap();
-                            selectPreset(text, getTableMapIndex(text));
-
-                            if (Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY) == null) {
-                                Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, PresetUtils.getFleetPresets().get(selectedPresetName));
-                            }
-                            enableButtonsRequiringSelection();
-                        }
-                    }
+                    tablePlugin.rebuild();
+                    return;
                 }
-                tablePlugin.rebuild();
-                return;
-            } else if (option == 1) {
-                if (overwrite && !cancel && !rename) {
-                    openSaveDialog();
-                }
-                if (!selectedPresetName.equals(EMPTY_STRING)) enableButtonsRequiringSelection();
+
+            } else {
                 // cancel
+                if (!selectedPresetName.equals(EMPTY_STRING)) enableButtonsRequiringSelection();
                 return;
             }
         }
