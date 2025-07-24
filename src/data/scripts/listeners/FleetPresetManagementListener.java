@@ -555,6 +555,11 @@ public class FleetPresetManagementListener extends ActionListener {
         private TooltipMakerAPI ptsLabbelTt;
         private TtHideEnsurer hideEnsurer = new TtHideEnsurer();
 
+        float leftBound;
+        float rightBound;
+        float topBound;
+        float btmBound;
+
         private class TtHideEnsurer implements EveryFrameScript {
             private boolean isDone = false;
             private boolean isActive = false;
@@ -613,12 +618,12 @@ public class FleetPresetManagementListener extends ActionListener {
                     float mouseX = event.getX();
                     float mouseY = event.getY();
 
-                    if (!isShowingTt && isInsideBounds(ptsLabbelPanel, mouseX, mouseY) && !hideEnsurer.isActive()) {
+                    if (!isShowingTt && isInsideBounds(mouseX, mouseY) && !hideEnsurer.isActive()) {
                         hideEnsurer.setIsActive(true);
                         hideEnsurer.setIsDone(false);
                         Global.getSector().addTransientScript(hideEnsurer);
 
-                    } else if (isShowingTt && !isInsideBounds(ptsLabbelPanel, mouseX, mouseY)) {
+                    } else if (isShowingTt && !isInsideBounds(mouseX, mouseY)) {
                         ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelHideTooltipMethod, ptsLabbelTt, tt);
                         isShowingTt = false;
                         hideEnsurer.setIsDone(true);
@@ -643,13 +648,7 @@ public class FleetPresetManagementListener extends ActionListener {
             }
         }
 
-        private boolean isInsideBounds(UIComponentAPI elem, float mouseX, float mouseY) {
-            PositionAPI pos = elem.getPosition();
-            float leftBound = pos.getCenterX() - pos.getWidth() / 2;
-            float rightBound = pos.getCenterX() + pos.getWidth() / 2;
-            float topBound = pos.getCenterY() + pos.getHeight() / 2;
-            float btmBound = pos.getCenterY() - pos.getHeight() / 2;
-
+        private boolean isInsideBounds(float mouseX, float mouseY) {
             return (mouseX >= leftBound && mouseX <= rightBound &&
                     mouseY >= btmBound && mouseY <= topBound);
         }
@@ -659,6 +658,13 @@ public class FleetPresetManagementListener extends ActionListener {
             this.ptsLabbelPanel = ptsLabbelPanel;
             this.ptsLabbelTt = ptsLabbelTt;
             this.subData = subData;
+
+            PositionAPI pos = ptsLabbelPanel.getPosition();
+            this.leftBound = pos.getCenterX() - pos.getWidth() / 2;
+            this.rightBound = pos.getCenterX() + pos.getWidth() / 2;
+            this.topBound = pos.getCenterY() + pos.getHeight() / 2;
+            this.btmBound = pos.getCenterY() - pos.getHeight() / 2;
+
         }
     }
 
