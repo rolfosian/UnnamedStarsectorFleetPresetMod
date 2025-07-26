@@ -3,12 +3,8 @@ package data.scripts.util;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.util.Pair;
 
-import data.scripts.ClassRefs;
-
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.lang.invoke.CallSite;
-import java.lang.invoke.LambdaMetafactory;
 import java.lang.invoke.MethodHandle;
 
 import java.util.*;
@@ -25,6 +21,68 @@ public class ReflectionUtilis {
             if (i < args.length - 1) sb.append(' ');
         }
         logger.info(sb.toString());
+    }
+
+    public static List<Class<?>> getAllObfClasses() {
+        try {
+            JarFile jarFile = new JarFile("starfarer_obf.jar");
+            Enumeration<JarEntry> entries = jarFile.entries();
+            List<Class<?>> obfClasses = new ArrayList<>();
+    
+            while (entries.hasMoreElements()) {
+                JarEntry entry = entries.nextElement();
+                if (entry.isDirectory()) continue;
+    
+                String name = entry.getName();
+                if (name.endsWith(".class")) {
+                    String className = name.replace("/", ".").substring(0, name.length() - ".class".length());
+                    obfClasses.add(Class.forName(className, false, Global.class.getClassLoader()));
+                }
+            }
+    
+            jarFile.close();
+            return obfClasses;
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static class ObfuscatedClasses {
+        private static final Class<?>[] obfClazzes;
+        private static final Class<?>[] obfInterfaces;
+        private static final Class<?>[] obfEnums;
+
+        static {
+            List<Class<?>> obfClasses = getAllObfClasses();
+    
+            List<Class<?>> enumz = new ArrayList<>();
+            List<Class<?>> interfeces = new ArrayList<>();
+            List<Class<?>> clses = new ArrayList<>();
+    
+            for (Class<?> cls : obfClasses) {
+                if (cls.isEnum()) enumz.add(cls);
+                else if (cls.isInterface()) interfeces.add(cls);
+                else clses.add(cls);
+            }
+    
+            Class<?>[] clsArr = new Class<?>[0];
+            obfClazzes = clses.toArray(clsArr);
+            obfInterfaces = interfeces.toArray(clsArr);
+            obfEnums = enumz.toArray(clsArr);
+        }
+
+        public static Class<?>[] getClasses() {
+            return obfClazzes;
+        }
+
+        public static Class<?>[] getInterfaces() {
+            return obfInterfaces;
+        }
+
+        public static Class<?>[] getEnums() {
+            return obfEnums;
+        }
     }
 
     // Code taken and modified from Grand Colonies and Ashes of the Domain
@@ -95,165 +153,6 @@ public class ReflectionUtilis {
             getConstructorDeclaringClassHandle = lookup.findVirtual(constructorClass, "getDeclaringClass", MethodType.methodType(Class.class));
             getConstructorGenericParameterTypesHandle = lookup.findVirtual(constructorClass, "getGenericParameterTypes", MethodType.methodType(typeArrayClass));
             getConstructorNameHandle = lookup.findVirtual(constructorClass, "getName", MethodType.methodType(String.class));
-
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static class ListenerFactory {
-        private static final CallSite dialogDismissedCallSite;
-        private static final CallSite actionListenerCallSite;
-
-        static {
-            ClassRefs.findAllClasses();
-            Class<?> dialogDismissedParamClass = getMethodParamTypes(ClassRefs.dialogDismissedInterface.getDeclaredMethods()[0])[0];
-
-            try {
-                MethodHandle implementationMethodHandle;
-                MethodType actualSamMethodType;
-                MethodType factoryType;
-                MethodType implSignature;
-        
-                actualSamMethodType = MethodType.methodType(void.class, dialogDismissedParamClass, int.class);
-                implSignature = MethodType.methodType(void.class, Object.class, int.class);
-                implementationMethodHandle = lookup.findVirtual(DialogDismissedListenerProxy.class, "dialogDismissed", implSignature);
-
-                factoryType = MethodType.methodType(ClassRefs.dialogDismissedInterface, DialogDismissedListenerProxy.class);
-                dialogDismissedCallSite = LambdaMetafactory.metafactory(
-                    lookup,
-                    "dialogDismissed",
-                    factoryType,
-                    actualSamMethodType,
-                    implementationMethodHandle,
-                    actualSamMethodType
-                );
-        
-                actualSamMethodType = MethodType.methodType(void.class, Object.class, Object.class);
-                implSignature = MethodType.methodType(void.class, Object.class, Object.class);
-                implementationMethodHandle = lookup.findVirtual(ActionListenerProxy.class, "actionPerformed", implSignature);
-        
-                factoryType = MethodType.methodType(ClassRefs.actionListenerInterface, ActionListenerProxy.class);
-                actionListenerCallSite = LambdaMetafactory.metafactory(
-                    lookup,
-                    "actionPerformed",
-                    factoryType,
-                    actualSamMethodType,
-                    implementationMethodHandle,
-                    actualSamMethodType
-                );
-
-                actualSamMethodType = MethodType.methodType(void.class, Object.class, Object.class);
-                implSignature = MethodType.methodType(void.class, Object.class, Object.class);
-                implementationMethodHandle = lookup.findVirtual(ActionListenerProxy.class, "actionPerformed", implSignature);
-
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        @FunctionalInterface
-        private static interface Triggerable {
-            void trigger(Object arg0, Object arg1);
-        }
-
-        // Rewritten proxy class from officer extension mod that works without using java.lang.reflect.Proxy and InvocationHandler imports
-        private static abstract class ProxyTrigger implements Triggerable {
-            private final Object listener;
-        
-            public ProxyTrigger(final String methodName) {
-                try {
-                    listener = createListener(methodName, this);
-                } catch (Throwable e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        
-            @Override public abstract void trigger(Object arg0, Object arg1);
-            
-            public Object getProxy() {
-                return listener;
-            }
-        }
-
-        public static abstract class ActionListener extends ProxyTrigger {
-            public ActionListener() {
-                super("actionPerformed");
-            }
-        }
-
-        public static abstract class DialogDismissedListener extends ProxyTrigger {
-            public DialogDismissedListener() {
-                super("dialogDismissed");
-            }
-        }
-
-        @FunctionalInterface
-        private static interface DummyActionListenerInterface {
-            public void actionPerformed(Object arg0, Object arg1);
-        }
-
-        @FunctionalInterface
-        private static interface DummyDialogDismissedInterface {
-            public void dialogDismissed(Object arg0, int arg1);
-        }
-    
-        private static class DialogDismissedListenerProxy implements DummyDialogDismissedInterface {
-            private final ProxyTrigger proxyTriggerClassInstance;
-    
-            public DialogDismissedListenerProxy(ProxyTrigger proxyTriggerClassInstance) {
-                this.proxyTriggerClassInstance = proxyTriggerClassInstance;
-            }
-    
-            public void dialogDismissed(Object arg0, int arg1) {
-                this.proxyTriggerClassInstance.trigger(arg0, arg1);
-            };
-        }
-    
-        private static class ActionListenerProxy implements DummyActionListenerInterface {
-            private final ProxyTrigger proxyTriggerClassInstance;
-    
-            public ActionListenerProxy(ProxyTrigger proxyTriggerClassInstance) {
-                this.proxyTriggerClassInstance = proxyTriggerClassInstance;
-            }
-    
-            @Override
-            public void actionPerformed(Object arg0, Object arg1) {
-                proxyTriggerClassInstance.trigger(arg0, arg1);
-            }
-        }
-
-        private static Object createListener(String targetMethodName, ProxyTrigger proxyTriggerInstance) throws Throwable {
-            switch (targetMethodName) {
-                case "dialogDismissed":
-                    return dialogDismissedCallSite.getTarget().invoke(new DialogDismissedListenerProxy(proxyTriggerInstance));
-                case "actionPerformed":
-                    return actionListenerCallSite.getTarget().invoke(new ActionListenerProxy(proxyTriggerInstance));
-                default:
-                    throw new IllegalArgumentException("Unsupported method: " + targetMethodName);
-            }
-        }
-    }
-
-    public static List<Class<?>> getAllObfClasses() {
-        try {
-            JarFile jarFile = new JarFile("starfarer_obf.jar");
-            Enumeration<JarEntry> entries = jarFile.entries();
-            List<Class<?>> obfClasses = new ArrayList<>();
-    
-            while (entries.hasMoreElements()) {
-                JarEntry entry = entries.nextElement();
-                if (entry.isDirectory()) continue;
-    
-                String name = entry.getName();
-                if (name.endsWith(".class")) {
-                    String className = name.replace("/", ".").substring(0, name.length() - ".class".length());
-                    obfClasses.add(Class.forName(className, false, Global.class.getClassLoader()));
-                }
-            }
-    
-            jarFile.close();
-            return obfClasses;
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -378,6 +277,19 @@ public class ReflectionUtilis {
             print(e);
             return null;
         }
+    }
+
+    public static Class<?> getFieldTypeByName(String name, Class<?> cls) {
+        try {
+            for (Object field : cls.getDeclaredFields()) {
+                if (((String)getFieldNameHandle.invoke(field)).equals(name)) {
+                    return (Class<?>) getFieldTypeHandle.invoke(field);
+                }
+            }
+        } catch (Throwable e) {
+            print(e);
+        }
+        return null;
     }
 
     public static Object getPrivateVariable(Object field, Object instanceToGetFrom) {

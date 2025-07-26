@@ -51,8 +51,8 @@ import data.scripts.ui.TreeTraverser.TreeNode;
 import data.scripts.ui.UIConfig;
 
 import data.scripts.util.ReflectionUtilis;
-import data.scripts.util.ReflectionUtilis.ListenerFactory.DialogDismissedListener;
-import data.scripts.util.ReflectionUtilis.ListenerFactory.ActionListener;
+import data.scripts.util.ListenerFactory.DialogDismissedListener;
+import data.scripts.util.ListenerFactory.ActionListener;
 import data.scripts.util.UtilReflection;
 import data.scripts.util.UtilReflection.ConfirmDialogData;
 import data.scripts.util.PresetUtils;
@@ -71,8 +71,8 @@ public class FleetPresetManagementListener extends ActionListener {
         PresetMiscUtils.print(args);
     }
 
-    private static final float CONFIRM_DIALOG_WIDTH = UIConfig.DISPLAY_WIDTH / UIConfig.CONFIRM_DIALOG_WIDTH_DIVISOR;
-    private static final float CONFIRM_DIALOG_HEIGHT = UIConfig.DISPLAY_HEIGHT / UIConfig.CONFIRM_DIALOG_HEIGHT_DIVISOR;
+    public static final float CONFIRM_DIALOG_WIDTH = UIConfig.DISPLAY_WIDTH / UIConfig.CONFIRM_DIALOG_WIDTH_DIVISOR;
+    public static final float CONFIRM_DIALOG_HEIGHT = UIConfig.DISPLAY_HEIGHT / UIConfig.CONFIRM_DIALOG_HEIGHT_DIVISOR;
 
     private static final float PANEL_WIDTH = UIConfig.DISPLAY_WIDTH / UIConfig.CONFIRM_DIALOG_WIDTH_DIVISOR - UIConfig.PANEL_WIDTH_SUBTRACTOR;
     private static final float PANEL_HEIGHT = UIConfig.DISPLAY_HEIGHT / UIConfig.CONFIRM_DIALOG_HEIGHT_DIVISOR - UIConfig.PANEL_HEIGHT_SUBTRACTOR;
@@ -222,10 +222,11 @@ public class FleetPresetManagementListener extends ActionListener {
     public FleetPresetManagementListener() {
         super();
         dockingListener = PresetUtils.getDockingListener();
+        print(CONFIRM_DIALOG_WIDTH, CONFIRM_DIALOG_HEIGHT);
     }
 
     @Override
-    public void trigger(Object arg0, Object arg1) {
+    public void trigger(Object... args) {
         CustomPanelAPI tableMasterPanel = Global.getSettings().createCustom(PANEL_WIDTH - CANCEL_CONFIRM_BUTTON_WIDTH - 5f, PANEL_HEIGHT, new BaseCustomUIPanelPlugin() );
         ConfirmDialogData master = UtilReflection.showConfirmationDialog(
             "graphics/illustrations/abyssal_light2.jpg",
@@ -236,7 +237,7 @@ public class FleetPresetManagementListener extends ActionListener {
             CONFIRM_DIALOG_HEIGHT,
             new DialogDismissedListener() {
                 @Override
-                public void trigger(Object arg0, Object arg1) {
+                public void trigger(Object... args) {
                     resetTopLevelVars();
                 }
         });
@@ -366,8 +367,8 @@ public class FleetPresetManagementListener extends ActionListener {
             CONFIRM_DIALOG_HEIGHT / 4,
             new DialogDismissedListener() {
                 @Override
-                public void trigger(Object arg0, Object arg1) {
-                    if ((int)arg1 == 0) {
+                public void trigger(Object... args) {
+                    if ((int)args[1] == 0) {
                         // confirm
                         if (currentTableMap.containsKey(newName)) {
                             selectPreset(newName, getTableMapIndex(newName));
@@ -404,8 +405,8 @@ public class FleetPresetManagementListener extends ActionListener {
             CONFIRM_DIALOG_HEIGHT / 4,
             new DialogDismissedListener() {
                 @Override
-                public void trigger(Object arg0, Object arg1) {
-                    if ((int)arg1 == 0) {
+                public void trigger(Object... args) {
+                    if ((int)args[1] == 0) {
                         // confirm
 
                         ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod,
@@ -526,7 +527,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
         ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, saveButton, new ActionListener() {
             @Override
-            public void trigger(Object arg0, Object arg1) {
+            public void trigger(Object... args) {
                 String text = saveNameField.getText();
                 if (!isEmptyOrWhitespace(text)) {
                     if (currentTableMap.containsKey(text)) {
@@ -534,14 +535,13 @@ public class FleetPresetManagementListener extends ActionListener {
                         openOverwriteDialog(oldSaveButtonListener, saveButton);
                         return;
                     }
-
                     FleetPreset possibleDuplicate = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
                     if (possibleDuplicate != null) {
                         openRenameDialog(possibleDuplicate.getName(), text, oldSaveButtonListener, saveButton, cancelButtonListener, cancelButton);
                         return;
                     }
                 }
-                ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldSaveButtonListener, saveButton, arg1);
+                ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldSaveButtonListener, saveButton, args[1]);
             }
         }.getProxy());
     }
@@ -1216,8 +1216,8 @@ public class FleetPresetManagementListener extends ActionListener {
 
     private class SaveListener extends DialogDismissedListener {
         @Override
-        public void trigger(Object arg0, Object arg1) {
-            int option = (int) arg1;
+        public void trigger(Object... args) {
+            int option = (int) args[1];
 
             if (option == 0) {
                 // confirm
@@ -1246,8 +1246,8 @@ public class FleetPresetManagementListener extends ActionListener {
 
     public class DeleteListener extends DialogDismissedListener {
         @Override
-        public void trigger(Object arg0, Object arg1) {
-            int option = (int) arg1;
+        public void trigger(Object... args) {
+            int option = (int) args[1];
     
             if (option == 0) {
                 // confirm

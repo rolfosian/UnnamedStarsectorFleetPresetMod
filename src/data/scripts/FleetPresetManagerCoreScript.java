@@ -65,17 +65,13 @@ public class FleetPresetManagerCoreScript implements EveryFrameScript {
                         Global.getSettings().getScreenHeight()
                         )
                     );
-                    ClassRefs.findAllClasses();
                 }
-                
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
             isFirstFrame = false;
             fleetPanelInjector.init();
         }
-        ClassRefs.findAllClasses();
-
         fleetPanelInjector.advance();
     }
 }

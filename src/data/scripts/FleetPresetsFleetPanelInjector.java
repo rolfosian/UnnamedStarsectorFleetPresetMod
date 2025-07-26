@@ -29,7 +29,7 @@ import data.scripts.util.PresetUtils.FleetMemberWrapper;
 import data.scripts.util.PresetUtils.FleetPreset;
 import data.scripts.util.PresetUtils.RunningMembers;
 import data.scripts.util.ReflectionUtilis;
-import data.scripts.util.ReflectionUtilis.ListenerFactory.ActionListener;
+import data.scripts.util.ListenerFactory.ActionListener;
 import data.scripts.util.UtilReflection;
 import data.scripts.util.UtilReflection.ConfirmDialogData;
 
@@ -366,7 +366,7 @@ public class FleetPresetsFleetPanelInjector {
                 " Store Entire Fleet",
                 new ActionListener() {
                     @Override
-                    public void trigger(Object arg0, Object arg1) {
+                    public void trigger(Object... args) {
                         Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
                         PresetUtils.storeFleetInStorage();
                     }
@@ -388,7 +388,7 @@ public class FleetPresetsFleetPanelInjector {
                 "  Take all ships from storage",
                 new ActionListener() {
                     @Override
-                    public void trigger(Object arg0, Object arg1) {
+                    public void trigger(Object... args) {
                         Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
                         PresetUtils.takeAllShipsFromStorage();
                     }

@@ -9,7 +9,7 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import data.scripts.ClassRefs;
 import data.scripts.util.UtilReflection;
 import data.scripts.util.ReflectionUtilis;
-import data.scripts.util.ReflectionUtilis.ListenerFactory.ActionListener;
+import data.scripts.util.ListenerFactory.ActionListener;
 
 @SuppressWarnings("unused")
 public class Button extends UIComponent implements Renderable {

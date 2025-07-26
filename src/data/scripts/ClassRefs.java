@@ -1,6 +1,7 @@
-// Code taken and modified from Officer Extension mod
+// Code taken and modified beyond recognition from Officer Extension mod
 package data.scripts;
 
+import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
 
 import com.fs.starfarer.campaign.fleet.CampaignFleet;
@@ -15,7 +16,7 @@ import com.fs.starfarer.api.campaign.FleetEncounterContextPlugin;
 import com.fs.starfarer.api.campaign.FleetMemberPickerListener;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;
 import com.fs.starfarer.api.campaign.InteractionDialogPlugin;
-import com.fs.starfarer.api.campaign.VisualPanelAPI;
+import com.fs.starfarer.api.campaign.OptionPanelAPI;
 import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.combat.EngagementResultAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
@@ -29,12 +30,14 @@ import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 
+import data.scripts.listeners.FleetPresetManagementListener;
 import data.scripts.ui.TreeTraverser;
 import data.scripts.ui.TreeTraverser.TreeNode;
 
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.ReflectionUtilis;
+import data.scripts.util.ReflectionUtilis.ObfuscatedClasses;
 import data.scripts.util.UtilReflection;
 
 import java.util.*;
@@ -43,7 +46,6 @@ import org.apache.log4j.Logger;
 import org.lwjgl.input.Keyboard;
 
 /** Stores references to class objects in the obfuscated game files */
-@SuppressWarnings("unchecked")
 public class ClassRefs {
     private static final Logger logger = Logger.getLogger(ClassRefs.class);
     public static void print(Object... args) {
@@ -97,10 +99,11 @@ public class ClassRefs {
     public static Object visualPanelGetChildrenNonCopyMethod;
     public static Object optionPanelGetButtonToItemMapMethod;
     public static Object interactionDialogGetCoreUIMethod;
-    public static float FMRDialogWidth;
-    public static float FMRDialogHeight;
-    public static float FMRDialogPanelWidth;
-    public static float FMRDialogPanelHeight;
+
+    public static float FMRDialogWidth = FleetPresetManagementListener.CONFIRM_DIALOG_WIDTH * 0.87f;
+    public static float FMRDialogHeight = FleetPresetManagementListener.CONFIRM_DIALOG_HEIGHT * 0.87f;
+    public static float FMRDialogPanelWidth = FMRDialogWidth * 0.97f;
+    public static float FMRDialogPanelHeight = FMRDialogHeight * 0.97f;
 
     /** Obfuscated ButtonAPI class */
     public static Class<?> buttonClass;
@@ -147,351 +150,158 @@ public class ClassRefs {
         char.class // unused for mouse afaik, give '\0' for mouse prob
     };
 
-    private static boolean foundAllClasses = false;
+    /** method to get optionData from optionItem class that is the type of the values of the InteractionDialogAPI OptionPanel's buttonsToItemsMap */
+    public static Object getOptionDataMethod;
 
-    public static void findFleetInfoClass() {
-        if (visualPanelFleetInfoClass != null) return;
+    static {
+        for (Class<?> cls : ObfuscatedClasses.getInterfaces()) {
+            Object[] methods = cls.getDeclaredMethods();
+            
+            if (methods.length == 1) {
+                String methodName = ReflectionUtilis.getMethodName(methods[0]);
 
-        Global.getSector().addTransientListener(new BaseCampaignEventListener(false) {
-            public void reportShownInteractionDialog(InteractionDialogAPI dialog) {
-                if (visualPanelFleetInfoClass != null) {
-                    Global.getSector().removeListener(this);
-                    dialog.dismiss();
-                    return;
-                }
-                if (!(dialog.getPlugin() instanceof DummyInteractionDialogPlugin)) return;
-                interactionDialogGetCoreUIMethod = ReflectionUtilis.getMethod("getCoreUI", dialog, 0);
+                if (methodName.equals("actionPerformed")) {
+                    actionListenerInterface = cls;
+                    buttonListenerActionPerformedMethod = methods[0];
 
-                VisualPanelAPI visualPanel = dialog.getVisualPanel();
-                visualPanel.showFleetInfo("", Global.getSector().getPlayerFleet(), null, null);
-                visualPanelGetChildrenNonCopyMethod = ReflectionUtilis.getMethod("getChildrenNonCopy", visualPanel, 0);
-                optionPanelGetButtonToItemMapMethod = ReflectionUtilis.getMethod("getButtonToItemMap", dialog.getOptionPanel(), 0);
-        
-                for (Object child : (List<Object>) ReflectionUtilis.invokeMethodDirectly(visualPanelGetChildrenNonCopyMethod, visualPanel)) {
-                    if (UIPanelAPI.class.isAssignableFrom(child.getClass()) && ReflectionUtilis.doInstantiationParamsMatch(child.getClass(), visualPanelFleetInfoClassParamTypes)) {
-                        visualPanelFleetInfoClass = child.getClass(); // found it
-                        break;
-                    }
-                }
-
-                dialog.showFleetMemberRecoveryDialog("", getDummyMembers(), new FleetMemberPickerListener() {
-                    @Override public void cancelledFleetMemberPicking() {}
-                    @Override public void pickedFleetMembers(List<FleetMemberAPI> arg0) {}});
-
-                for (Object child : (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.visualPanelGetChildrenNonCopyMethod, dialog.getVisualPanel())) {
-                    if (child instanceof FleetMemberRecoveryDialog) {
-                        FleetMemberRecoveryDialog FMRDialog = (FleetMemberRecoveryDialog) child;
-
-                        FMRDialogPanelWidth = FMRDialog.getInnerPanel().getPosition().getWidth();
-                        FMRDialogPanelHeight = FMRDialog.getInnerPanel().getPosition().getHeight();
-                        FMRDialogWidth = FMRDialog.getWidth();
-                        FMRDialogHeight = FMRDialog.getHeight();
-                        break;
-                    }
-                }
-                Global.getSector().removeListener(this);
-                dialog.dismiss();
-            }
-        });
-
-        Global.getSector().getCampaignUI().showInteractionDialogFromCargo(new DummyInteractionDialogPlugin(), null, new CampaignUIAPI.DismissDialogDelegate() {
-            public void dialogDismissed() {}
-        });
-    }
-
-    public static void findTablePanelMethods() {
-        CustomPanelAPI panel = Global.getSettings().createCustom(0f, 0f, null);
-        TooltipMakerAPI tt = panel.createUIElement(0f, 0f, false);
-        Object tablePanel = tt.beginTable(Global.getSettings().getBasePlayerColor(), Global.getSettings().getBasePlayerColor(), Global.getSettings().getBasePlayerColor(), 1f, false, false, new Object[]{"", 1f});
-        tablePanelsetItemsSelectableMethod = ReflectionUtilis.getMethod("setItemsSelectable", tablePanel, 1);
-        tablePanelSelectMethod = ReflectionUtilis.getMethod("select", tablePanel, 2);
-    }
-
-    public static void findInputEventClass() {
-        UIPanelAPI coreUI = UtilReflection.getCoreUI();
-        if (coreUI == null) return;
-
-        for (Object child : (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", coreUI, 0)) {
-            if (ButtonAPI.class.isAssignableFrom(child.getClass()) && !child.getClass().getSimpleName().equals("ButtonAPI")) {
-
-                for (Object method : child.getClass().getDeclaredMethods()) {
-                    if (ReflectionUtilis.getMethodName(method).equals("buttonPressed")) {
-                        for (Class<?> paramType : ReflectionUtilis.getMethodParamTypes(method)) {
-                            if (ReflectionUtilis.doInstantiationParamsMatch(paramType, inputEventClassParamTypes)) {
-                                inputEventClass = paramType;
-                                return;
-                            }
-                        }
-                    }
+                } else if (methodName.equals("dialogDismissed")) {
+                    dialogDismissedInterface = cls;
                 }
             }
         }
-    }
 
-    public static void findButtonClass() {
-        UIPanelAPI coreUI = UtilReflection.getCoreUI();
-        if (coreUI == null) return;
-        for (Object child : (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", coreUI, 0)) {
-            if (ButtonAPI.class.isAssignableFrom(child.getClass()) && !child.getClass().getSimpleName().equals("ButtonAPI")) {
-                buttonClass = child.getClass();
+        for (Class<?> cls : ObfuscatedClasses.getClasses()) {
+            if (ReflectionUtilis.doInstantiationParamsMatch(cls, ClassRefs.visualPanelFleetInfoClassParamTypes)) {
+                visualPanelFleetInfoClass = cls;
+                continue;
+            }
+            if (OptionPanelAPI.class.isAssignableFrom(cls)) {
+                optionPanelGetButtonToItemMapMethod = ReflectionUtilis.getMethod("getButtonToItemMap", cls, 0);
+                continue;
+            }
+            if (InteractionDialogAPI.class.isAssignableFrom(cls) && !cls.isAnonymousClass()) {
+                visualPanelGetChildrenNonCopyMethod = ReflectionUtilis.getMethod("getChildrenNonCopy", cls, 0);
+                interactionDialogGetCoreUIMethod = ReflectionUtilis.getMethod("getCoreUI", cls, 0);
+                continue;
+            }
+            if (ButtonAPI.class.isAssignableFrom(cls)) {
+                buttonClass = cls;
                 buttonGetListenerMethod = ReflectionUtilis.getMethod("getListener", buttonClass, 0);
                 buttonSetListenerMethod = ReflectionUtilis.getMethod("setListener", buttonClass, 1);
                 buttonSetEnabledMethod = ReflectionUtilis.getMethod("setEnabled", buttonClass, 1);
                 buttonSetShortcutMethod = ReflectionUtilis.getMethodExplicit("setShortcut", buttonClass, new Class<?>[]{int.class, boolean.class});
                 buttonSetButtonPressedSoundMethod = ReflectionUtilis.getMethod("setButtonPressedSound", buttonClass, 1);
                 buttonSetActiveMethod = ReflectionUtilis.getMethod("setActive", buttonClass, 1);
-                return;
+
+                Object buttonPressedMethod = ReflectionUtilis.getMethod("buttonPressed", buttonClass, 2);
+                inputEventClass = ReflectionUtilis.getMethodParamTypes(buttonPressedMethod)[0];
+                continue;
             }
-        }
-    }
+
+            if (cls.getSimpleName().equals("CampaignState")) {
+                campaignUIGetCoreMethod = ReflectionUtilis.getMethod("getCore", cls, 0);
+
+                Class<?> coreUIClass = ReflectionUtilis.getReturnType(campaignUIGetCoreMethod);
+                coreUIgetCurrentTabMethod = ReflectionUtilis.getMethod("getCurrentTab", coreUIClass, 0);
+
+                uiPanelClass = ReflectionUtilis.getFieldTypeByName("screenPanel", cls);
+                
+                outer:
+                for (Class<?> interfc : uiPanelClass.getInterfaces()) {
+                    for (Object method : interfc.getDeclaredMethods()) {
+                        if (ReflectionUtilis.getMethodName(method).equals("render")) {
+                            renderableUIElementInterface = interfc;
+                            renderableSetOpacityMethod = ReflectionUtilis.getMethod("setOpacity", renderableUIElementInterface, 1);
+                            break outer;
+                        }
+                    }
+                }
+
+                uiPanelsetParentMethod = ReflectionUtilis.getMethod("setParent", uiPanelClass, 1);
+                uiPanelsetOpacityMethod = ReflectionUtilis.getMethod("setOpacity", uiPanelClass, 1);
+                uiPanelgetChildrenNonCopyMethod = ReflectionUtilis.getMethod("getChildrenNonCopy", uiPanelClass, 0);
+                uiPanelgetChildrenCopyMethod = ReflectionUtilis.getMethod("getChildrenCopy", uiPanelClass, 0);
+                uiPanelShowTooltipMethod = ReflectionUtilis.getMethod("showTooltip", uiPanelClass, 1);
+                uiPanelHideTooltipMethod = ReflectionUtilis.getMethod("hideTooltip", uiPanelClass, 1);
+                uiPanelSetTooltipMethod = ReflectionUtilis.getMethod("setTooltip", uiPanelClass, 2);
+                uiPanelGetTooltipMethod = ReflectionUtilis.getMethod("getTooltip", uiPanelClass, 0);
+                uiPanelAddMethod = ReflectionUtilis.getMethodExplicit("add", uiPanelClass, new Class<?>[]{ClassRefs.renderableUIElementInterface});
+                uiPanelRemoveMethod = ReflectionUtilis.getMethodExplicit("remove", uiPanelClass, new Class<?>[]{ClassRefs.renderableUIElementInterface});
     
-    // this must be called after buttonClass is found
-    // public static void findButtonFactoryClass(List<Class<?>> classes) {
-    //     for (Class<?> cls : classes) {
-    //         List<Object> methods = ReflectionUtilis.getMethodsByReturnType(cls, buttonClass);
+                positionSetMethod = ReflectionUtilis.getMethod("set", ReflectionUtilis.getReturnType(uiPanelAddMethod), 1);
 
-    //         if (methods.size() > 10) {
-    //             buttonFactoryClass = cls;
-    //             // ReflectionUtilis.logMethods(cls);
+                confirmDialogClassParamTypes = new Class<?>[] {
+                    float.class,
+                    float.class,
+                    ClassRefs.uiPanelClass,
+                    ClassRefs.dialogDismissedInterface,
+                    String.class,
+                    String[].class
+                };
+                continue;
+            }
 
-    //             for (Object method : methods) {
-    //                 Class<?>[] paramTypes = ReflectionUtilis.getMethodParamTypes(method);
+            if (confirmDialogClassParamTypes != null && ReflectionUtilis.doInstantiationParamsMatch(cls, confirmDialogClassParamTypes)) {
+                confirmDialogClass = cls;
 
-    //                 for (Class<?> type : paramTypes) {
-    //                     if (type.isEnum()) {
-    //                         Object[] constants = type.getEnumConstants();
-    //                         for (Object constant : constants) {
-    //                             if (String.valueOf(constant) == "NEUTRAL") {
-    //                                 memberButtonFactoryMethod = method;
+                confirmDialogGetButtonMethod = ReflectionUtilis.getMethod("getButton", confirmDialogClass, 1);
+                confirmDialogGetInnerPanelMethod = ReflectionUtilis.getMethod("getInnerPanel", confirmDialogClass, 0);
+                confirmDialogShowMethod = ReflectionUtilis.getMethod("show", confirmDialogClass, 2);
+                confirmDialogGetLabelMethod = ReflectionUtilis.getMethod("getLabel", confirmDialogClass, 0);
+                confirmDialogSetBackgroundDimAmountMethod = ReflectionUtilis.getMethod("setBackgroundDimAmount", confirmDialogClass, 1);
+                confirmDialogOutsideClickAbsorbedMethod = ReflectionUtilis.getMethodDeclared("outsideClickAbsorbed", confirmDialogClass, 1);
+                continue;
+            }
 
-    //                                 List<Object> sorted = Arrays.stream(new String[] {"FRIEND", "NEUTRAL", "ENEMY"})
-    //                                     .map(ord -> Arrays.stream(constants)
-    //                                         .filter(o -> String.valueOf(o).equals(ord))
-    //                                         .findFirst()
-    //                                         .orElse(null))
-    //                                     .toList();
-                                    
-    //                                 memberButtonEnums.FRIEND = sorted.get(0);
-    //                                 memberButtonEnums.NEUTRAL = sorted.get(1);
-    //                                 memberButtonEnums.ENEMY = sorted.get(2);
-    //                                 break;
-    //                             }
-    //                         }
-    //                     } else if (type.equals(Sprite.class)) {
-    //                         spriteButtonFactoryMethod = method;
-    //                         break;
-    //                     }
-    //                 }
-    //             }
-    //             return;
-    //         }
-    //     }
-    // }
+            Object[] methods = cls.getDeclaredMethods();
 
-    public static void findConfirmDialogClass() {
-        CampaignUIAPI campaignUI = Global.getSector().getCampaignUI();
+            if (methods.length == 2) {
+                boolean objReturnType = false;
+                boolean stringReturnType = false;
+                Object objReturnMethod = null;
 
-        // If we don't know the confirmation dialog class, try to create a confirmation dialog in order to access it
-        boolean isPaused = Global.getSector().isPaused();
-        if (confirmDialogClass == null && campaignUI.showConfirmDialog("", "", "", null, null)) {
-            Object screenPanel = ReflectionUtilis.getPrivateVariable("screenPanel", campaignUI);
-            List<Object> children = (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", screenPanel, 0);
-            // the confirm dialog will be the last child
-            Object panel = children.get(children.size() - 1);
+                for (int i = 0; i < 2; i++) {
+                    Object method = methods[i];
+                    Class<?> returnType = ReflectionUtilis.getReturnType(method);
 
-            confirmDialogClass = panel.getClass();
-            confirmDialogGetButtonMethod = ReflectionUtilis.getMethod("getButton", panel, 1);
-            confirmDialogGetInnerPanelMethod = ReflectionUtilis.getMethod("getInnerPanel", panel, 0);
-            confirmDialogShowMethod = ReflectionUtilis.getMethod("show", panel, 2);
-            confirmDialogGetLabelMethod = ReflectionUtilis.getMethod("getLabel", panel, 0);
-            confirmDialogSetBackgroundDimAmountMethod = ReflectionUtilis.getMethod("setBackgroundDimAmount", confirmDialogClass, 1);
-            confirmDialogOutsideClickAbsorbedMethod = ReflectionUtilis.getMethodDeclared("outsideClickAbsorbed", confirmDialogClass, 1);
+                    if (returnType.equals(Object.class)) {
+                        objReturnType = true;
+                        objReturnMethod = method;
 
-            // we have the class, dismiss the dialog
-
-            ReflectionUtilis.getMethodAndInvokeDirectly("dismiss", panel, 1, 0);
-            Global.getSector().setPaused(isPaused);
-        }
-    }
-
-    public static void findUIPanelClass() {
-        CampaignUIAPI campaignUI = Global.getSector().getCampaignUI();
-        try {
-            Object field = campaignUI.getClass().getDeclaredField("screenPanel");
-            uiPanelClass = ReflectionUtilis.getFieldType(field);
-
-            uiPanelsetParentMethod = ReflectionUtilis.getMethod("setParent", uiPanelClass, 1);
-            uiPanelsetOpacityMethod = ReflectionUtilis.getMethod("setOpacity", uiPanelClass, 1);
-            uiPanelgetChildrenNonCopyMethod = ReflectionUtilis.getMethod("getChildrenNonCopy", uiPanelClass, 0);
-            uiPanelgetChildrenCopyMethod = ReflectionUtilis.getMethod("getChildrenCopy", uiPanelClass, 0);
-            uiPanelShowTooltipMethod = ReflectionUtilis.getMethod("showTooltip", uiPanelClass, 1);
-            uiPanelHideTooltipMethod = ReflectionUtilis.getMethod("hideTooltip", uiPanelClass, 1);
-            uiPanelSetTooltipMethod = ReflectionUtilis.getMethod("setTooltip", uiPanelClass, 2);
-            uiPanelGetTooltipMethod = ReflectionUtilis.getMethod("getTooltip", uiPanelClass, 0);
-            uiPanelAddMethod = ReflectionUtilis.getMethodExplicit("add", uiPanelClass, new Class<?>[]{ClassRefs.renderableUIElementInterface});
-            uiPanelRemoveMethod = ReflectionUtilis.getMethodExplicit("remove", uiPanelClass, new Class<?>[]{ClassRefs.renderableUIElementInterface});
-
-            positionSetMethod = ReflectionUtilis.getMethod("set", ReflectionUtilis.getReturnType(uiPanelAddMethod), 1);
-        } catch (Exception e) {
-            print(e);
-        }
-    }
-
-    /** [witness] needs to implement the renderable UI element interface */
-    public static void findRenderableUIElementInterface(Object witness) {
-        if (witness == null) {
-            return;
-        }
-        for (Class<?> cls : witness.getClass().getInterfaces()) {
-            // Look for an interface that has the "render" method
-            for (Object method : cls.getDeclaredMethods()) {
-                if (ReflectionUtilis.getMethodName(method).equals("render")) {
-                    renderableUIElementInterface = cls;
-                    renderableSetOpacityMethod = ReflectionUtilis.getMethod("setOpacity", renderableUIElementInterface, 1);
-                    return;
+                    } else if (returnType.equals(String.class)) {
+                        stringReturnType = true;
+                    }
+                }
+                if (objReturnType && stringReturnType) {
+                    getOptionDataMethod = objReturnMethod;
+                }
+            } else if (methods.length == 17) {
+                for (Object method : methods) {
+                    if (((String)ReflectionUtilis.getMethodName(method)).equals("getMousedOverFleetMember")) {
+                        fleetTabGetFleetPanelMethod = ReflectionUtilis.getMethod("getFleetPanel", cls, 0);
+                        fleetTabGetMarketPickerMethod = ReflectionUtilis.getMethod("getMarketPicker", cls, 0);
+                
+                        Class<?> fleetPanelCls = ReflectionUtilis.getReturnType(fleetTabGetFleetPanelMethod);
+                        fleetPanelgetClickAndDropHandlerMethod = ReflectionUtilis.getMethod("getClickAndDropHandler", fleetPanelCls, 0);
+                        fleetPanelRecreateUIMethod = ReflectionUtilis.getMethod("recreateUI", fleetPanelCls, 1);
+                        fleetPanelGetListMethod = ReflectionUtilis.getMethod("getList", fleetPanelCls, 0);
+                
+                        Class<?> clickAndDropHandlerCls = ReflectionUtilis.getReturnType(fleetPanelgetClickAndDropHandlerMethod);
+                        fleetPanelClickAndDropHandlerGetPickedUpMemberMethod = ReflectionUtilis.getMethod("getPickedUpMember", clickAndDropHandlerCls, 0);
+                        
+                        Class<?> fleetPanelListCls = ReflectionUtilis.getReturnType(fleetPanelGetListMethod);
+                        fleetPanelListGetItemsMethod = ReflectionUtilis.getMethod("getItems", fleetPanelListCls, 0);
+                        break;
+                    }
                 }
             }
         }
-        if (renderableUIElementInterface == null) {
-            throw new RuntimeException("``Renderable'' interface not found; perhaps invalid witness used?");
-        }
+
+        CustomPanelAPI panel = Global.getSettings().createCustom(0f, 0f, null);
+        TooltipMakerAPI tt = panel.createUIElement(0f, 0f, false);
+        Object tablePanel = tt.beginTable(Global.getSettings().getBasePlayerColor(), Global.getSettings().getBasePlayerColor(), Global.getSettings().getBasePlayerColor(), 1f, false, false, new Object[]{"", 1f});
+        tablePanelsetItemsSelectableMethod = ReflectionUtilis.getMethod("setItemsSelectable", tablePanel, 1);
+        tablePanelSelectMethod = ReflectionUtilis.getMethod("select", tablePanel, 2);
     }
-
-    /** [witness] needs to implement the action listener interface */
-    public static void findActionListenerInterface(Object witness) {
-        actionListenerInterface = findInterfaceByMethod(witness.getClass().getInterfaces(), "actionPerformed");
-        buttonListenerActionPerformedMethod = actionListenerInterface.getDeclaredMethods()[0];
-    }
-
-    /** [witness] needs to implement the dialog dismissed interface */
-    public static void findDialogDismissedInterface(Object witness) {
-        dialogDismissedInterface = findInterfaceByMethod(witness.getClass().getInterfaces(), "dialogDismissed");
-    }
-
-    public static void findFleetPanelMethods(CampaignUIAPI campaignUI) {
-        UIPanelAPI core = UtilReflection.getCoreUI();
-        if (core != null) {
-            ReflectionUtilis.getMethodAndInvokeDirectly("showCoreUITab", campaignUI, 1, CoreUITabId.FLEET);
-
-            coreUIgetCurrentTabMethod = ReflectionUtilis.getMethod("getCurrentTab", core, 0);
-            Object fleetTab = ReflectionUtilis.invokeMethodDirectly(coreUIgetCurrentTabMethod, core);
-
-            fleetTabGetFleetPanelMethod = ReflectionUtilis.getMethod("getFleetPanel", fleetTab, 0);
-            fleetTabGetMarketPickerMethod = ReflectionUtilis.getMethod("getMarketPicker", fleetTab, 0);
-    
-            Object fleetPanel = ReflectionUtilis.invokeMethodDirectly(fleetTabGetFleetPanelMethod, fleetTab);
-            fleetPanelgetClickAndDropHandlerMethod = ReflectionUtilis.getMethod("getClickAndDropHandler", fleetPanel, 0);
-            fleetPanelRecreateUIMethod = ReflectionUtilis.getMethod("recreateUI", fleetPanel, 1);
-            fleetPanelGetListMethod = ReflectionUtilis.getMethod("getList", fleetPanel, 0);
-
-            Object clickAndDropHandler = ReflectionUtilis.invokeMethodDirectly(fleetPanelgetClickAndDropHandlerMethod, fleetPanel);
-            fleetPanelClickAndDropHandlerGetPickedUpMemberMethod = ReflectionUtilis.getMethod("getPickedUpMember", clickAndDropHandler, 0);
-            
-            Object fleetPanelList = ReflectionUtilis.invokeMethodDirectly(fleetPanelGetListMethod, fleetPanel);
-            fleetPanelListGetItemsMethod = ReflectionUtilis.getMethod("getItems", fleetPanelList, 0);
-            
-            ReflectionUtilis.getMethodAndInvokeDirectly("dismiss", core, 1, 1);
-        }
-    }
-
-    public static void findAllClasses() {
-        if (foundAllClasses) return;
-        CampaignUIAPI campaignUI = Global.getSector().getCampaignUI();
-
-        if (campaignUIGetCoreMethod == null) {
-            campaignUIGetCoreMethod = ReflectionUtilis.getMethod("getCore", campaignUI, 0);
-        }
-        if (tablePanelSelectMethod == null) {
-            findTablePanelMethods();
-        }
-        if (confirmDialogClass == null) {
-            findConfirmDialogClass();
-        }
-        if (dialogDismissedInterface == null) {
-            findDialogDismissedInterface(campaignUI);
-        }
-        if (actionListenerInterface == null) {
-            findActionListenerInterface(campaignUI);
-        }
-        if (renderableUIElementInterface == null) {
-            findRenderableUIElementInterface(ReflectionUtilis.getPrivateVariable("screenPanel", campaignUI));
-        }
-        if (uiPanelClass == null) {
-            findUIPanelClass();
-        }
-        if (visualPanelFleetInfoClass == null) {
-            findFleetInfoClass();
-        }
-        if (buttonClass == null) {
-            findButtonClass();
-            // findButtonFactoryClass(ReflectionUtilis.getAllObfClasses());
-        }
-        if (inputEventClass == null) {
-            findInputEventClass();
-        }
-        
-        if (fleetPanelGetListMethod == null) {
-            findFleetPanelMethods(campaignUI);
-        }
-
-        if (fleetPanelGetListMethod != null
-                && campaignUIGetCoreMethod != null
-                && tablePanelSelectMethod != null
-                && confirmDialogClass != null
-                && dialogDismissedInterface != null
-                && actionListenerInterface != null
-                && uiPanelClass != null
-                && renderableUIElementInterface != null
-                && visualPanelFleetInfoClass != null
-                && buttonClass != null
-                && inputEventClass != null) {
-            confirmDialogClassParamTypes = new Class<?>[] {
-                float.class,
-                float.class,
-                ClassRefs.uiPanelClass,
-                ClassRefs.dialogDismissedInterface,
-                String.class,
-                String[].class
-            };
-            foundAllClasses = true;
-        }
-    }
-
-    public static boolean foundAllClasses(){
-        return foundAllClasses;
-    }
-
-    /** Tries to find an interface among [interfaces] that has [methodName] as its only method. */
-    private static Class<?> findInterfaceByMethod(Class<?>[] interfaces, String methodName) {
-        for (Class<?> cls : interfaces) {
-            Object[] methods = cls.getDeclaredMethods();
-            if (methods.length != 1) {
-                continue;
-            }
-            Object method = methods[0];
-            if (ReflectionUtilis.getMethodName(method).equals(methodName)) {
-                return cls;
-            }
-        }
-
-        throw new RuntimeException("Interface with only method " + methodName + " not found; perhaps invalid witness used?");
-    }
-
-    public static class DummyInteractionDialogPlugin implements InteractionDialogPlugin {
-        public void advance(float arg0) { return; }
-        public void backFromEngagement(EngagementResultAPI arg0) { return; }
-        public Object getContext() { return ""; }
-        public Map<String, MemoryAPI> getMemoryMap() { return new HashMap<>(); }
-        public void init(InteractionDialogAPI arg0) { return; }
-        public void optionMousedOver(String arg0, Object arg1) { return; }
-        public void optionSelected(String arg0, Object arg1) { return; }
-    }
-
-    public static List<FleetMemberAPI> getDummyMembers() {
-        List<FleetMemberAPI> members = new ArrayList<>();
-        for (int i = 0; i < 9; i++) {
-            members.add(Global.getFactory().createFleetMember(FleetMemberType.SHIP, Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder().get(0).getVariant()));
-        }
-        return members;
-    }
+    public static void findAllClasses() {}
 }

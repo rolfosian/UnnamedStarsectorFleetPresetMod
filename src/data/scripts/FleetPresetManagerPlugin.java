@@ -34,7 +34,12 @@ public class FleetPresetManagerPlugin extends BaseModPlugin {
         PresetMiscUtils.print(args);
     }
     private static final String ver = "0.1.1a";
-    
+
+    @Override
+    public void onApplicationLoad() {
+        ClassRefs.findAllClasses();
+    }
+
     @Override
     public void onGameLoad(boolean newGame) {
         SectorAPI sector = Global.getSector();

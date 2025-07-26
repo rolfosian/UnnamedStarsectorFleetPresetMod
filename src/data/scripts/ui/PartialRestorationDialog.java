@@ -6,8 +6,8 @@ import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.PresetUtils.FleetPreset;
 import data.scripts.util.ReflectionUtilis;
-import data.scripts.util.ReflectionUtilis.ListenerFactory.ActionListener;
-import data.scripts.util.ReflectionUtilis.ListenerFactory.DialogDismissedListener;
+import data.scripts.util.ListenerFactory.ActionListener;
+import data.scripts.util.ListenerFactory.DialogDismissedListener;
 import data.scripts.util.UtilReflection.HoloVar;
 import data.scripts.util.UtilReflection;
 import data.scripts.ui.TreeTraverser;
@@ -103,9 +103,9 @@ public class PartialRestorationDialog {
             ClassRefs.FMRDialogHeight,
             new DialogDismissedListener() {
                 @Override
-                public void trigger(Object arg0, Object arg1) {
+                public void trigger(Object... args) {
 
-                    switch ((int) arg1) {
+                    switch ((int) args[1]) {
                         case 0:
                             pickedFleetMembers(pickedFleetMembers);
                             tempFleet.despawn();
@@ -214,8 +214,8 @@ public class PartialRestorationDialog {
 
     private void setListenerForDisabled(FleetMemberButton buttonWrapper) {
         ActionListener listener = new ActionListener() {
-            public void trigger(Object arg0, Object arg1) {
-                if (String.valueOf(arg0).equals("All")) return;
+            public void trigger(Object... args) {
+                if (String.valueOf(args[0]).equals("All")) return;
 
                 holoVar.setColor(UtilReflection.DARK_RED);
                 holoVar.setOverride(false);
@@ -254,7 +254,7 @@ public class PartialRestorationDialog {
         FleetMemberAPI member = buttonWrapper.getMember();
 
         ActionListener listener = new ActionListener() {
-            public void trigger(Object arg0, Object arg1) {
+            public void trigger(Object... args) {
 
                 if (btn.isChecked()) {
                     buttonWrapper.addLabel();
@@ -277,7 +277,7 @@ public class PartialRestorationDialog {
                 }
 
                 Global.getSector().getPlayerFleet().getFleetData().sortToMatchOrder(presetFleet.getFleetData().getMembersListCopy());
-                if (!String.valueOf(arg0).equals("All")) {
+                if (!String.valueOf(args[0]).equals("All")) {
                     PresetUtils.refreshFleetUI();
                 }
                 if (selected == available) all = true;
@@ -315,7 +315,7 @@ public class PartialRestorationDialog {
         presetFleet.getFleetData().sortToMatchOrder(originalOrder);
     }
 
-    // so warning message doesnt show for over max ships
+    // so warning message doesnt show for over max ships THIS IS IRRELEVANT NOW AS WE ARE NO LONGER USING THE ACTUAL FLEET MEMEBR RECOVERY DIALOG. IDK WHY I KEPT THIS
     private void removeFleetMembersFromPlayerFleet() {
         List<FleetMemberAPI> members = Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder();
         FleetDataAPI mothballedShips = PresetUtils.getMothBalledShipsData(master.getDockingListener().getPlayerCurrentMarket());

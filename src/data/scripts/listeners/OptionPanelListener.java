@@ -19,6 +19,7 @@ import assortment_of_things.misc.RATInteractionPlugin;
 import data.scripts.ClassRefs;
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.ReflectionUtilis;
+import data.scripts.util.ListenerFactory.ActionListener;
 import data.scripts.util.UtilReflection;
 
 import java.util.*;
@@ -29,8 +30,8 @@ public abstract class OptionPanelListener {
         PresetMiscUtils.print(args);
     }
 
-    private static Class<?> proxyListenerClass = new ReflectionUtilis.ListenerFactory.ActionListener() {
-        public void trigger(Object arg0, Object arg1) {}
+    private static Class<?> proxyListenerClass = new ActionListener() {
+        public void trigger(Object... args) {}
     }.getProxy().getClass();
 
     private InteractionDialogAPI dialog;
@@ -95,104 +96,99 @@ public abstract class OptionPanelListener {
             Object oldListener = ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, entry.getKey());
             if (oldListener.getClass().equals(proxyListenerClass)) continue;
 
-            for (Object field : entry.getValue().getClass().getDeclaredFields()) {
-                Object val = ReflectionUtilis.getPrivateVariable(field, entry.getValue());
+            Object optionData = ReflectionUtilis.invokeMethodDirectly(ClassRefs.getOptionDataMethod, entry.getValue());
+            if (optionData != null) {
+                newOptions.add(optionData);
 
-                if (val != null && ReflectionUtilis.getFieldType(field).equals(Object.class)) {
-                    // val is Option 'data'
-                    newOptions.add(val);
+                // add the interceptor listener for the option
+                ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, entry.getKey(), new ActionListener() {
+                    @Override
+                    public void trigger(Object... args) {
+                        if (args[1] == entry.getKey()) {
+                            if (optionPanel.optionHasConfirmDelegate(optionData)) {
+                                // option (usually) opens a confirm dialog, but not in the case of CONTINUE_INTO_BATTLE and also Manage Storage/Refit Fleet options in rat settlements for example
+                                if (String.valueOf(optionData).equals("CONTINUE_INTO_BATTLE")) {
+                                    onPlayerEnterBattle();
+                                }
 
-                    // add the interceptor listener for the option
-                    ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, entry.getKey(), new ReflectionUtilis.ListenerFactory.ActionListener() {
-                        @Override
-                        public void trigger(Object arg0, Object arg1) {
-                            if (arg1 == entry.getKey()) {
-                                if (optionPanel.optionHasConfirmDelegate(val)) {
-                                    // option (usually) opens a confirm dialog, but not in the case of CONTINUE_INTO_BATTLE and also Manage Storage/Refit Fleet options in rat settlements for example
-                                    if (String.valueOf(val).equals("CONTINUE_INTO_BATTLE")) {
-                                        onPlayerEnterBattle();
-                                    }
+                                ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldListener, args);
+                                
+                                List<Object> children = (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.visualPanelGetChildrenNonCopyMethod, visualPanel);
+                                Object confirmDialog = children.get(children.size()-1); // the standard confirm dialog
+                                // (ButtonAPI) ReflectionUtilis.getMethodAndInvokeDirectly("getButton", child, 1, 0), // Yes
+                                // (ButtonAPI) ReflectionUtilis.getMethodAndInvokeDirectly("getButton", child, 1, 1); // No
 
-                                    ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldListener, arg0, arg1);
-                                    
-                                    List<Object> children = (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.visualPanelGetChildrenNonCopyMethod, visualPanel);
-                                    Object confirmDialog = children.get(children.size()-1); // the standard confirm dialog
-                                    // (ButtonAPI) ReflectionUtilis.getMethodAndInvokeDirectly("getButton", child, 1, 0), // Yes
-                                    // (ButtonAPI) ReflectionUtilis.getMethodAndInvokeDirectly("getButton", child, 1, 1); // No
-
-                                    // Yes button
-                                    Object yesButton = ReflectionUtilis.getMethodAndInvokeDirectly("getButton", confirmDialog, 1, 0);
-                                    if (yesButton != null) {
-                                        setConfirmListener(yesButton, val, newButtons, newOptions);
-
-                                    } else {
-                                        // the confirm button is possibly nested, such as in the case of "transfer command for this engagement"
-                                        Object innerPanel = ReflectionUtilis.getMethodAndInvokeDirectly("getInnerPanel", confirmDialog, 0);
-                                        
-                                        if (innerPanel == null) {
-                                            executeAfter(val);
-                                            updateOptions(newButtons, newOptions);
-                                            populateOptions();
-                                            return;
-                                        }
-
-                                        List<Object> innerChildren = UtilReflection.getChildrenRecursive(innerPanel);
-                                        Set<Object> nonButtons = new HashSet<>();
-
-                                        if (innerChildren != null) {
-                                            for (Object child : innerChildren) {
-                                                if (ButtonAPI.class.isAssignableFrom(child.getClass()) && !currentConfirmButtons.contains(child)) {
-                                                    if (((ButtonAPI) child).getText() == null) continue;
-                                                    String buttonText = ((ButtonAPI) child).getText().toLowerCase();
-
-                                                    if (currentConfirmButtons.contains(child)) continue;
-
-                                                    if (!buttonText.contains("all") && !buttonText.contains("cancel") && !buttonText.contains("no") && !buttonText.contains("dismiss") && !buttonText.contains("leave") && !buttonText.contains("back") && !buttonText.contains("never")) {
-                                                        setConfirmListener(child, val, newButtons, newOptions);
-                                                        currentConfirmButtons.add(child);
-                                                        return;
-                                                    }
-
-                                                } else {
-                                                    nonButtons.add(child);
-                                                }
-                                            }
-
-                                            if (String.valueOf(val).equals("marketCommDir")) handleCommDirectory(nonButtons, newButtons, newOptions);
-
-                                            // for confirmation with only dismiss button such as marketCommDir
-                                            executeAfter(val);
-
-                                            updateOptions(newButtons, newOptions);
-
-                                            if (!Global.getSector().hasTransientScript(ButtonChecker.class) && !Global.getSector().hasTransientScript(BackGroundOptionChecker.class)) {
-                                                Global.getSector().addTransientScript(new ButtonChecker(newButtons, newOptions));
-                                            }
-                                            return;
-
-                                            // fallback, no buttons found?
-                                        } else {
-                                            executeAfter(val);
-                                            updateOptions(newButtons, newOptions);
-                                            populateOptions();
-                                            return;
-                                        }
-                                    }
-                                    // Natively the game does not call optionSelected when the no button is pressed
+                                // Yes button
+                                Object yesButton = ReflectionUtilis.getMethodAndInvokeDirectly("getButton", confirmDialog, 1, 0);
+                                if (yesButton != null) {
+                                    setConfirmListener(yesButton, optionData, newButtons, newOptions);
 
                                 } else {
-                                    ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldListener, arg0, arg1);
-                                    executeAfter(val);
+                                    // the confirm button is possibly nested, such as in the case of "transfer command for this engagement"
+                                    Object innerPanel = ReflectionUtilis.getMethodAndInvokeDirectly("getInnerPanel", confirmDialog, 0);
+                                    
+                                    if (innerPanel == null) {
+                                        executeAfter(optionData);
+                                        updateOptions(newButtons, newOptions);
+                                        populateOptions();
+                                        return;
+                                    }
 
-                                    updateOptions(newButtons, newOptions);
-                                    populateOptions();
-                                    return;
+                                    List<Object> innerChildren = UtilReflection.getChildrenRecursive(innerPanel);
+                                    Set<Object> nonButtons = new HashSet<>();
+
+                                    if (innerChildren != null) {
+                                        for (Object child : innerChildren) {
+                                            if (ButtonAPI.class.isAssignableFrom(child.getClass()) && !currentConfirmButtons.contains(child)) {
+                                                if (((ButtonAPI) child).getText() == null) continue;
+                                                String buttonText = ((ButtonAPI) child).getText().toLowerCase();
+
+                                                if (currentConfirmButtons.contains(child)) continue;
+
+                                                if (!buttonText.contains("all") && !buttonText.contains("cancel") && !buttonText.contains("no") && !buttonText.contains("dismiss") && !buttonText.contains("leave") && !buttonText.contains("back") && !buttonText.contains("never")) {
+                                                    setConfirmListener(child, optionData, newButtons, newOptions);
+                                                    currentConfirmButtons.add(child);
+                                                    return;
+                                                }
+
+                                            } else {
+                                                nonButtons.add(child);
+                                            }
+                                        }
+
+                                        if (String.valueOf(optionData).equals("marketCommDir")) handleCommDirectory(nonButtons, newButtons, newOptions);
+
+                                        // for confirmation with only dismiss button such as marketCommDir
+                                        executeAfter(optionData);
+
+                                        updateOptions(newButtons, newOptions);
+
+                                        if (!Global.getSector().hasTransientScript(ButtonChecker.class) && !Global.getSector().hasTransientScript(BackGroundOptionChecker.class)) {
+                                            Global.getSector().addTransientScript(new ButtonChecker(newButtons, newOptions));
+                                        }
+                                        return;
+
+                                        // fallback, no buttons found?
+                                    } else {
+                                        executeAfter(optionData);
+                                        updateOptions(newButtons, newOptions);
+                                        populateOptions();
+                                        return;
+                                    }
                                 }
+                                // Natively the game does not call optionSelected when the no button is pressed
+
+                            } else {
+                                ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldListener, args);
+                                executeAfter(optionData);
+
+                                updateOptions(newButtons, newOptions);
+                                populateOptions();
+                                return;
                             }
                         }
-                    }.getProxy());
-                    break;
-                }
+                    }
+                }.getProxy());
             }
         }
         updateOptions(newButtons, newOptions);
@@ -237,13 +233,13 @@ public abstract class OptionPanelListener {
 
     private void setConfirmListener(Object button, Object optionData, Set<Object> newButtons, Set<Object> newOptions) {
         Object oldListener = ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, button);
-        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, button, new ReflectionUtilis.ListenerFactory.ActionListener() {
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, button, new ActionListener() {
             @Override
-            public void trigger(Object arg0, Object arg1) {
-                if (arg1 == button) {
+            public void trigger(Object... args) {
+                if (args[1] == button) {
                     if (String.valueOf(optionData).equals("AUTORESOLVE_PURSUE") || String.valueOf(optionData).equals("CONTINUE_INTO_BATTLE")) onPlayerEnterBattle();
 
-                    ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldListener, arg0, arg1);
+                    ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldListener, args);
                     executeAfter(optionData);
 
                     updateOptions(newButtons, newOptions);
@@ -276,11 +272,11 @@ public abstract class OptionPanelListener {
 
     private void setCommmDirectoryButtonListener(Object button, Set<Object> newButtons, Set<Object> newOptions) {
         Object oldListener = ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, button);
-        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, button, new ReflectionUtilis.ListenerFactory.ActionListener() {
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, button, new ActionListener() {
             @Override
-            public void trigger(Object arg0, Object arg1) {
-                if (arg1 == button) {
-                    ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldListener, arg0, arg1);
+            public void trigger(Object... args) {
+                if (args[1] == button) {
+                    ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldListener, args);
                     updateOptions(newButtons, newOptions);
                     populateOptions();
                 }

@@ -36,8 +36,8 @@ import data.scripts.ui.UIComponent;
 import data.scripts.ui.UIPanel;
 import data.scripts.ui.TreeTraverser.TreeNode;
 import data.scripts.ui.TreeTraverser;
-import data.scripts.util.ReflectionUtilis.ListenerFactory.ActionListener;
-import data.scripts.util.ReflectionUtilis.ListenerFactory.DialogDismissedListener;
+import data.scripts.util.ListenerFactory.ActionListener;
+import data.scripts.util.ListenerFactory.DialogDismissedListener;
 
 import java.util.*;
 import java.awt.Color;
@@ -125,14 +125,14 @@ public class UtilReflection {
         Object oldListener = ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, btn.getInstance());
 
         ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, btn.getInstance(), new ActionListener() {
-            public void trigger(Object arg0, Object arg1) {
+            public void trigger(Object... args) {
                 bgImagePanel.setOpacity(0f);
                 (((BackGroundImagePanelPlugin)bgImagePanel.getPlugin())).tt.setOpacity(0f);
 
                 bgImagePanel.removeComponent(((BackGroundImagePanelPlugin)bgImagePanel.getPlugin()).tt);
                 dialog.removeComponent(bgImagePanel);
 
-                ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldListener, arg0, arg1);
+                ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldListener, args);
             }
         }.getProxy());
     }
