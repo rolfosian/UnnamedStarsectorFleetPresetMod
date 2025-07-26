@@ -8,20 +8,12 @@ import com.fs.starfarer.campaign.fleet.CampaignFleet;
 // import com.fs.graphics.Sprite;
 // import com.fs.starfarer.campaign.fleet.FleetMember;
 
-import com.fs.starfarer.ui.newui.FleetMemberRecoveryDialog;
-import com.fs.starfarer.api.campaign.BaseCampaignEventListener;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
-import com.fs.starfarer.api.campaign.CampaignUIAPI;
 import com.fs.starfarer.api.campaign.CoreUITabId;
 import com.fs.starfarer.api.campaign.FleetEncounterContextPlugin;
-import com.fs.starfarer.api.campaign.FleetMemberPickerListener;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;
-import com.fs.starfarer.api.campaign.InteractionDialogPlugin;
 import com.fs.starfarer.api.campaign.OptionPanelAPI;
-import com.fs.starfarer.api.campaign.rules.MemoryAPI;
-import com.fs.starfarer.api.combat.EngagementResultAPI;
-import com.fs.starfarer.api.fleet.FleetMemberAPI;
-import com.fs.starfarer.api.fleet.FleetMemberType;
+
 import com.fs.starfarer.api.input.InputEventClass;
 import com.fs.starfarer.api.input.InputEventType;
 
@@ -243,6 +235,7 @@ public class ClassRefs {
                 continue;
             }
 
+            // this is a glaring hole that only works by chance, will require another pass after this loop
             if (confirmDialogClassParamTypes != null && confirmDialogClass == null && ReflectionUtilis.doInstantiationParamsMatch(cls, confirmDialogClassParamTypes)) {
                 confirmDialogClass = cls;
 
@@ -297,11 +290,11 @@ public class ClassRefs {
                         outer:
                         for (Object field : cls.getDeclaredFields()) {
                             Class<?> fieldType = ReflectionUtilis.getFieldType(field);
-            
+                            
                             if (!UIPanelAPI.class.isAssignableFrom(fieldType)) {
                                 continue;
                             }
-            
+                            
                             boolean hasLabelField = false;
                             boolean hasFleetField = false;
                             for (Object innerField : fieldType.getDeclaredFields()) {
