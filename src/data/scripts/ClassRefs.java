@@ -148,27 +148,28 @@ public class ClassRefs {
     public static Object getOptionDataMethod;
 
     static {
-        for (Class<?> cls : ObfuscatedClasses.getInterfaces()) {
-            Object[] methods = cls.getDeclaredMethods();
-            
+        Class<?>[] interfaces = ObfuscatedClasses.getInterfaces();
+        for (int i = 0; i < interfaces.length; i++) {
+            Class<?> interfc = interfaces[i];
+
+            Object[] methods = interfc.getDeclaredMethods();
             if (methods.length == 1) {
                 String methodName = ReflectionUtilis.getMethodName(methods[0]);
 
                 if (actionListenerInterface == null && methodName.equals("actionPerformed")) {
-                    actionListenerInterface = cls;
+                    actionListenerInterface = interfc;
                     buttonListenerActionPerformedMethod = methods[0];
 
                 } else if (dialogDismissedInterface == null && methodName.equals("dialogDismissed")) {
-                    dialogDismissedInterface = cls;
+                    dialogDismissedInterface = interfc;
                 }
             }
         }
 
-        for (Class<?> cls : ObfuscatedClasses.getClasses()) {
-            if (visualPanelFleetInfoClass == null && ReflectionUtilis.doInstantiationParamsMatch(cls, ClassRefs.visualPanelFleetInfoClassParamTypes)) {
-                visualPanelFleetInfoClass = cls;
-                continue;
-            }
+        Class<?>[] obfClasses = ObfuscatedClasses.getClasses();
+        for (int i = 0; i < obfClasses.length; i++) {
+            Class<?> cls = obfClasses[i];
+            
             if (optionPanelGetButtonToItemMapMethod == null && OptionPanelAPI.class.isAssignableFrom(cls)) {
                 optionPanelGetButtonToItemMapMethod = ReflectionUtilis.getMethod("getButtonToItemMap", cls, 0);
                 continue;
@@ -234,86 +235,111 @@ public class ClassRefs {
                 };
                 continue;
             }
-
-            // this is a glaring hole that only works by chance, will require another pass after this loop
-            if (confirmDialogClassParamTypes != null && confirmDialogClass == null && ReflectionUtilis.doInstantiationParamsMatch(cls, confirmDialogClassParamTypes)) {
-                confirmDialogClass = cls;
-
-                confirmDialogGetButtonMethod = ReflectionUtilis.getMethod("getButton", confirmDialogClass, 1);
-                confirmDialogGetInnerPanelMethod = ReflectionUtilis.getMethod("getInnerPanel", confirmDialogClass, 0);
-                confirmDialogShowMethod = ReflectionUtilis.getMethod("show", confirmDialogClass, 2);
-                confirmDialogGetLabelMethod = ReflectionUtilis.getMethod("getLabel", confirmDialogClass, 0);
-                confirmDialogSetBackgroundDimAmountMethod = ReflectionUtilis.getMethod("setBackgroundDimAmount", confirmDialogClass, 1);
-                confirmDialogOutsideClickAbsorbedMethod = ReflectionUtilis.getMethodDeclared("outsideClickAbsorbed", confirmDialogClass, 1);
-                continue;
-            }
-
             Object[] methods = cls.getDeclaredMethods();
 
-            if (getOptionDataMethod == null && methods.length == 2) {
-                boolean objReturnType = false;
-                boolean stringReturnType = false;
-                Object objReturnMethod = null;
-
-                for (int i = 0; i < 2; i++) {
-                    Object method = methods[i];
-                    Class<?> returnType = ReflectionUtilis.getReturnType(method);
-
-                    if (returnType.equals(Object.class)) {
-                        objReturnType = true;
-                        objReturnMethod = method;
-
-                    } else if (returnType.equals(String.class)) {
-                        stringReturnType = true;
-                    }
-                }
-                if (objReturnType && stringReturnType) {
-                    getOptionDataMethod = objReturnMethod;
-                }
-            } else if (fleetTabGetFleetPanelMethod == null && methods.length == 17) {
-                for (Object method : methods) {
-                    if (((String)ReflectionUtilis.getMethodName(method)).equals("getMousedOverFleetMember")) {
-                        fleetTabGetFleetPanelMethod = ReflectionUtilis.getMethod("getFleetPanel", cls, 0);
-                        fleetTabGetMarketPickerMethod = ReflectionUtilis.getMethod("getMarketPicker", cls, 0);
-                
-                        Class<?> fleetPanelCls = ReflectionUtilis.getReturnType(fleetTabGetFleetPanelMethod);
-                        fleetPanelgetClickAndDropHandlerMethod = ReflectionUtilis.getMethod("getClickAndDropHandler", fleetPanelCls, 0);
-                        fleetPanelRecreateUIMethod = ReflectionUtilis.getMethod("recreateUI", fleetPanelCls, 1);
-                        fleetPanelGetListMethod = ReflectionUtilis.getMethod("getList", fleetPanelCls, 0);
-                
-                        Class<?> clickAndDropHandlerCls = ReflectionUtilis.getReturnType(fleetPanelgetClickAndDropHandlerMethod);
-                        fleetPanelClickAndDropHandlerGetPickedUpMemberMethod = ReflectionUtilis.getMethod("getPickedUpMember", clickAndDropHandlerCls, 0);
-                        
-                        Class<?> fleetPanelListCls = ReflectionUtilis.getReturnType(fleetPanelGetListMethod);
-                        fleetPanelListGetItemsMethod = ReflectionUtilis.getMethod("getItems", fleetPanelListCls, 0);
-
-                        outer:
-                        for (Object field : cls.getDeclaredFields()) {
-                            Class<?> fieldType = ReflectionUtilis.getFieldType(field);
-                            
-                            if (!UIPanelAPI.class.isAssignableFrom(fieldType)) {
-                                continue;
-                            }
-                            
-                            boolean hasLabelField = false;
-                            boolean hasFleetField = false;
-                            for (Object innerField : fieldType.getDeclaredFields()) {
-                                Class<?> innerFieldType = ReflectionUtilis.getFieldType(innerField);
-                                if (CampaignFleetAPI.class.isAssignableFrom(innerFieldType)) {
-                                    hasFleetField = true;
-                                }
-                                if (LabelAPI.class.isAssignableFrom(innerFieldType)) {
-                                    hasLabelField = true;
-                                }
-                                if (hasFleetField && hasLabelField) {
-                                    fleetTabFleetInfoPanelField = field;
-                                    break outer;
-                                }
+            switch(methods.length) {
+                case 2:
+                    if (getOptionDataMethod == null) {
+                        boolean objReturnType = false;
+                        boolean stringReturnType = false;
+                        Object objReturnMethod = null;
+        
+                        for (int j = 0; j < 2; j++) {
+                            Object method = methods[j];
+                            Class<?> returnType = ReflectionUtilis.getReturnType(method);
+        
+                            if (returnType.equals(Object.class)) {
+                                objReturnType = true;
+                                objReturnMethod = method;
+        
+                            } else if (returnType.equals(String.class)) {
+                                stringReturnType = true;
                             }
                         }
-                        break;
+                        if (objReturnType && stringReturnType) {
+                            getOptionDataMethod = objReturnMethod;
+                        }
                     }
-                }
+                    if (visualPanelFleetInfoClass == null && ReflectionUtilis.doInstantiationParamsMatch(cls, ClassRefs.visualPanelFleetInfoClassParamTypes)) {
+                        visualPanelFleetInfoClass = cls;
+                    }
+                    continue;
+
+                case 15:
+                    if (confirmDialogClass == null) {
+                        for (int j = 0; j < methods.length; j++) {
+                            Object method = methods[j];
+        
+                            if (((String)ReflectionUtilis.getMethodName(method)).equals("setNoiseOnConfirmDismiss")) {
+                                confirmDialogClass = cls;
+        
+                                confirmDialogGetButtonMethod = ReflectionUtilis.getMethod("getButton", confirmDialogClass, 1);
+                                confirmDialogGetInnerPanelMethod = ReflectionUtilis.getMethod("getInnerPanel", confirmDialogClass, 0);
+                                confirmDialogShowMethod = ReflectionUtilis.getMethod("show", confirmDialogClass, 2);
+                                confirmDialogGetLabelMethod = ReflectionUtilis.getMethod("getLabel", confirmDialogClass, 0);
+                                confirmDialogSetBackgroundDimAmountMethod = ReflectionUtilis.getMethod("setBackgroundDimAmount", confirmDialogClass, 1);
+                                confirmDialogOutsideClickAbsorbedMethod = ReflectionUtilis.getMethodDeclared("outsideClickAbsorbed", confirmDialogClass, 1);
+                                break;
+                            }
+                        }
+                    }
+                    continue;
+
+                case 17:
+                    if (fleetTabGetFleetPanelMethod == null) {
+                        for (int j = 0; j < methods.length; j++) {
+                            Object method = methods[j];
+        
+                            if (((String)ReflectionUtilis.getMethodName(method)).equals("getMousedOverFleetMember")) {
+                                fleetTabGetFleetPanelMethod = ReflectionUtilis.getMethod("getFleetPanel", cls, 0);
+                                fleetTabGetMarketPickerMethod = ReflectionUtilis.getMethod("getMarketPicker", cls, 0);
+                        
+                                Class<?> fleetPanelCls = ReflectionUtilis.getReturnType(fleetTabGetFleetPanelMethod);
+                                fleetPanelgetClickAndDropHandlerMethod = ReflectionUtilis.getMethod("getClickAndDropHandler", fleetPanelCls, 0);
+                                fleetPanelRecreateUIMethod = ReflectionUtilis.getMethod("recreateUI", fleetPanelCls, 1);
+                                fleetPanelGetListMethod = ReflectionUtilis.getMethod("getList", fleetPanelCls, 0);
+                        
+                                Class<?> clickAndDropHandlerCls = ReflectionUtilis.getReturnType(fleetPanelgetClickAndDropHandlerMethod);
+                                fleetPanelClickAndDropHandlerGetPickedUpMemberMethod = ReflectionUtilis.getMethod("getPickedUpMember", clickAndDropHandlerCls, 0);
+                                
+                                Class<?> fleetPanelListCls = ReflectionUtilis.getReturnType(fleetPanelGetListMethod);
+                                fleetPanelListGetItemsMethod = ReflectionUtilis.getMethod("getItems", fleetPanelListCls, 0);
+                                
+                                Object[] fields = cls.getDeclaredFields();
+                                outer:
+                                for (int k = 0; k < fields.length; k++) {
+                                    Object field = fields[k];
+                                    Class<?> fieldType = ReflectionUtilis.getFieldType(field);
+                                    if (!UIPanelAPI.class.isAssignableFrom(fieldType)) continue;
+                                    
+                                    boolean hasLabelField = false;
+                                    boolean hasFleetField = false;
+
+                                    Object[] innerFields = fieldType.getDeclaredFields();
+                                    for (int l = 0; l < innerFields.length; l++) {
+                                        Object innerField = innerFields[l];
+
+                                        Class<?> innerFieldType = ReflectionUtilis.getFieldType(innerField);
+                                        if (CampaignFleetAPI.class.isAssignableFrom(innerFieldType)) {
+                                            hasFleetField = true;
+                                        }
+                                        if (LabelAPI.class.isAssignableFrom(innerFieldType)) {
+                                            hasLabelField = true;
+                                        }
+                                        if (hasFleetField && hasLabelField) {
+                                            fleetTabFleetInfoPanelField = field;
+                                            break outer;
+                                        }
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    continue;
+
+                default:
+                    continue;
             }
         }
 
