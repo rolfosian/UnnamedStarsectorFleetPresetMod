@@ -10,6 +10,7 @@ import com.fs.starfarer.campaign.fleet.CampaignFleet;
 
 import com.fs.starfarer.ui.newui.FleetMemberRecoveryDialog;
 import com.fs.starfarer.api.campaign.BaseCampaignEventListener;
+import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.campaign.CampaignUIAPI;
 import com.fs.starfarer.api.campaign.CoreUITabId;
 import com.fs.starfarer.api.campaign.FleetEncounterContextPlugin;
@@ -132,6 +133,7 @@ public class ClassRefs {
 
     public static Object fleetTabGetMarketPickerMethod;
     public static Object fleetTabGetFleetPanelMethod;
+    public static Object fleetTabFleetInfoPanelField;
 
     public static Object fleetPanelGetListMethod;
     public static Object fleetPanelListGetItemsMethod;
@@ -160,31 +162,31 @@ public class ClassRefs {
             if (methods.length == 1) {
                 String methodName = ReflectionUtilis.getMethodName(methods[0]);
 
-                if (methodName.equals("actionPerformed")) {
+                if (actionListenerInterface == null && methodName.equals("actionPerformed")) {
                     actionListenerInterface = cls;
                     buttonListenerActionPerformedMethod = methods[0];
 
-                } else if (methodName.equals("dialogDismissed")) {
+                } else if (dialogDismissedInterface == null && methodName.equals("dialogDismissed")) {
                     dialogDismissedInterface = cls;
                 }
             }
         }
 
         for (Class<?> cls : ObfuscatedClasses.getClasses()) {
-            if (ReflectionUtilis.doInstantiationParamsMatch(cls, ClassRefs.visualPanelFleetInfoClassParamTypes)) {
+            if (visualPanelFleetInfoClass == null && ReflectionUtilis.doInstantiationParamsMatch(cls, ClassRefs.visualPanelFleetInfoClassParamTypes)) {
                 visualPanelFleetInfoClass = cls;
                 continue;
             }
-            if (OptionPanelAPI.class.isAssignableFrom(cls)) {
+            if (optionPanelGetButtonToItemMapMethod == null && OptionPanelAPI.class.isAssignableFrom(cls)) {
                 optionPanelGetButtonToItemMapMethod = ReflectionUtilis.getMethod("getButtonToItemMap", cls, 0);
                 continue;
             }
-            if (InteractionDialogAPI.class.isAssignableFrom(cls) && !cls.isAnonymousClass()) {
+            if (interactionDialogGetCoreUIMethod == null && InteractionDialogAPI.class.isAssignableFrom(cls) && !cls.isAnonymousClass()) {
                 visualPanelGetChildrenNonCopyMethod = ReflectionUtilis.getMethod("getChildrenNonCopy", cls, 0);
                 interactionDialogGetCoreUIMethod = ReflectionUtilis.getMethod("getCoreUI", cls, 0);
                 continue;
             }
-            if (ButtonAPI.class.isAssignableFrom(cls)) {
+            if (buttonClass == null && ButtonAPI.class.isAssignableFrom(cls)) {
                 buttonClass = cls;
                 buttonGetListenerMethod = ReflectionUtilis.getMethod("getListener", buttonClass, 0);
                 buttonSetListenerMethod = ReflectionUtilis.getMethod("setListener", buttonClass, 1);
@@ -198,7 +200,7 @@ public class ClassRefs {
                 continue;
             }
 
-            if (cls.getSimpleName().equals("CampaignState")) {
+            if (campaignUIGetCoreMethod == null && cls.getSimpleName().equals("CampaignState")) {
                 campaignUIGetCoreMethod = ReflectionUtilis.getMethod("getCore", cls, 0);
 
                 Class<?> coreUIClass = ReflectionUtilis.getReturnType(campaignUIGetCoreMethod);
@@ -241,7 +243,7 @@ public class ClassRefs {
                 continue;
             }
 
-            if (confirmDialogClassParamTypes != null && ReflectionUtilis.doInstantiationParamsMatch(cls, confirmDialogClassParamTypes)) {
+            if (confirmDialogClassParamTypes != null && confirmDialogClass == null && ReflectionUtilis.doInstantiationParamsMatch(cls, confirmDialogClassParamTypes)) {
                 confirmDialogClass = cls;
 
                 confirmDialogGetButtonMethod = ReflectionUtilis.getMethod("getButton", confirmDialogClass, 1);
@@ -255,7 +257,7 @@ public class ClassRefs {
 
             Object[] methods = cls.getDeclaredMethods();
 
-            if (methods.length == 2) {
+            if (getOptionDataMethod == null && methods.length == 2) {
                 boolean objReturnType = false;
                 boolean stringReturnType = false;
                 Object objReturnMethod = null;
@@ -275,7 +277,7 @@ public class ClassRefs {
                 if (objReturnType && stringReturnType) {
                     getOptionDataMethod = objReturnMethod;
                 }
-            } else if (methods.length == 17) {
+            } else if (fleetTabGetFleetPanelMethod == null && methods.length == 17) {
                 for (Object method : methods) {
                     if (((String)ReflectionUtilis.getMethodName(method)).equals("getMousedOverFleetMember")) {
                         fleetTabGetFleetPanelMethod = ReflectionUtilis.getMethod("getFleetPanel", cls, 0);
@@ -291,6 +293,31 @@ public class ClassRefs {
                         
                         Class<?> fleetPanelListCls = ReflectionUtilis.getReturnType(fleetPanelGetListMethod);
                         fleetPanelListGetItemsMethod = ReflectionUtilis.getMethod("getItems", fleetPanelListCls, 0);
+
+                        outer:
+                        for (Object field : cls.getDeclaredFields()) {
+                            Class<?> fieldType = ReflectionUtilis.getFieldType(field);
+            
+                            if (!UIPanelAPI.class.isAssignableFrom(fieldType)) {
+                                continue;
+                            }
+            
+                            boolean hasLabelField = false;
+                            boolean hasFleetField = false;
+                            for (Object innerField : fieldType.getDeclaredFields()) {
+                                Class<?> innerFieldType = ReflectionUtilis.getFieldType(innerField);
+                                if (CampaignFleetAPI.class.isAssignableFrom(innerFieldType)) {
+                                    hasFleetField = true;
+                                }
+                                if (LabelAPI.class.isAssignableFrom(innerFieldType)) {
+                                    hasLabelField = true;
+                                }
+                                if (hasFleetField && hasLabelField) {
+                                    fleetTabFleetInfoPanelField = field;
+                                    break outer;
+                                }
+                            }
+                        }
                         break;
                     }
                 }

@@ -44,7 +44,6 @@ public class FleetPresetsFleetPanelInjector {
         PresetMiscUtils.print(args);
     }
 
-    private static Object fleetInfoPanelField;
     private static Object autoAssignButtonField;
     private static Object marketPickerMethod;
     private static Object getFleetPanelMethod;
@@ -87,7 +86,8 @@ public class FleetPresetsFleetPanelInjector {
     }
 
     private ButtonAPI getStorageButton(UIPanelAPI core) { // This will probably crash the game if you call it without the player docked at a market
-        Object marketPicker = ReflectionUtilis.invokeMethodDirectly(ClassRefs.fleetTabGetMarketPickerMethod, fleetTab);
+        Object marketPicker = getMarketPicker();
+        print(marketPicker);
         if (marketPicker == null) return null;
 
         List<ButtonAPI> marketButtons = ((List<ButtonAPI>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.visualPanelGetChildrenNonCopyMethod, marketPicker));
@@ -208,7 +208,6 @@ public class FleetPresetsFleetPanelInjector {
             } else {
                 Position pos = fleetTabLeftPane.add(presetFleetsButton);
                 pos.getInstance().inTL(UIConfig.MANAGEMENT_BTN_X_OFFSET, UIConfig.MANAGEMENT_BTN_Y_OFFSET);
-                // print(pos.getInstance().getX(), pos.getInstance().getY());
             }
         }
         if (!masterPresetsDialog.isPartialSelecting()) runningMembers = new RunningMembers(playerFleetMembers);
@@ -275,50 +274,13 @@ public class FleetPresetsFleetPanelInjector {
         }
 
         Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.COREUI_KEY, core);
-        UIPanelAPI currentTab = (UIPanelAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.coreUIgetCurrentTabMethod, core);
+        fleetTab = (UIPanelAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.coreUIgetCurrentTabMethod, core);
 
-        Object fleetPanel = ReflectionUtilis.invokeMethodDirectly(ClassRefs.fleetTabGetFleetPanelMethod, currentTab);
+        Object fleetPanel = ReflectionUtilis.invokeMethodDirectly(ClassRefs.fleetTabGetFleetPanelMethod, fleetTab);
         fleetPanelClickHandler = ReflectionUtilis.invokeMethodDirectly(ClassRefs.fleetPanelgetClickAndDropHandlerMethod, fleetPanel);
-
-        // Since the current tab ID is fleet, this *should* give us the fleet tab.
-        // We need to find the field corresponding to the info panel. There's no good way to do this,
-        // other than to go through every declared field, check that it's a UIPanelAPI, then look for
-        // a LabelAPI and a CampaignFleetAPI field in that
-        if (fleetInfoPanelField == null) {
-            outer:
-            for (Object field : currentTab.getClass().getDeclaredFields()) {
-                Class<?> fieldType = ReflectionUtilis.getFieldType(field);
-
-                if (!UIPanelAPI.class.isAssignableFrom(fieldType)) {
-                    continue;
-                }
-                boolean hasLabelField = false;
-                boolean hasFleetField = false;
-                for (Object innerField : fieldType.getDeclaredFields()) {
-                    Class<?> innerFieldType = ReflectionUtilis.getFieldType(innerField);
-                    if (CampaignFleetAPI.class.isAssignableFrom(innerFieldType)) {
-                        hasFleetField = true;
-                    }
-                    if (LabelAPI.class.isAssignableFrom(innerFieldType)) {
-                        hasLabelField = true;
-                    }
-                    // The outer field is the fleet info panel
-                    if (hasFleetField && hasLabelField) {
-                        fleetInfoPanelField = field;
-                        break outer;
-                    }
-                }
-            }
-        }
-        if (fleetInfoPanelField == null) {
-            throw new RuntimeException("Could not find the fleet info panel for the fleet tab");
-        }
-
-        fleetTab = currentTab;
         fleetTabWrapped = new UIPanel(fleetTab);
 
-        return (UIPanelAPI) ReflectionUtilis.getPrivateVariable(fleetInfoPanelField, currentTab);
-
+        return (UIPanelAPI) ReflectionUtilis.getPrivateVariable(ClassRefs.fleetTabFleetInfoPanelField, fleetTab);
     }
 
     private UIComponentAPI getDisengageableNotice(UIPanelAPI fleetInfoPanel) {
@@ -430,5 +392,9 @@ public class FleetPresetsFleetPanelInjector {
 
     private Object getFleetPanel() {
         return ReflectionUtilis.invokeMethodDirectly(ClassRefs.fleetTabGetFleetPanelMethod, fleetTab);
+    }
+
+    private Object getMarketPicker() {
+        return ReflectionUtilis.invokeMethodDirectly(ClassRefs.fleetTabGetMarketPickerMethod, fleetTab);
     }
 }
