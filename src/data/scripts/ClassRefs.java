@@ -120,6 +120,7 @@ public class ClassRefs {
     public static Object tablePanelsetItemsSelectableMethod;
     public static Object tablePanelSelectMethod;
 
+    public static Object campaignUIScreenPanelField;
     public static Object campaignUIGetCoreMethod;
     public static Object coreUIgetCurrentTabMethod;
 
@@ -199,7 +200,8 @@ public class ClassRefs {
                 Class<?> coreUIClass = ReflectionUtilis.getReturnType(campaignUIGetCoreMethod);
                 coreUIgetCurrentTabMethod = ReflectionUtilis.getMethod("getCurrentTab", coreUIClass, 0);
 
-                uiPanelClass = ReflectionUtilis.getFieldTypeByName("screenPanel", cls);
+                campaignUIScreenPanelField = ReflectionUtilis.getFieldByName("screenPanel", cls);
+                uiPanelClass = ReflectionUtilis.getFieldType(campaignUIScreenPanelField);
                 
                 outer:
                 for (Class<?> interfc : uiPanelClass.getInterfaces()) {

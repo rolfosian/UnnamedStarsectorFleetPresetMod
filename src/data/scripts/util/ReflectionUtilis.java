@@ -279,11 +279,11 @@ public class ReflectionUtilis {
         }
     }
 
-    public static Class<?> getFieldTypeByName(String name, Class<?> cls) {
+    public static Object getFieldByName(String name, Class<?> cls) {
         try {
             for (Object field : cls.getDeclaredFields()) {
                 if (((String)getFieldNameHandle.invoke(field)).equals(name)) {
-                    return (Class<?>) getFieldTypeHandle.invoke(field);
+                    return field;
                 }
             }
         } catch (Throwable e) {

@@ -87,7 +87,6 @@ public class FleetPresetsFleetPanelInjector {
 
     private ButtonAPI getStorageButton(UIPanelAPI core) { // This will probably crash the game if you call it without the player docked at a market
         Object marketPicker = getMarketPicker();
-        print(marketPicker);
         if (marketPicker == null) return null;
 
         List<ButtonAPI> marketButtons = ((List<ButtonAPI>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.visualPanelGetChildrenNonCopyMethod, marketPicker));

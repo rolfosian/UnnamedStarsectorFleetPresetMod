@@ -50,25 +50,21 @@ public class FleetPresetManagerCoreScript implements EveryFrameScript {
     @Override
     public void advance(float amount) {
         if (isFirstFrame) {
-            try {
-                CampaignUIAPI campaignUI = Global.getSector().getCampaignUI();
-                Object field = campaignUI.getClass().getDeclaredField("screenPanel");
+            CampaignUIAPI campaignUI = Global.getSector().getCampaignUI();
 
-                if (ReflectionUtilis.getPrivateVariable(field, campaignUI) == null) {
-                    ReflectionUtilis.setPrivateVariable(field, campaignUI,
-                        ReflectionUtilis.instantiateClass(ReflectionUtilis.getFieldType(field),
-                        new Class<?>[] {
-                            float.class,
-                            float.class,
-                        },
-                        Global.getSettings().getScreenWidth(),
-                        Global.getSettings().getScreenHeight()
-                        )
-                    );
-                }
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+            if (ReflectionUtilis.getPrivateVariable(ClassRefs.campaignUIScreenPanelField, campaignUI) == null) {
+                ReflectionUtilis.setPrivateVariable(ClassRefs.campaignUIScreenPanelField, campaignUI,
+                    ReflectionUtilis.instantiateClass(ClassRefs.uiPanelClass,
+                    new Class<?>[] {
+                        float.class,
+                        float.class,
+                    },
+                    Global.getSettings().getScreenWidth(),
+                    Global.getSettings().getScreenHeight()
+                    )
+                );
             }
+            
             isFirstFrame = false;
             fleetPanelInjector.init();
         }
