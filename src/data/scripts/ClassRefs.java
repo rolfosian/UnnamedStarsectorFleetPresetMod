@@ -292,7 +292,7 @@ public class ClassRefs {
                         for (int j = 0; j < methods.length; j++) {
                             Object method = methods[j];
         
-                            if (((String)ReflectionUtilis.getMethodName(method)).equals("getMousedOverFleetMember")) {
+                            if (ReflectionUtilis.getMethodName(method).equals("getMousedOverFleetMember")) {
                                 fleetTabGetFleetPanelMethod = ReflectionUtilis.getMethod("getFleetPanel", cls, 0);
                                 fleetTabGetMarketPickerMethod = ReflectionUtilis.getMethod("getMarketPicker", cls, 0);
                         
