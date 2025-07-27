@@ -9,7 +9,6 @@ import com.fs.starfarer.campaign.fleet.CampaignFleet;
 // import com.fs.starfarer.campaign.fleet.FleetMember;
 
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
-import com.fs.starfarer.api.campaign.CoreUITabId;
 import com.fs.starfarer.api.campaign.FleetEncounterContextPlugin;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;
 import com.fs.starfarer.api.campaign.OptionPanelAPI;
@@ -24,14 +23,10 @@ import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 
 import data.scripts.listeners.FleetPresetManagementListener;
-import data.scripts.ui.TreeTraverser;
-import data.scripts.ui.TreeTraverser.TreeNode;
 
 import data.scripts.util.PresetMiscUtils;
-import data.scripts.util.PresetUtils;
 import data.scripts.util.ReflectionUtilis;
 import data.scripts.util.ReflectionUtilis.ObfuscatedClasses;
-import data.scripts.util.UtilReflection;
 
 import java.util.*;
 
@@ -40,7 +35,6 @@ import org.lwjgl.input.Keyboard;
 
 /** Stores references to class objects in the obfuscated game files */
 public class ClassRefs {
-    private static final Logger logger = Logger.getLogger(ClassRefs.class);
     public static void print(Object... args) {
         PresetMiscUtils.print(args);
     }
@@ -351,5 +345,7 @@ public class ClassRefs {
         tablePanelsetItemsSelectableMethod = ReflectionUtilis.getMethod("setItemsSelectable", tablePanel, 1);
         tablePanelSelectMethod = ReflectionUtilis.getMethod("select", tablePanel, 2);
     }
+
+    /**Dummy function to call to load the class and run the static block in onApplicationLoad */
     public static void findAllClasses() {}
 }
