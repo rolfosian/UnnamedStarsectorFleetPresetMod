@@ -89,7 +89,7 @@ public class FleetPresetsFleetPanelInjector {
         Object marketPicker = getMarketPicker();
         if (marketPicker == null) return null;
 
-        List<ButtonAPI> marketButtons = ((List<ButtonAPI>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.visualPanelGetChildrenNonCopyMethod, marketPicker));
+        List<ButtonAPI> marketButtons = ((List<ButtonAPI>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelgetChildrenNonCopyMethod, marketPicker));
         return marketButtons.get(marketButtons.size() - 1);
     }
 
@@ -214,6 +214,7 @@ public class FleetPresetsFleetPanelInjector {
 
     private void setCurrentPresetLabel(List<FleetMemberAPI> playerFleetMembers) {
         FleetPreset preset = PresetUtils.getPresetOfMembers(playerFleetMembers);
+        
         if (preset != null && UIConfig.IS_SET_CURRENT_PRESET_LABEL) {
             if (currentPresetLabel == null) {
                 LabelAPI labbel1 = Global.getSettings().createLabel("Current Fleet Is Preset", Fonts.ORBITRON_12);
@@ -283,7 +284,7 @@ public class FleetPresetsFleetPanelInjector {
     }
 
     private UIComponentAPI getDisengageableNotice(UIPanelAPI fleetInfoPanel) {
-        for (Object child : (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", fleetInfoPanel, 0)) {
+        for (Object child : (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelgetChildrenNonCopyMethod, fleetInfoPanel)) {
             if (LabelAPI.class.isAssignableFrom(child.getClass())) {
                 LabelAPI labbel = (LabelAPI) child;
                 if (labbel.getText().startsWith("Your fleet is")) return (UIComponentAPI) labbel;

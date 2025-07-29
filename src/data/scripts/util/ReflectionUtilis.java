@@ -103,6 +103,7 @@ public class ReflectionUtilis {
     private static final MethodHandle getFieldModifiersHandle;
 
     private static final MethodHandle getMethodNameHandle;
+    private static final MethodHandle getMethodDeclaringClassHandle;
     private static final MethodHandle invokeMethodHandle;
     private static final MethodHandle setMethodAccessable;
     private static final MethodHandle getModifiersHandle;
@@ -137,6 +138,7 @@ public class ReflectionUtilis {
             setFieldAccessibleHandle = lookup.findVirtual(fieldClass, "setAccessible", MethodType.methodType(void.class, boolean.class));
 
             getMethodNameHandle = lookup.findVirtual(methodClass, "getName", MethodType.methodType(String.class));
+            getMethodDeclaringClassHandle = lookup.findVirtual(methodClass, "getDeclaringClass", MethodType.methodType(Class.class));
             invokeMethodHandle = lookup.findVirtual(methodClass, "invoke", MethodType.methodType(Object.class, Object.class, Object[].class));
             setMethodAccessable = lookup.findVirtual(methodClass, "setAccessible", MethodType.methodType(void.class, boolean.class));
             getModifiersHandle = lookup.findVirtual(methodClass, "getModifiers", MethodType.methodType(int.class));
@@ -156,6 +158,14 @@ public class ReflectionUtilis {
 
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public static Class<?> getMethodDeclaringClass(Object method) {
+        try {
+            return (Class<?>) getMethodDeclaringClassHandle.invoke(method);
+        } catch (Throwable e) {
+            throw new RuntimeException();
         }
     }
 

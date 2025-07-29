@@ -101,7 +101,7 @@ public class UtilReflection {
     }
 
     public static List<Object> getChildren(Object parent) {
-        return (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", parent, 0);
+        return (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelgetChildrenNonCopyMethod, parent);
     }
 
     public static List<Object> getChildrenRecursive(Object parentPanel) {
@@ -111,7 +111,7 @@ public class UtilReflection {
     }
     
     private static void collectChildren(Object parent, List<Object> list) {
-        List<Object> children = (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", parent, 0);
+        List<Object> children = (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelgetChildrenNonCopyMethod, parent);
 
         if (children != null) {
             for (Object child : children) {
@@ -509,7 +509,7 @@ public class UtilReflection {
         }
 
         private Object getHoloVar(UIPanelAPI dialog) {
-            Object holo = ReflectionUtilis.getMethodAndInvokeDirectly("getHolo", dialog, 0);
+            Object holo = ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetHoloMethod, dialog);
             for (Object variable : ReflectionUtilis.getAllVariables(holo)) {
                 if (variable != null && !ReflectionUtilis.isNativeJavaClass(variable.getClass())) {
     

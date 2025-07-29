@@ -6,21 +6,17 @@ import com.fs.starfarer.api.campaign.BaseCampaignEventListener;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;
 import com.fs.starfarer.api.campaign.InteractionDialogPlugin;
 import com.fs.starfarer.api.campaign.OptionPanelAPI;
-import com.fs.starfarer.api.campaign.CustomDialogDelegate;
 import com.fs.starfarer.api.campaign.VisualPanelAPI;
 import com.fs.starfarer.api.combat.EngagementResultAPI;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 import com.fs.starfarer.campaign.CommDirectoryEntry;
 
-import assortment_of_things.frontiers.interactions.CreateSettlementInteraction;
-import assortment_of_things.frontiers.interactions.SettlementInteraction;
-import assortment_of_things.misc.RATInteractionPlugin;
 import data.scripts.ClassRefs;
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.ReflectionUtilis;
-import data.scripts.util.ListenerFactory.ActionListener;
 import data.scripts.util.UtilReflection;
+import data.scripts.util.ListenerFactory.ActionListener;
 
 import java.util.*;
 
@@ -39,7 +35,7 @@ public abstract class OptionPanelListener {
     private VisualPanelAPI visualPanel;
     private OptionPanelListener self;
     private InteractionDialogPlugin plugin;
-    private Map<Object, Object> buttonsToItemsMap;
+    private Map<ButtonAPI, Object> buttonsToItemsMap;
     private Object currentOption;
 
     private Set<Object> currentOptions = new HashSet<>();
@@ -51,7 +47,7 @@ public abstract class OptionPanelListener {
         this.optionPanel = dialog.getOptionPanel();
         this.visualPanel = dialog.getVisualPanel();
         this.plugin = dialog.getPlugin();
-        this.buttonsToItemsMap = (Map<Object, Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.optionPanelGetButtonToItemMapMethod, optionPanel);
+        this.buttonsToItemsMap = (Map<ButtonAPI, Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.optionPanelGetButtonToItemMapMethod, optionPanel);
         this.self = this;
 
         populateOptions();
@@ -62,7 +58,7 @@ public abstract class OptionPanelListener {
         this.optionPanel = dialog_.getOptionPanel();
         this.visualPanel = dialog_.getVisualPanel();
         this.plugin = dialog_.getPlugin();
-        this.buttonsToItemsMap = (Map<Object, Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.optionPanelGetButtonToItemMapMethod, optionPanel);
+        this.buttonsToItemsMap = (Map<ButtonAPI, Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.optionPanelGetButtonToItemMapMethod, optionPanel);
 
         currentOption = null;
         currentOptions.clear();
@@ -89,11 +85,12 @@ public abstract class OptionPanelListener {
         Set<Object> newButtons = new HashSet<>();
         Set<Object> newOptions = new HashSet<>();
 
-        for (Map.Entry<Object, Object> entry : buttonsToItemsMap.entrySet()) {
-            if (currentButtons.contains(entry.getKey())) continue;
-            newButtons.add(entry.getKey());
+        for (Map.Entry<ButtonAPI, Object> entry : buttonsToItemsMap.entrySet()) {
+            ButtonAPI optionButton = entry.getKey();
+            if (currentButtons.contains(optionButton)) continue;
+            newButtons.add(optionButton);
 
-            Object oldListener = ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, entry.getKey());
+            Object oldListener = ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, optionButton);
             if (oldListener.getClass().equals(proxyListenerClass)) continue;
 
             Object optionData = ReflectionUtilis.invokeMethodDirectly(ClassRefs.getOptionDataMethod, entry.getValue());
@@ -101,10 +98,10 @@ public abstract class OptionPanelListener {
                 newOptions.add(optionData);
 
                 // add the interceptor listener for the option
-                ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, entry.getKey(), new ActionListener() {
+                ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, optionButton, new ActionListener() {
                     @Override
                     public void trigger(Object... args) {
-                        if (args[1] == entry.getKey()) {
+                        if (args[1] == optionButton) {
                             if (optionPanel.optionHasConfirmDelegate(optionData)) {
                                 // option (usually) opens a confirm dialog, but not in the case of CONTINUE_INTO_BATTLE and also Manage Storage/Refit Fleet options in rat settlements for example
                                 if (String.valueOf(optionData).equals("CONTINUE_INTO_BATTLE")) {
@@ -113,7 +110,7 @@ public abstract class OptionPanelListener {
 
                                 ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldListener, args);
                                 
-                                List<Object> children = (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.visualPanelGetChildrenNonCopyMethod, visualPanel);
+                                List<Object> children = (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelgetChildrenNonCopyMethod, visualPanel);
                                 Object confirmDialog = children.get(children.size()-1); // the standard confirm dialog
                                 // (ButtonAPI) ReflectionUtilis.getMethodAndInvokeDirectly("getButton", child, 1, 0), // Yes
                                 // (ButtonAPI) ReflectionUtilis.getMethodAndInvokeDirectly("getButton", child, 1, 1); // No
@@ -125,9 +122,10 @@ public abstract class OptionPanelListener {
 
                                 } else {
                                     // the confirm button is possibly nested, such as in the case of "transfer command for this engagement"
-                                    Object innerPanel = ReflectionUtilis.getMethodAndInvokeDirectly("getInnerPanel", confirmDialog, 0);
-                                    
-                                    if (innerPanel == null) {
+                                    Object innerPanel;
+                                    if (ClassRefs.confirmDialogClass.isInstance(confirmDialog)) {
+                                        innerPanel = ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetInnerPanelMethod, confirmDialog);
+                                    } else {
                                         executeAfter(optionData);
                                         updateOptions(newButtons, newOptions);
                                         populateOptions();
@@ -298,7 +296,7 @@ public abstract class OptionPanelListener {
 
             @Override
             public void advance(float amount) {
-                self.buttonsToItemsMap = (Map<Object, Object>)ReflectionUtilis.invokeMethodDirectly(ClassRefs.optionPanelGetButtonToItemMapMethod, optionPanel);
+                self.buttonsToItemsMap = (Map<ButtonAPI, Object>)ReflectionUtilis.invokeMethodDirectly(ClassRefs.optionPanelGetButtonToItemMapMethod, optionPanel);
                 populateOptions();
                 Global.getSector().removeTransientScript(this);
                 isDone = true;

@@ -5,6 +5,7 @@ import java.util.*;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 
+import data.scripts.ClassRefs;
 import data.scripts.util.ReflectionUtilis;
 
 public class TreeTraverser {
@@ -129,7 +130,12 @@ public class TreeTraverser {
     
     @SuppressWarnings("unchecked")
     private void getChildren(Object node, Object parent, int depth) {
-        List<Object> children = (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenCopy", node, 0);
+        List<Object> children;
+        if (ClassRefs.uiPanelClass.isInstance(node)) {
+            children = (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelgetChildrenCopyMethod, node);
+        } else {
+            children = null;
+        }
 
         if (children != null && !children.isEmpty()) {
             if (parent == null) {

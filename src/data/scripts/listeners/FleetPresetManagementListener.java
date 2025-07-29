@@ -222,7 +222,6 @@ public class FleetPresetManagementListener extends ActionListener {
     public FleetPresetManagementListener() {
         super();
         dockingListener = PresetUtils.getDockingListener();
-        print(CONFIRM_DIALOG_WIDTH, CONFIRM_DIALOG_HEIGHT);
     }
 
     @Override
@@ -908,7 +907,7 @@ public class FleetPresetManagementListener extends ActionListener {
         private void processRow(UIPanelAPI row, String rowName, int id) {
             PositionAPI rowPos = row.getPosition();
 
-            ButtonAPI button = (ButtonAPI) ReflectionUtilis.getMethodAndInvokeDirectly("getButton", row, 0);
+            ButtonAPI button = (ButtonAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.tableRowGetButtonMethod, row);
             button.setMouseOverSound(null);
             
             TableRowListener rowListener = new TableRowListener(row, rowPos, rowName, id);

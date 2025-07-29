@@ -1,12 +1,11 @@
 // Code taken and modified beyond recognition from Officer Extension mod
 package data.scripts;
 
-import com.fs.starfarer.api.EveryFrameScript;
-import com.fs.starfarer.api.Global;
-
 import com.fs.starfarer.campaign.fleet.CampaignFleet;
 // import com.fs.graphics.Sprite;
 // import com.fs.starfarer.campaign.fleet.FleetMember;
+
+import com.fs.starfarer.api.Global;
 
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.campaign.FleetEncounterContextPlugin;
@@ -28,10 +27,8 @@ import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.ReflectionUtilis;
 import data.scripts.util.ReflectionUtilis.ObfuscatedClasses;
 
+import java.awt.Color;
 import java.util.*;
-
-import org.apache.log4j.Logger;
-import org.lwjgl.input.Keyboard;
 
 /** Stores references to class objects in the obfuscated game files */
 public class ClassRefs {
@@ -43,6 +40,7 @@ public class ClassRefs {
      *  if any core UI is open. */
     public static Class<?> confirmDialogClass;
     public static Class<?>[] confirmDialogClassParamTypes;
+    public static Object confirmDialogGetHoloMethod;
     public static Object confirmDialogGetButtonMethod;
     public static Object confirmDialogGetInnerPanelMethod;
     public static Object confirmDialogShowMethod;
@@ -113,6 +111,7 @@ public class ClassRefs {
 
     public static Object tablePanelsetItemsSelectableMethod;
     public static Object tablePanelSelectMethod;
+    public static Object tableRowGetButtonMethod;
 
     public static Object campaignUIScreenPanelField;
     public static Object campaignUIGetCoreMethod;
@@ -127,6 +126,8 @@ public class ClassRefs {
     public static Object fleetPanelRecreateUIMethod;
     public static Object fleetPanelgetClickAndDropHandlerMethod;
     public static Object fleetPanelClickAndDropHandlerGetPickedUpMemberMethod;
+
+    public static Class<?> uiPanelSuperClass;
 
     /** Obfuscated InputEvent class */
     public static Class<?> inputEventClass;
@@ -148,16 +149,9 @@ public class ClassRefs {
             Class<?> interfc = interfaces[i];
 
             Object[] methods = interfc.getDeclaredMethods();
-            if (methods.length == 1) {
-                String methodName = ReflectionUtilis.getMethodName(methods[0]);
-
-                if (actionListenerInterface == null && methodName.equals("actionPerformed")) {
-                    actionListenerInterface = interfc;
-                    buttonListenerActionPerformedMethod = methods[0];
-
-                } else if (dialogDismissedInterface == null && methodName.equals("dialogDismissed")) {
-                    dialogDismissedInterface = interfc;
-                }
+            if (methods.length == 1 && ReflectionUtilis.getMethodName(methods[0]).equals("dialogDismissed")) {
+                dialogDismissedInterface = interfc;
+                break;
             }
         }
 
@@ -170,10 +164,10 @@ public class ClassRefs {
                 continue;
             }
             if (interactionDialogGetCoreUIMethod == null && InteractionDialogAPI.class.isAssignableFrom(cls) && !cls.isAnonymousClass()) {
-                visualPanelGetChildrenNonCopyMethod = ReflectionUtilis.getMethod("getChildrenNonCopy", cls, 0);
                 interactionDialogGetCoreUIMethod = ReflectionUtilis.getMethod("getCoreUI", cls, 0);
                 continue;
             }
+
             if (buttonClass == null && ButtonAPI.class.isAssignableFrom(cls)) {
                 buttonClass = cls;
                 buttonGetListenerMethod = ReflectionUtilis.getMethod("getListener", buttonClass, 0);
@@ -182,6 +176,9 @@ public class ClassRefs {
                 buttonSetShortcutMethod = ReflectionUtilis.getMethodExplicit("setShortcut", buttonClass, new Class<?>[]{int.class, boolean.class});
                 buttonSetButtonPressedSoundMethod = ReflectionUtilis.getMethod("setButtonPressedSound", buttonClass, 1);
                 buttonSetActiveMethod = ReflectionUtilis.getMethod("setActive", buttonClass, 1);
+
+                actionListenerInterface = ReflectionUtilis.getReturnType(buttonGetListenerMethod);
+                buttonListenerActionPerformedMethod = actionListenerInterface.getMethods()[0];
 
                 Object buttonPressedMethod = ReflectionUtilis.getMethod("buttonPressed", buttonClass, 2);
                 inputEventClass = ReflectionUtilis.getMethodParamTypes(buttonPressedMethod)[0];
@@ -196,6 +193,7 @@ public class ClassRefs {
 
                 campaignUIScreenPanelField = ReflectionUtilis.getFieldByName("screenPanel", cls);
                 uiPanelClass = ReflectionUtilis.getFieldType(campaignUIScreenPanelField);
+                uiPanelSuperClass = uiPanelClass.getSuperclass();
                 
                 outer:
                 for (Class<?> interfc : uiPanelClass.getInterfaces()) {
@@ -231,8 +229,8 @@ public class ClassRefs {
                 };
                 continue;
             }
-            Object[] methods = cls.getDeclaredMethods();
 
+            Object[] methods = cls.getDeclaredMethods();
             switch(methods.length) {
                 case 2:
                     if (getOptionDataMethod == null) {
@@ -269,6 +267,7 @@ public class ClassRefs {
                             if (((String)ReflectionUtilis.getMethodName(method)).equals("setNoiseOnConfirmDismiss")) {
                                 confirmDialogClass = cls;
         
+                                confirmDialogGetHoloMethod = ReflectionUtilis.getMethod("getHolo", confirmDialogClass, 0);
                                 confirmDialogGetButtonMethod = ReflectionUtilis.getMethod("getButton", confirmDialogClass, 1);
                                 confirmDialogGetInnerPanelMethod = ReflectionUtilis.getMethod("getInnerPanel", confirmDialogClass, 0);
                                 confirmDialogShowMethod = ReflectionUtilis.getMethod("show", confirmDialogClass, 2);
@@ -344,6 +343,9 @@ public class ClassRefs {
         Object tablePanel = tt.beginTable(Global.getSettings().getBasePlayerColor(), Global.getSettings().getBasePlayerColor(), Global.getSettings().getBasePlayerColor(), 1f, false, false, new Object[]{"", 1f});
         tablePanelsetItemsSelectableMethod = ReflectionUtilis.getMethod("setItemsSelectable", tablePanel, 1);
         tablePanelSelectMethod = ReflectionUtilis.getMethod("select", tablePanel, 2);
+
+        Object row = tt.addRowWithGlow(new Color(0, 0, 0), "");
+        tableRowGetButtonMethod = ReflectionUtilis.getMethod("getButton", row, 0);
     }
 
     /**Dummy function to call to load the class and run the static block in onApplicationLoad */

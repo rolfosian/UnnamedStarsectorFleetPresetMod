@@ -2009,10 +2009,14 @@ public class PresetUtils {
             @Override
             public void advance(float arg0) {
                 for (UIPanelAPI item : items) {
-                    for (TreeNode node :  new TreeTraverser(item).getNodes()) { // if we dont reinstantiate the traverser every frame then it doesnt work for some reason
+                    for (TreeNode node :  new TreeTraverser(item).getNodes()) { // if we dont reinstantiate the traverser every frame then it doesnt work for some reason, maybe this could be fixed by using getChildrenNonCopy instead of getChildenCopy, but I don't feel like fixing this that isn't broken right now
                         for (Object child : node.getChildren()) {
-                            Object tt = ReflectionUtilis.getMethodAndInvokeDirectly("getTooltip", child, 0);
-                            if (tt != null) ReflectionUtilis.getMethodAndInvokeDirectly("hideTooltip", child, 1, tt);
+                            if (ClassRefs.uiPanelSuperClass.isAssignableFrom(child.getClass())) {
+                                Object tt = ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelGetTooltipMethod, child);
+                                if (tt != null) {
+                                    ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelHideTooltipMethod, child, tt);
+                                } 
+                            }
                         }
                     }
                 }
