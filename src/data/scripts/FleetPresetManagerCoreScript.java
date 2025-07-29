@@ -3,32 +3,15 @@ package data.scripts;
 
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
-import com.fs.starfarer.api.campaign.*;
-import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.campaign.CampaignUIAPI;
-import com.fs.starfarer.api.campaign.InteractionDialogAPI;
-import com.fs.starfarer.api.campaign.SectorAPI;
-import com.fs.starfarer.api.campaign.CargoAPI;
-import com.fs.starfarer.api.campaign.CampaignFleetAPI;
-import com.fs.starfarer.api.campaign.econ.SubmarketAPI;
-import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
-import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.api.ui.TooltipMakerAPI;
-import com.fs.starfarer.api.util.IntervalUtil;
-import com.fs.starfarer.api.ui.ButtonAPI;
 
-import data.scripts.ui.*;
 import data.scripts.util.*;
-import data.scripts.listeners.*;
 import data.scripts.FleetPresetsFleetPanelInjector;
-
-import java.util.*;
 
 public class FleetPresetManagerCoreScript implements EveryFrameScript {
     private static void print(Object... args) {
         PresetMiscUtils.print(args);
     }
-    private static PresetUtils.FleetPreset currentFleetPreset;
 
     private boolean isFirstFrame = true;
     private final FleetPresetsFleetPanelInjector fleetPanelInjector;
