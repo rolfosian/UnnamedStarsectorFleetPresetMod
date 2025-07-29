@@ -111,7 +111,13 @@ public class UtilReflection {
     }
     
     private static void collectChildren(Object parent, List<Object> list) {
-        List<Object> children = (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelgetChildrenNonCopyMethod, parent);
+        List<Object> children;
+
+        if (ClassRefs.uiPanelClass.isInstance(parent)) {
+            children = (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelgetChildrenNonCopyMethod, parent);
+        } else {
+            children = null;
+        }
 
         if (children != null) {
             for (Object child : children) {
