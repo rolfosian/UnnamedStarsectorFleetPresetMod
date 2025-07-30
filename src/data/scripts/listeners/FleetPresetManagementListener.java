@@ -226,6 +226,9 @@ public class FleetPresetManagementListener extends ActionListener {
 
     @Override
     public void trigger(Object... args) {
+        PresetUtils.cleanUpPerishedPresetMembers();
+        if (PresetUtils.isAutoUpdatePresets()) PresetUtils.updateFleetPresetStats(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
+
         CustomPanelAPI tableMasterPanel = Global.getSettings().createCustom(PANEL_WIDTH - CANCEL_CONFIRM_BUTTON_WIDTH - 5f, PANEL_HEIGHT, new BaseCustomUIPanelPlugin() );
         ConfirmDialogData master = UtilReflection.showConfirmationDialog(
             "graphics/illustrations/abyssal_light2.jpg",
@@ -240,10 +243,7 @@ public class FleetPresetManagementListener extends ActionListener {
                     resetTopLevelVars();
                 }
         });
-        if (master == null) {
-            return;
-        }
-        PresetUtils.updateFleetPresetStats(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
+        if (master == null) return;
 
         overlordPanel = master.panel;
         overlordPanelPos = master.panel.getPosition();
@@ -335,7 +335,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
         ButtonAPI autoUpdateButton = tooltipMaker.addCheckbox(buttonWidth, buttonHeight, AUTO_UPDATE_BUTTON_TEXT, AUTO_UPDATE_BUTTON_ID, Fonts.ORBITRON_12, c1,
         ButtonAPI.UICheckboxSize.SMALL, 5f);
-        autoUpdateButton.setChecked((boolean)Global.getSector().getPersistentData().get(PresetUtils.IS_AUTO_UPDATE_KEY));
+        autoUpdateButton.setChecked(PresetUtils.isAutoUpdatePresets());
         tooltipMaker.addTooltipTo(tc(AUTO_UPDATE_BUTTON_TOOLTIP_PARA_TEXT), autoUpdateButton, TooltipLocation.RIGHT, false);
 
         // ButtonAPI cargoRatiosButton = tooltipMaker.addCheckbox(buttonWidth, buttonHeight, KEEP_CARGO_RATIOS_BUTTON_TEXT, KEEP_CARGO_RATIOS_BUTTON_ID, Fonts.ORBITRON_12, c1,
@@ -1225,6 +1225,7 @@ public class FleetPresetManagementListener extends ActionListener {
                     selectedPresetName = text;
                     PresetUtils.saveFleetPreset(selectedPresetName);
                     refreshTableMap();
+                    selectedRowIndex = getTableMapIndex(selectedPresetName);
 
                     if (Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY) == null) {
                         Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, PresetUtils.getFleetPresets().get(selectedPresetName));
@@ -1277,7 +1278,7 @@ public class FleetPresetManagementListener extends ActionListener {
                         selectPreset(EMPTY_STRING, -1);
                     } else {
                         selectPreset(tableRowListeners.get(tableRowListeners.size() - selectedRowIndex - 1).rowName,
-                         tableRowListeners.size() - selectedRowIndex - 1);
+                        tableRowListeners.size() - selectedRowIndex - 1);
                         enableButtonsRequiringSelection();
                     }
                     tablePlugin.rebuild();

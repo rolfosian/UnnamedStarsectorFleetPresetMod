@@ -15,8 +15,7 @@ public class FleetMonitor implements EveryFrameScript {
         PresetMiscUtils.print(args);
     }
     
-    IntervalUtil checkFleetInterval = new IntervalUtil(0.2f, 0.3f);
-    IntervalUtil checkPerishedMembersInterval = new IntervalUtil(599f, 600f);
+    IntervalUtil checkFleetInterval = new IntervalUtil(0.1f, 0.1f);
 
     RunningMembers runningMembers;
     public FleetMonitor() {
@@ -27,15 +26,9 @@ public class FleetMonitor implements EveryFrameScript {
     public void advance(float amount) {
         if (Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY) != null) return;
         checkFleetInterval.advance(amount);
-        checkPerishedMembersInterval.advance(amount);
 
-        if (checkFleetInterval.intervalElapsed()) {
-        runningMembers = PresetUtils.checkFleetAgainstPreset(runningMembers);
-
-            if (checkPerishedMembersInterval.intervalElapsed()) {
-                // if garbage needs collecting
-                PresetUtils.cleanUpPerishedPresetMembers();
-            }
+        if (checkFleetInterval.intervalElapsed() && Global.getSettings().isInCampaignState()) {
+            runningMembers = PresetUtils.checkFleetAgainstPreset(runningMembers);
         }
     }
 
