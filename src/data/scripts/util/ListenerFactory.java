@@ -50,10 +50,6 @@ public class ListenerFactory {
                 actualSamMethodType
             );
 
-            actualSamMethodType = MethodType.methodType(void.class, Object.class, Object.class);
-            implSignature = MethodType.methodType(void.class, Object.class, Object.class);
-            implementationMethodHandle = lookup.findVirtual(ActionListenerProxy.class, "actionPerformed", implSignature);
-
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
