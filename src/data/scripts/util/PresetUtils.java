@@ -328,14 +328,7 @@ public class PresetUtils {
         }
 
         public void removeFrompreset() {
-            this.preset.getShipIds().remove(this.index);
-            this.preset.getVariantsMap().remove(this.index);
-            this.preset.getVariantWrappers().remove(this.index);
-            this.preset.getFleetMembers().remove(this.index);
-            this.preset.getOfficersMap().remove(this.index);
-            this.captainCopy = null;
-
-            this.preset.rebuildPreset();
+            this.preset.rebuildPresetWithoutMember(this.id);
         }
 
         public FleetPreset getPreset() {
@@ -447,7 +440,7 @@ public class PresetUtils {
                     this.campaignFleet.getFleetData().setFlagship(wrappedMember.getMember());
                 }
 
-                if (presetsMembers.get(member.getId()) == null) getFleetPresetsMembers().put(member.getId(), new ArrayList<>());
+                if (presetsMembers.get(member.getId()) == null) presetsMembers.put(member.getId(), new ArrayList<>());
                 presetsMembers.get(member.getId()).add(wrappedMember);
             }
         }
@@ -536,19 +529,30 @@ public class PresetUtils {
             }
         }
 
-        public void rebuildPreset() {
+        public void rebuildPresetWithoutMember(String idOfmemberToLose) {
             List<FleetMemberWrapper> wrappedMembers = new ArrayList<>();
             Map<String, List<FleetMemberWrapper>> presetsMembers = getFleetPresetsMembers();
 
-            if (this.campaignFleet != null) {
-                this.campaignFleet.despawn();
-                this.campaignFleet = null;
-            }
+            int numMembers = this.fleetMembers.size(); 
+            for (int i = 0; i < numMembers; i++) {
+                FleetMemberWrapper wrappedMember = this.fleetMembers.get(i);
 
-            for (FleetMemberWrapper wrappedMember : this.fleetMembers) {
-                wrappedMembers.add(wrappedMember);
-                this.getCampaignFleet().getFleetData().removeFleetMember(wrappedMember.getMember());
-                presetsMembers.get(wrappedMember.getId()).remove(wrappedMember);
+                List<FleetMemberWrapper> siblingMembers = presetsMembers.get(wrappedMember.getId());
+                if (siblingMembers != null)  {
+                    siblingMembers.remove(wrappedMember);
+                }
+
+                if (!wrappedMember.getId().equals(idOfmemberToLose)) {
+                    wrappedMembers.add(wrappedMember);
+
+                } else if (wrappedMember.getCaptainId().equals(Global.getSector().getPlayerPerson().getId())) {
+                    
+                    if (i - 1 >= 0) {
+                        this.fleetMembers.get(i-1).updateCaptain(Global.getSector().getPlayerPerson());
+                    } else if (i + 1 < numMembers - 2) {
+                        this.fleetMembers.get(i+1).updateCaptain(Global.getSector().getPlayerPerson());
+                    }
+                }
             }
 
             this.fleetMembers.clear();
@@ -558,30 +562,27 @@ public class PresetUtils {
             this.officersMap.clear();
 
             for (int i = 0; i < wrappedMembers.size(); i++) {
-                FleetMemberWrapper member = wrappedMembers.get(i);
-                String hullId = member.getMember().getHullSpec().getBaseHullId();
-                
-                FleetMemberWrapper wrappedMember = new FleetMemberWrapper(this, member.getParentMember(), member.getMember().getVariant(), member.getMember().getCaptain(), i);
-                this.getCampaignFleet().getFleetData().addFleetMember(wrappedMember.getMember());
+                FleetMemberWrapper wrappedMember = wrappedMembers.get(i);
+                String hullId = wrappedMember.getParentMember().getHullSpec().getBaseHullId();
+                wrappedMember.setIndex(i);
 
-                if (presetsMembers.get(member.getId()) == null) getFleetPresetsMembers().put(member.getId(), new ArrayList<>());
-                presetsMembers.get(member.getId()).add(wrappedMember);
+                if (presetsMembers.get(wrappedMember.getId()) == null) presetsMembers.put(wrappedMember.getId(), new ArrayList<>());
+                presetsMembers.get(wrappedMember.getId()).add(wrappedMember);
                 
                 this.fleetMembers.add(wrappedMember);
                 
                 this.shipIds.add(hullId);
-                this.variantsMap.put(i, member.getMember().getVariant());
-                this.variantWrappers.put(i, new VariantWrapper(member.getMember().getVariant(), i, this));
-                
-                if (!isOfficerNought(member.getMember().getCaptain())) {
-                    this.officersMap.put(i, new OfficerVariantPair(member.getMember().getCaptain(), member.getMember().getVariant(), i));
-                    if (Global.getSector().getPlayerPerson().getId().equals(member.getCaptainId())) {
-                        this.getCampaignFleet().setCommander(wrappedMember.getMember().getCaptain());
-                        this.getCampaignFleet().getFleetData().setFlagship(wrappedMember.getMember());
-                    }
-                }
+                this.variantsMap.put(i, wrappedMember.getParentMember().getVariant());
+                this.variantWrappers.put(i, new VariantWrapper(wrappedMember.getParentMember().getVariant(), i, this));
+
             }
-            Global.getSector().getCampaignUI().addMessage("The fleet composition has changed and the " + this.name + " fleet preset has been updated.", Misc.getBasePlayerColor());
+            if (this.campaignFleet != null) {
+                for (FleetMemberAPI member : this.campaignFleet.getFleetData().getMembersListCopy()) this.campaignFleet.getFleetData().removeFleetMember(member);
+                this.campaignFleet.despawn();
+                this.campaignFleet = null;
+            }
+
+            Global.getSector().getCampaignUI().addMessage("The fleet composition has changed and the " + this.name + " fleet preset has been updated. Reason: Ship Lost", Misc.getBasePlayerColor());
         }
 
         public String getName() {
@@ -652,7 +653,7 @@ public class PresetUtils {
                 }
             }
     
-            if (isPresetMemberPerished(wrappedMembers.get(0).getParentMember(), isStored)) {
+            if (isMemberPerished(wrappedMembers.get(0).getParentMember(), isStored)) {
                 toRemoveKeys.add(memberId);
                 toRemoveMembers.addAll(wrappedMembers);
             }
@@ -668,16 +669,16 @@ public class PresetUtils {
     }
 
     // note: this will return true if it's called after a player has picked up a fleet member with the mouse in the fleet tab of the coreui and before it is put back down again, so contingencies are required for that
-    public static boolean isPresetMemberPerished(FleetMemberAPI member, boolean isStored) {
+    public static boolean isMemberPerished(FleetMemberAPI member, boolean isStored) {
         if (isStored) {
             return false;
         } else if (member.getFleetData() == null) {
             return true;
         } else if (member.getFleetData().getFleet() == null) {
-            // edge case - initmothballedships was called on this member's  market shortly before it was decivilized and it hasn't been nulled yet
+            // edge case - initmothballedships was called on this member's market shortly before it was decivilized and its fleetData hasn't been nulled yet
             return true;
         }
-        return false;
+        return !Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder().contains(member); // FleetData can still remain non-null for member in the case of recovery dialog opened and member not recovered
     }
 
     public static List<FleetMemberWrapper> getMemberCopiesFromPresets(FleetMemberAPI member) {
@@ -848,10 +849,6 @@ public class PresetUtils {
                     }
                 }
 
-                if (preset.getCampaignFleet() == null) preset.setCampaignFleet(createDummyPresetFleet());
-                for (FleetMemberWrapper wrappedMember : preset.getFleetMembers()) {
-                    preset.getCampaignFleet().getFleetData().removeFleetMember(wrappedMember.getMember());
-                }
                 preset.getFleetMembers().clear();
 
                 preset.getShipIds().clear();
@@ -868,10 +865,10 @@ public class PresetUtils {
                     FleetMemberWrapper wrappedMember = new FleetMemberWrapper(preset, member, variant, member.getCaptain(), i);
                     preset.getCampaignFleet().getFleetData().addFleetMember(wrappedMember.getMember());
 
-                    if (presetsMembers.get(member.getId()) == null) getFleetPresetsMembers().put(member.getId(), new ArrayList<>());
+                    if (presetsMembers.get(member.getId()) == null) presetsMembers.put(member.getId(), new ArrayList<>());
                     if (!presetsMembers.get(member.getId()).contains(wrappedMember)) presetsMembers.get(member.getId()).add(wrappedMember);
 
-                    List<FleetMemberWrapper> presetMembers = getFleetPresetsMembers().get(member.getId());
+                    List<FleetMemberWrapper> presetMembers = presetsMembers.get(member.getId());
                     if (presetMembers != null) {
                         for (int j = 0; j < presetMembers.size(); j++) {
                             FleetMemberWrapper presetMember = presetMembers.get(j);
@@ -884,8 +881,8 @@ public class PresetUtils {
                         }
                         
                     } else {
-                        getFleetPresetsMembers().put(member.getId(), new ArrayList<>());
-                        getFleetPresetsMembers().get(member.getId()).add(wrappedMember);
+                        presetsMembers.put(member.getId(), new ArrayList<>());
+                        presetsMembers.get(member.getId()).add(wrappedMember);
                     }
                     preset.getFleetMembers().add(wrappedMember);
                     
@@ -893,15 +890,11 @@ public class PresetUtils {
                     preset.getVariantsMap().put(i, variant);
                     preset.getVariantWrappers().put(i, new VariantWrapper(variant, i, preset));
                     
-                    if (!isOfficerNought(member.getCaptain())) {
-                        preset.getOfficersMap().put(i, new OfficerVariantPair(member.getCaptain(), variant, i));
-
-                        if (wrappedMember.getCaptainId().equals(Global.getSector().getPlayerPerson().getId())) {
-                            preset.getCampaignFleet().setCommander(wrappedMember.getMember().getCaptain());
-                            preset.getCampaignFleet().getFleetData().setFlagship(wrappedMember.getMember());
-                        }
-                    }
                 }
+
+                for (FleetMemberAPI member : preset.getCampaignFleet().getFleetData().getMembersListCopy()) preset.getCampaignFleet().getFleetData().removeFleetMember(member);
+                preset.getCampaignFleet().despawn();
+                preset.setCampaignFleet(null);
 
                 if (officersToReassign != null) {
                     for (PersonAPI officer : officersToReassign) {
@@ -914,6 +907,7 @@ public class PresetUtils {
                         }
                     }
                 }
+
                 Global.getSector().getCampaignUI().addMessage("The fleet composition has changed and the " + preset.getName() + " fleet preset has been updated. Reason: " + reason, Misc.getBasePlayerColor());
 
             } else {
@@ -1018,7 +1012,6 @@ public class PresetUtils {
                         }
                     }
                     variantMatched = true;
-                    break;
                 }
                 
                 if (!variantMatched) {
@@ -1070,7 +1063,6 @@ public class PresetUtils {
                         }
                     }
                     variantMatched = true;
-                    break;
                 }
                 
                 if (!variantMatched) {
@@ -1165,7 +1157,6 @@ public class PresetUtils {
 
             if (areSameVariant(presetVariant, variant)) {
                 variantMatched = true;
-                break;
             }
             
             if (!variantMatched) {

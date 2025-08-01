@@ -121,6 +121,9 @@ public class FleetPresetsFleetPanelInjector {
 
         if (injected) {
             setCurrentPresetLabel(playerFleetMembers);
+            if (market == null && currentPresetLabel != null && PresetUtils.isAutoUpdatePresets()) {
+                dockingListener.setUndockedPreset(currentPresetLabel.getInstance().getText());
+            }
 
             if (market != null && CargoPresetUtils.getStorageSubmarket(market) != null) {
                 if (dockingListener.canPlayerAccessStorage(market)) {
@@ -199,6 +202,9 @@ public class FleetPresetsFleetPanelInjector {
                     Keyboard.KEY_A);
 
             setCurrentPresetLabel(playerFleetMembers);
+            if (market == null && currentPresetLabel != null && PresetUtils.isAutoUpdatePresets()) {
+                dockingListener.setUndockedPreset(currentPresetLabel.getInstance().getText());
+            }
 
             if (UIConfig.DISPLAY_HEIGHT > 800) {
                 Position pos = fleetTabLeftPane.add(presetFleetsButton);

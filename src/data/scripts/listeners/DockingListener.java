@@ -68,6 +68,15 @@ public class DockingListener extends BaseCampaignEventListener {
         }
     }
 
+    public void setUndockedPreset(String presetName) {
+        FleetPreset preset = PresetUtils.getFleetPresets().get(presetName);
+        if (preset != null) {
+            Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, preset);
+        } else {
+            Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
+        }
+    }
+
     @Override
     public void reportPlayerClosedMarket(MarketAPI market) {
         MemoryAPI mem = Global.getSector().getMemoryWithoutUpdate();
