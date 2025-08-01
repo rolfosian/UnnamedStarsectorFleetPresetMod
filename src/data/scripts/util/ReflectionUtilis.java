@@ -797,6 +797,31 @@ public class ReflectionUtilis {
         }
     }
 
+    public static List<Class<?>[]> getConstructorParamTypes(Class<?> cls) {
+        Object[] ctors = cls.getDeclaredConstructors();
+        List<Class<?>[]> lst = new ArrayList<>();
+
+        try {
+            for (Object ctor : ctors) {
+                Class<?>[] ctorParams = (Class<?>[]) getConstructorParameterTypesHandle.invoke(ctor);
+                lst.add(ctorParams);
+            }
+            return lst;
+
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Class<?>[] getConstructorParamTypesSingleConstructor(Class<?> cls) {
+        Object ctor = cls.getDeclaredConstructors()[0];
+        try {
+            return (Class<?>[]) getConstructorParameterTypesHandle.invoke(ctor);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static Object instantiateClass(Class<?> clazz, Class<?>[] paramTypes, Object... params) {
         try {
             Object ctor = clazz.getDeclaredConstructor(paramTypes);

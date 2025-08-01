@@ -61,6 +61,11 @@ public class TreeTraverser {
         refresh();
     }
 
+    public TreeTraverser(Object parentPanel, int depthLimit) {
+        this.parentPanel = parentPanel;
+        refresh(depthLimit);
+    }
+
     public void removeBranch() {
         TreeNode node = getCurrentNode();
         Object parent = node.getParent();
@@ -111,12 +116,6 @@ public class TreeTraverser {
         currentIndex = 0;
     }
 
-    public void refresh() {
-        this.nodes = new ArrayList<>();
-        this.currentIndex = 0;
-        this.getChildren(parentPanel, null, 0);
-    }
-
     public void clearPanel() { // this is dangerous to use and i cant be bothered debugging it, sometimes it goes above the top level for some reason idk. it's good for clearing ConfirmDialog panels though
         while (this.goDownOneLevel()) {}
         for (int i = 0; i < this.getNodes().size(); i++) {
@@ -126,6 +125,18 @@ public class TreeTraverser {
             }
             this.goUpOneLevel();
         }
+    }
+
+    public void refresh() {
+        this.nodes = new ArrayList<>();
+        this.currentIndex = 0;
+        this.getChildren(parentPanel, null, 0);
+    }
+
+    public void refresh(int depthLimit) {
+        this.nodes = new ArrayList<>();
+        this.currentIndex = 0;
+        this.getChildren(parentPanel, null, 0, depthLimit);
     }
     
     @SuppressWarnings("unchecked")
@@ -147,6 +158,31 @@ public class TreeTraverser {
 
             for (Object child : children) {
                 this.getChildren(child, node, depth);
+            }
+        }
+        return;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void getChildren(Object node, Object parent, int depth, int depthLimit) {
+        List<Object> children;
+        if (ClassRefs.uiPanelClass.isInstance(node)) {
+            children = (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelgetChildrenCopyMethod, node);
+        } else {
+            children = null;
+        }
+
+        if (children != null && !children.isEmpty()) {
+            if (parent == null) {
+                this.nodes.add(new TreeNode(node, children, depth));
+            } else {
+                this.nodes.add(new TreeNode(parent, children, depth));
+            }
+            depth++;
+            if (depth == depthLimit) return;
+
+            for (Object child : children) {
+                this.getChildren(child, node, depth, depthLimit);
             }
         }
         return;

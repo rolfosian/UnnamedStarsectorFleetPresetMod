@@ -59,6 +59,10 @@ public class ClassRefs {
 
     /** Obfuscated UI panel class */
     public static Class<?> uiPanelClass;
+    public static Class<?>[] uiPanelClassConstructorParamTypes = new Class<?>[] {
+        float.class,
+        float.class,
+    };
     public static Object uiPanelsetParentMethod;
     public static Object uiPanelsetOpacityMethod;
     public static Object uiPanelgetChildrenNonCopyMethod;
@@ -142,6 +146,11 @@ public class ClassRefs {
 
     /** method to get optionData from optionItem class that is the type of the values of the InteractionDialogAPI OptionPanel's buttonsToItemsMap */
     public static Object getOptionDataMethod;
+
+    public static Class<?>[] standardTooltipV2ConstructorParamTypes = ReflectionUtilis.getConstructorParamTypesSingleConstructor(com.fs.starfarer.ui.impl.StandardTooltipV2.class);
+    public static Class<?> CRBarClass;
+    public static Object CRBarClassSetProgressMethod;
+    public static Object CRBarClassForceSyncMethod;
 
     static {
         Class<?>[] interfaces = ObfuscatedClasses.getInterfaces();
@@ -264,7 +273,7 @@ public class ClassRefs {
                         for (int j = 0; j < methods.length; j++) {
                             Object method = methods[j];
         
-                            if (((String)ReflectionUtilis.getMethodName(method)).equals("setNoiseOnConfirmDismiss")) {
+                            if ((ReflectionUtilis.getMethodName(method)).equals("setNoiseOnConfirmDismiss")) {
                                 confirmDialogClass = cls;
         
                                 confirmDialogGetHoloMethod = ReflectionUtilis.getMethod("getHolo", confirmDialogClass, 0);
@@ -328,6 +337,29 @@ public class ClassRefs {
                                     }
                                 }
                                 break;
+                            }
+                        }
+                    }
+                    continue;
+
+                case 56:
+                    if (CRBarClass == null) {
+                        outer:
+                        for (int j = 0; j < methods.length; j++) {
+                            Object method = methods[j];
+
+                            if (ReflectionUtilis.getMethodName(method).equals("setProgress")) {
+                                CRBarClass = cls;
+                                CRBarClassSetProgressMethod = method;
+
+                                for (int k = 0; k < methods.length; k++) {
+                                    Object methode = methods[k];
+
+                                    if (ReflectionUtilis.getMethodName(methode).equals("forceSync")) {
+                                        CRBarClassForceSyncMethod = methode;
+                                        break outer;
+                                    }
+                                }
                             }
                         }
                     }

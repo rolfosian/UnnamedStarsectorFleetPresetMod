@@ -343,8 +343,57 @@ public class UtilReflection {
         }
     }
 
+    public static Object getCRBarFromTooltip(TreeTraverser traverser) {
+        for (TreeNode node : traverser.getNodesAtDepth(2)) {
+            for (Object child : node.getChildren()) {
+                if (LabelAPI.class.isAssignableFrom(child.getClass())) {
+                    if(((LabelAPI)child).getText().equals("Combat readiness")) {
+                        for (Object target : node.getChildren()) {
+                            if (ClassRefs.CRBarClass.isInstance(target)) {
+                                return target;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    // tooltip parameter needs to be set on button before this is called. natively the expanded tooltip doesnt show the actual CR, but the maximum, so we do this to 'fix' it
+    public static StandardTooltipV2 fixCRBar(ButtonAPI btn, FleetMemberAPI member, StandardTooltipV2 tt) {
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelShowTooltipMethod, btn, tt);
+        Object CRBar = getCRBarFromTooltip(new TreeTraverser(tt, 3));
+
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.CRBarClassSetProgressMethod, CRBar, member.getRepairTracker().getCR() * 100f);
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.CRBarClassForceSyncMethod, CRBar);
+        UIComponentAPI contents = (UIComponentAPI) tt.getContents();
+        PositionAPI contentsPos = contents.getPosition();
+
+        Object panel = ReflectionUtilis.instantiateClass(ClassRefs.uiPanelClass,
+            ClassRefs.uiPanelClassConstructorParamTypes,
+            contentsPos.getWidth(),
+            contentsPos.getHeight()
+        );
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelHideTooltipMethod, btn, tt);
+
+        StandardTooltipV2 newTt = (StandardTooltipV2) ReflectionUtilis.instantiateClass(StandardTooltipV2.class,
+            ClassRefs.standardTooltipV2ConstructorParamTypes,
+            contents,
+            panel
+            );
+        newTt.setCodexEntryFleetMember(member);
+
+        return newTt;
+    }
+
     public static void setButtonTooltip(ButtonAPI btn, FleetMemberAPI member) {
-        ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelSetTooltipMethod, btn, 5f, createShipButtonTooltip(member));
+        StandardTooltipV2 tt = createShipButtonTooltip(member);
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelSetTooltipMethod, btn, 5f, tt);
+
+        if (member.getRepairTracker().getMaxCR() != member.getRepairTracker().getCR()) {
+            ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelSetTooltipMethod, btn, 5f, fixCRBar(btn, member, tt));
+        }
     }
 
     public static void setButtonTooltipWithPostProcessing(ButtonAPI btn, FleetMemberAPI member) {
@@ -352,7 +401,7 @@ public class UtilReflection {
         ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelsetOpacityMethod, tt, 0.5f);
         ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelSetTooltipMethod, btn, 5f, tt);
 
-        UIPanel ttPa = new UIPanel(tt);
+        UIPanelAPI ttPa = (UIPanelAPI) tt;
 
         ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelShowTooltipMethod, btn, tt);
         tt.makeNonExpandable();
@@ -368,7 +417,7 @@ public class UtilReflection {
         overlay.setButtonPressedSound(null);
 
         pane.addUIElement(ttB);
-        ttPa.getInstance().addComponent(pane).inTL(-1f, 1f);
+        ttPa.addComponent(pane).inTL(-1f, 1f);
     }
 
     public static StandardTooltipV2 getButtonTooltip(ButtonAPI btn) {

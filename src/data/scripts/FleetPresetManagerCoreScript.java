@@ -38,10 +38,7 @@ public class FleetPresetManagerCoreScript implements EveryFrameScript {
             if (ReflectionUtilis.getPrivateVariable(ClassRefs.campaignUIScreenPanelField, campaignUI) == null) {
                 ReflectionUtilis.setPrivateVariable(ClassRefs.campaignUIScreenPanelField, campaignUI,
                     ReflectionUtilis.instantiateClass(ClassRefs.uiPanelClass,
-                    new Class<?>[] {
-                        float.class,
-                        float.class,
-                    },
+                    ClassRefs.uiPanelClassConstructorParamTypes,
                     Global.getSettings().getScreenWidth(),
                     Global.getSettings().getScreenHeight()
                     )
