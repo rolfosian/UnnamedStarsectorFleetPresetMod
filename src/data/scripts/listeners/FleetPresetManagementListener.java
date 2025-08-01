@@ -1004,12 +1004,15 @@ public class FleetPresetManagementListener extends ActionListener {
                     if (PresetUtils.isPresetPlayerFleet(selectedPreset)) {
                         isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet"));
                         isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
+
                     } else if (PresetUtils.isPresetPlayerFleetOfficerAgnostic(selectedPreset)) {
                         isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet but the ship order or officer assignments are different."));
                         isSelectedPresetAvailablePara.setColor(TEXT_HIGHLIGHT_COLOR);
+
                     } else if (PresetUtils.isPresetContainedInPlayerFleet(selectedPreset)) {
-                        isSelectedPresetAvailablePara.setText(String.format("Selected Preset is part of the current fleet"));
+                        isSelectedPresetAvailablePara.setText(String.format("Selected Preset is a part of the current fleet"));
                         isSelectedPresetAvailablePara.setColor(TEXT_HIGHLIGHT_COLOR);
+
                     } else {
                         isSelectedPresetAvailablePara.setText(String.format(isSelectedPresetAvailableParaFormat, "only partially available, or unavailable"));
                         isSelectedPresetAvailablePara.setColor(Misc.getNegativeHighlightColor());
