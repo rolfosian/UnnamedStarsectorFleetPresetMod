@@ -344,20 +344,21 @@ public class UtilReflection {
     }
 
     public static Object getCRBarFromTooltip(TreeTraverser traverser) {
-        for (TreeNode node : traverser.getNodesAtDepth(2)) {
-            for (Object child : node.getChildren()) {
-                if (LabelAPI.class.isAssignableFrom(child.getClass())) {
-                    if(((LabelAPI)child).getText().equals("Combat readiness")) {
-                        for (Object target : node.getChildren()) {
-                            if (ClassRefs.CRBarClass.isInstance(target)) {
-                                return target;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return null;
+        return traverser.getNodesAtDepth(2).get(0).getChildren().get(1);
+        // for (TreeNode node : traverser.getNodesAtDepth(2)) {
+        //     for (Object child : node.getChildren()) {
+        //         if (LabelAPI.class.isAssignableFrom(child.getClass())) {
+        //             if(((LabelAPI)child).getText().equals("Combat readiness")) {
+        //                 for (Object target : node.getChildren()) {
+        //                     if (ClassRefs.CRBarClass.isInstance(target)) {
+        //                         return target;
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
+        // return null;
     }
 
     // tooltip parameter needs to be set on button before this is called. natively the expanded tooltip doesnt show the actual CR, but the maximum, so we do this to 'fix' it
