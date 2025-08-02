@@ -1,0 +1,2 @@
+command,class,tags,syntax,help
+ufp_deleteall,data.scripts.console.DeleteFleetPresets,"cheat,campaign",ufp_deleteall,Deletes All Fleet Presets.

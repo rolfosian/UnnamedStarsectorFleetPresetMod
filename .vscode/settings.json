@@ -3,8 +3,9 @@
         "src"
     ],
     "java.project.referencedLibraries": [
-        "c:\\Starsector\\mods\\Nexerelin\\jars\\ExerelinCore.jar",
+        "c:\\Starsector\\mods\\Console Commands\\jars\\lw_Console.jar",
         "c:\\Starsector\\mods\\LunaLib\\jars\\LunaLib.jar",
+        "c:\\Starsector\\mods\\Nexerelin\\jars\\ExerelinCore.jar",
         "c:\\Starsector\\starsector-core\\starfarer.api.jar",
         "c:\\Starsector\\starsector-core\\log4j-1.2.9.jar",
         "c:\\Starsector\\mods\\Random-Assortment-of-Things\\jars\\RandomAssortmentofThings.jar",
