@@ -549,7 +549,7 @@ public class PresetUtils {
                     
                     if (i - 1 >= 0) {
                         this.fleetMembers.get(i-1).updateCaptain(Global.getSector().getPlayerPerson());
-                    } else if (i + 1 < numMembers - 2) {
+                    } else if (i + 1 < numMembers) {
                         this.fleetMembers.get(i+1).updateCaptain(Global.getSector().getPlayerPerson());
                     }
                 }
@@ -569,13 +569,15 @@ public class PresetUtils {
                 if (presetsMembers.get(wrappedMember.getId()) == null) presetsMembers.put(wrappedMember.getId(), new ArrayList<>());
                 presetsMembers.get(wrappedMember.getId()).add(wrappedMember);
                 
-                this.fleetMembers.add(wrappedMember);
-                
                 this.shipIds.add(hullId);
+                this.fleetMembers.add(wrappedMember);
+
                 this.variantsMap.put(i, wrappedMember.getParentMember().getVariant());
                 this.variantWrappers.put(i, new VariantWrapper(wrappedMember.getParentMember().getVariant(), i, this));
-
+                
+                this.officersMap.put(i, new OfficerVariantPair(wrappedMember.getParentMember().getCaptain(), wrappedMember.getParentMember().getVariant(), i));
             }
+
             if (this.campaignFleet != null) {
                 for (FleetMemberAPI member : this.campaignFleet.getFleetData().getMembersListCopy()) this.campaignFleet.getFleetData().removeFleetMember(member);
                 this.campaignFleet.despawn();
