@@ -344,7 +344,7 @@ public class UtilReflection {
     }
 
     public static Object getCRBarFromTooltip(TreeTraverser traverser) {
-        return traverser.getNodesAtDepth(2).get(0).getChildren().get(1);
+        return traverser.getTargetChild();
         // for (TreeNode node : traverser.getNodesAtDepth(2)) {
         //     for (Object child : node.getChildren()) {
         //         if (LabelAPI.class.isAssignableFrom(child.getClass())) {
@@ -364,7 +364,7 @@ public class UtilReflection {
     // tooltip parameter needs to be set on button before this is called. natively the expanded tooltip doesnt show the actual CR, but the maximum, so we do this to 'fix' it
     public static StandardTooltipV2 fixCRBar(ButtonAPI btn, FleetMemberAPI member, StandardTooltipV2 tt) {
         ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelShowTooltipMethod, btn, tt);
-        Object CRBar = getCRBarFromTooltip(new TreeTraverser(tt, 3));
+        Object CRBar = getCRBarFromTooltip(new TreeTraverser(tt, 0, 5, 1));
 
         ReflectionUtilis.invokeMethodDirectly(ClassRefs.CRBarClassSetProgressMethod, CRBar, member.getRepairTracker().getCR() * 100f);
         ReflectionUtilis.invokeMethodDirectly(ClassRefs.CRBarClassForceSyncMethod, CRBar);
