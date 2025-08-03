@@ -304,6 +304,7 @@ public class PresetUtils {
             return captainCopy;
         }
 
+        /**not to be confused with updateOfficer */
         public void updateCaptain(PersonAPI captain) {
             if (captain == null) {
                 this.captainId = null;
@@ -328,6 +329,7 @@ public class PresetUtils {
         }
 
         public void removeFrompreset() {
+            Global.getSector().getPlayerFleet().getFleetData().ensureHasFlagship();
             this.preset.rebuildPresetWithoutMember(this.id);
         }
 
@@ -473,9 +475,8 @@ public class PresetUtils {
             Map<String, List<FleetMemberWrapper>> presetsMembersMap = getFleetPresetsMembers();
             if (presetsMembersMap.get(newMember.getId()) == null) {
                 presetsMembersMap.put(newMember.getId(), new ArrayList<>());
-            } else {
-                presetsMembersMap.get(newMember.getId()).remove(oldWrappedMember);
             }
+            presetsMembersMap.get(oldWrappedMember.getId()).remove(oldWrappedMember);
 
             ShipVariantAPI newVariant = newMember.getVariant().clone();
             FleetMemberWrapper newWrappedMember = new FleetMemberWrapper(this, newMember, newVariant, newMember.getCaptain(), index);
@@ -533,7 +534,7 @@ public class PresetUtils {
             List<FleetMemberWrapper> wrappedMembers = new ArrayList<>();
             Map<String, List<FleetMemberWrapper>> presetsMembers = getFleetPresetsMembers();
 
-            int numMembers = this.fleetMembers.size(); 
+            int numMembers = this.fleetMembers.size();
             for (int i = 0; i < numMembers; i++) {
                 FleetMemberWrapper wrappedMember = this.fleetMembers.get(i);
 
@@ -546,12 +547,7 @@ public class PresetUtils {
                     wrappedMembers.add(wrappedMember);
 
                 } else if (wrappedMember.getCaptainId().equals(Global.getSector().getPlayerPerson().getId())) {
-                    
-                    if (i - 1 >= 0) {
-                        this.fleetMembers.get(i-1).updateCaptain(Global.getSector().getPlayerPerson());
-                    } else if (i + 1 < numMembers) {
-                        this.fleetMembers.get(i+1).updateCaptain(Global.getSector().getPlayerPerson());
-                    }
+                    this.updateOfficer(i > 0 ? 0 : 1, Global.getSector().getPlayerPerson());
                 }
             }
 
@@ -563,7 +559,7 @@ public class PresetUtils {
 
             for (int i = 0; i < wrappedMembers.size(); i++) {
                 FleetMemberWrapper wrappedMember = wrappedMembers.get(i);
-                String hullId = wrappedMember.getParentMember().getHullSpec().getBaseHullId();
+                String hullId = wrappedMember.getMember().getHullSpec().getBaseHullId();
                 wrappedMember.setIndex(i);
 
                 if (presetsMembers.get(wrappedMember.getId()) == null) presetsMembers.put(wrappedMember.getId(), new ArrayList<>());
@@ -572,10 +568,10 @@ public class PresetUtils {
                 this.shipIds.add(hullId);
                 this.fleetMembers.add(wrappedMember);
 
-                this.variantsMap.put(i, wrappedMember.getParentMember().getVariant());
-                this.variantWrappers.put(i, new VariantWrapper(wrappedMember.getParentMember().getVariant(), i, this));
-                
-                this.officersMap.put(i, new OfficerVariantPair(wrappedMember.getParentMember().getCaptain(), wrappedMember.getParentMember().getVariant(), i));
+                this.variantsMap.put(i, wrappedMember.getMember().getVariant());
+                this.variantWrappers.put(i, new VariantWrapper(wrappedMember.getMember().getVariant(), i, this));
+
+                this.officersMap.put(i, new OfficerVariantPair(wrappedMember.getParentMember().getCaptain(), wrappedMember.getMember().getVariant(), i));
             }
 
             if (this.campaignFleet != null) {
@@ -610,8 +606,10 @@ public class PresetUtils {
         public CampaignFleetAPI getCampaignFleet() {
             if (this.campaignFleet == null) {
                 this.campaignFleet = createDummyPresetFleet();
+
                 for (FleetMemberWrapper member : this.fleetMembers) {
                     this.campaignFleet.getFleetData().addFleetMember(member.getMember());
+
                     if (member.getCaptainCopy().getId().equals(Global.getSector().getPlayerPerson().getId())) {
                         this.campaignFleet.setCommander(member.getCaptainCopy());
                         this.campaignFleet.getFleetData().setFlagship(member.getMember());
@@ -708,10 +706,8 @@ public class PresetUtils {
 
     public static Map<Integer, FleetMemberAPI> whichMembersAvailable(MarketAPI market, List<FleetMemberAPI> membersToCheck) {
         if (market == null) return whichMembersAvailable(membersToCheck);
-
         SubmarketAPI storage = CargoPresetUtils.getStorageSubmarket(market);
-        SubmarketPlugin storagePlugin = storage.getPlugin();
-        if (!isPlayerPaidForStorage(storagePlugin)) return null;
+        if (!isPlayerPaidForStorage(storage.getPlugin())) return whichMembersAvailable(membersToCheck);
         
         CargoAPI storageCargo = storage.getCargo();
         initMothballedShips(storageCargo);
@@ -723,7 +719,7 @@ public class PresetUtils {
         for (int i = 0; i < membersToCheck.size(); i++) {
             boolean seent = false;
             for (FleetMemberAPI playerMember : Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy()) {
-                if (!seenPlayer.values().contains(playerMember) && playerMember.getId().equals(membersToCheck.get(i).getId())) {
+                if (!seenPlayer.values().contains(playerMember) && areSameVariant(membersToCheck.get(i).getVariant(), playerMember.getVariant())) {
                     seenPlayer.put(i, playerMember);
                     seent = true;
                     break;
@@ -732,7 +728,7 @@ public class PresetUtils {
             if (seent) continue;
 
             for (FleetMemberAPI storedMember : storageCargo.getMothballedShips().getMembersListCopy()) {
-                if (!seenStorage.values().contains(storedMember) && storedMember.getId().equals(membersToCheck.get(i).getId())) {
+                if (!seenStorage.values().contains(storedMember) && areSameVariant(membersToCheck.get(i).getVariant(), storedMember.getVariant())) {
                     seenStorage.put(i, storedMember);
                     break;
                 }
@@ -748,7 +744,7 @@ public class PresetUtils {
         Map<Integer, FleetMemberAPI> seen = new HashMap<>();
         for (int i = 0; i < membersToCheck.size(); i++) {
             for (FleetMemberAPI playerMember : Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy()) {
-                if (!seen.values().contains(playerMember) && playerMember.getId().equals(membersToCheck.get(i).getId())) {
+                if (!seen.values().contains(playerMember) && areSameVariant(membersToCheck.get(i).getVariant(), playerMember.getVariant())) {
                     seen.put(i, playerMember);
                     break;
                 }
@@ -782,6 +778,10 @@ public class PresetUtils {
         return (Map<String, Set<String>>) Global.getSector().getPersistentData().get(STORED_PRESET_MEMBERIDS_KEY);
     }
 
+    public static FleetPreset getUndockedFleetPreset() {
+        return (FleetPreset) Global.getSector().getMemoryWithoutUpdate().get(UNDOCKED_PRESET_KEY);
+    }
+
     public static boolean isMemberinFleet(CampaignFleetAPI targetFleet, FleetMemberAPI fleetMember) {
         for (FleetMemberAPI member : targetFleet.getFleetData().getMembersListCopy()) {
             if (member.getId().equals(fleetMember.getId())) return true;
@@ -791,7 +791,7 @@ public class PresetUtils {
 
     public static void updateFleetPresetStats(List<FleetMemberAPI> playerFleet) {
         Map<String, List<FleetMemberWrapper>> presetMembers = getFleetPresetsMembers();
-        if (presetMembers.size() == 0) return;
+        if (presetMembers.isEmpty()) return;
 
         for (int i = 0; i < playerFleet.size(); i++) {
             FleetMemberAPI playerMember = playerFleet.get(i);
@@ -824,7 +824,7 @@ public class PresetUtils {
         FleetPreset preset = (FleetPreset) mem.get(UNDOCKED_PRESET_KEY);
         if (preset == null) return new RunningMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
 
-        boolean isAutoUpdate = (boolean) Global.getSector().getPersistentData().get(IS_AUTO_UPDATE_KEY);
+        boolean isAutoUpdate = isAutoUpdatePresets();
         Set<String> reasons;
 
         CampaignFleetAPI playerFleet = Global.getSector().getPlayerFleet();
@@ -891,7 +891,6 @@ public class PresetUtils {
                     preset.getShipIds().add(member.getHullSpec().getBaseHullId());
                     preset.getVariantsMap().put(i, variant);
                     preset.getVariantWrappers().put(i, new VariantWrapper(variant, i, preset));
-                    
                 }
 
                 for (FleetMemberAPI member : preset.getCampaignFleet().getFleetData().getMembersListCopy()) preset.getCampaignFleet().getFleetData().removeFleetMember(member);
@@ -974,7 +973,6 @@ public class PresetUtils {
 
     public static void initMothballedShips(CargoAPI storageCargo) {
         for (FactionAPI faction : Global.getSector().getAllFactions()) {
-            // i dont know what this does but the javadocs say to do it before calling getmothballedships and i think it stopped some crashing?
             storageCargo.initMothballedShips(faction.getId());
         }
     }
@@ -1814,6 +1812,10 @@ public class PresetUtils {
             }
             if (!isSet) playerFleetData.getMembersInPriorityOrder().get(0).setCaptain(Global.getSector().getPlayerPerson());
         }
+        playerFleetData.setSyncNeeded();
+        playerFleetData.syncIfNeeded();
+        updateFleetPresetStats(playerFleetData.getMembersListCopy());
+        if (preset.getShipIds().size() != playerFleetData.getMembersListCopy().size()) getDockingListener().setUndockedPreset(null);
         refreshFleetUI();
     }
 
@@ -1846,12 +1848,12 @@ public class PresetUtils {
         
         FleetMemberAPI playerFleetMember = getPlayerFleetMember(playerFleetData);
 
+        initMothballedShips(storageCargo);
         for (FleetMemberAPI member : playerFleetMembers) {
             member.setCaptain(null);
             playerFleetData.removeFleetMember(member);
             storageCargo.getMothballedShips().addFleetMember(member);
         }
-        initMothballedShips(storageCargo);
 
         List<CampaignUIMessage> messageQueue = new ArrayList<>();
         List<FleetMemberAPI> membersDone = new ArrayList<>();
@@ -1864,21 +1866,18 @@ public class PresetUtils {
             boolean found = false;
             for (FleetMemberAPI storedMember : storageCargo.getMothballedShips().getMembersListCopy()) {
                 if (storedMember.getHullSpec().getBaseHullId().equals(hullId)) {
-                    if (preset.getOfficersMap().containsKey(i)) {
-                        OfficerVariantPair pair = preset.getOfficersMap().get(i);
+                    OfficerVariantPair pair = preset.getOfficersMap().get(i);
 
-                        if (areSameVariant(pair.getVariant(), variant)) {
-                            storedMember.setCaptain(pair.getOfficer());
+                    if (pair != null && areSameVariant(pair.getVariant(), storedMember.getVariant())) {
+                        storageCargo.getMothballedShips().removeFleetMember(storedMember);
+                        membersDone.add(storedMember);
+                        storedMember.setCaptain(pair.getOfficer());
 
-                            storageCargo.getMothballedShips().removeFleetMember(storedMember);
-                            membersDone.add(storedMember);
-
-                            if (!storedMember.getId().equals(preset.getFleetMembers().get(i).getId())) {
-                                preset.updateWrappedMember(i, storedMember);
-                            }
-                            found = true;
-                            break;
+                        if (!storedMember.getId().equals(preset.getFleetMembers().get(i).getId())) {
+                            preset.updateWrappedMember(i, storedMember);
                         }
+                        found = true;
+                        break;
                     }
                     
                     if (areSameVariant(variant, storedMember.getVariant())) {
@@ -1908,7 +1907,6 @@ public class PresetUtils {
             playerFleetData.addFleetMember(member);
         }
 
-
         if (!isPlayerInFleet(playerFleetData.getMembersInPriorityOrder())) {
             initMothballedShips(storageCargo);
             for (FleetMemberAPI storageMember : storageCargo.getMothballedShips().getMembersListCopy()) {
@@ -1918,7 +1916,9 @@ public class PresetUtils {
                 }
             }
         }
-        updateFleetPresetStats(playerFleetData.getMembersListCopy());
+        playerFleetData.setSyncNeeded();
+        playerFleetData.syncIfNeeded();
+        updateFleetPresetStats(playerFleetData.getMembersInPriorityOrder());
         refreshFleetUI();
 
         // if (isEqualizeCargo) CargoPresetUtils.equalizeCargo(playerFleetData.getMembersListCopy(), playerCargo, storageCargo, cargoRatios);
@@ -2006,7 +2006,7 @@ public class PresetUtils {
                 for (UIPanelAPI item : items) {
                     for (TreeNode node :  new TreeTraverser(item).getNodes()) { // if we dont reinstantiate the traverser every frame then it doesnt work for some reason, maybe this could be fixed by using getChildrenNonCopy instead of getChildenCopy, but I don't feel like fixing this that isn't broken right now
                         for (Object child : node.getChildren()) {
-                            if (ClassRefs.uiPanelSuperClass.isAssignableFrom(child.getClass())) {
+                            if (ClassRefs.uiPanelSuperClass.isInstance(child)) {
                                 Object tt = ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelGetTooltipMethod, child);
                                 if (tt != null) {
                                     ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelHideTooltipMethod, child, tt);

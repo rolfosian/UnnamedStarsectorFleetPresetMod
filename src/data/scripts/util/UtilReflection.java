@@ -399,8 +399,13 @@ public class UtilReflection {
 
     public static void setButtonTooltipWithPostProcessing(ButtonAPI btn, FleetMemberAPI member) {
         StandardTooltipV2 tt = createShipButtonTooltip(member);
-        ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelsetOpacityMethod, tt, 0.5f);
         ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelSetTooltipMethod, btn, 5f, tt);
+
+        if (member.getRepairTracker().getMaxCR() != member.getRepairTracker().getCR()) {
+            tt = fixCRBar(btn, member, tt);
+            ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelSetTooltipMethod, btn, 5f, tt);
+        }
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelsetOpacityMethod, tt, 0.5f);
 
         UIPanelAPI ttPa = (UIPanelAPI) tt;
 

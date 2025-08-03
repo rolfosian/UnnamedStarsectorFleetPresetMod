@@ -1051,7 +1051,7 @@ public class FleetPresetManagementListener extends ActionListener {
             TooltipMakerAPI fleetInfoPanelHolder = shipsPanel.createUIElement(SHIP_COLUMN_WIDTH, PANEL_HEIGHT, false);
             fleetInfoPanel = UtilReflection.getObfFleetInfoPanel(selectedPresetName, fleet); // Object casted to UIPanelAPI, fixed size 400x400 afaik
             
-            if (whichMembersAvailable != null && !whichMembersAvailable.isEmpty()) {
+            if (whichMembersAvailable != null) {
                 UtilReflection.setButtonTooltips(selectedPresetName, fleetInfoPanel, whichMembersAvailable, fleet.getFleetData().getMembersListCopy());
             } else {
                 UtilReflection.setButtonTooltips(selectedPresetName, fleetInfoPanel, fleet.getFleetData().getMembersListCopy());

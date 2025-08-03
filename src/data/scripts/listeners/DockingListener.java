@@ -69,6 +69,11 @@ public class DockingListener extends BaseCampaignEventListener {
     }
 
     public void setUndockedPreset(String presetName) {
+        if (presetName == null) {
+            Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
+            return;
+        }
+
         FleetPreset preset = PresetUtils.getFleetPresets().get(presetName);
         if (preset != null) {
             Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, preset);
@@ -236,6 +241,7 @@ public class DockingListener extends BaseCampaignEventListener {
                             isBattle = false;
                             PresetUtils.checkFleetAgainstPreset(runningMembers);
                         }
+                        return;
                         
                     case "LEAVE":
                         if (isBattle) {
