@@ -4,6 +4,7 @@ import java.util.*;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
+import com.fs.starfarer.api.ui.ScrollPanelAPI;
 import com.fs.starfarer.api.ui.UIComponentAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 
@@ -231,6 +232,7 @@ public class TreeTraverser {
         for (int i = 0; i < this.getNodes().size(); i++) {
             UIPanelAPI parent = this.getCurrentNode().getParent();
 
+            if (parent instanceof ScrollPanelAPI) continue; // throws if called on scroll panels
             for (UIComponentAPI child : this.getCurrentNode().getChildren()) {
                 parent.removeComponent(child);
             }
