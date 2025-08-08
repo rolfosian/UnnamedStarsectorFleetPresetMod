@@ -38,6 +38,7 @@ import com.fs.starfarer.api.input.InputEventClass;
 import com.fs.starfarer.api.input.InputEventType;
 import com.fs.starfarer.api.util.IntervalUtil;
 import com.fs.starfarer.api.util.Misc;
+import com.fs.starfarer.campaign.ui.UITable;
 
 import data.scripts.ClassRefs;
 import data.scripts.listeners.DockingListener;
@@ -205,7 +206,7 @@ public class FleetPresetManagementListener extends ActionListener {
     private ButtonAPI masterCancelButton = null;
     private FenaglePanele fenaglePanele = null;
 
-    private Object tablePanel = null;
+    private UITable tablePanel = null;
     private List<TableRowListener> tableRowListeners = new ArrayList<>();
     private TablePlugin tablePlugin = new TablePlugin();
     private PositionAPI tableCanvasPos = null;
@@ -765,7 +766,7 @@ public class FleetPresetManagementListener extends ActionListener {
         public void processInput(List<InputEventAPI> arg0) {
             for (InputEventAPI event : arg0) {
                 if (event.isKeyDownEvent()) {
-                    if (Keyboard.isKeyDown(Keyboard.KEY_RETURN) || Keyboard.isKeyDown(Keyboard.KEY_NUMPADENTER)) {
+                    if (Keyboard.isKeyDown(Keyboard.KEY_RETURN) || Keyboard.isKeyDown(Keyboard.KEY_NUMPADENTER) || Keyboard.isKeyDown(Keyboard.KEY_SPACE)) {
                         event.consume();
                         continue;
                     }
@@ -781,10 +782,12 @@ public class FleetPresetManagementListener extends ActionListener {
                                 } else if (selectedRowIndex >= rowNum) {
                                     selectedRowIndex = rowNum - 1;
                                 } else {
-                                    selectPreset(tableRowListeners.get(selectedRowIndex).rowName, selectedRowIndex);
-                                    tablePlugin.rebuild();
+                                    TableRowListener rowListener = tableRowListeners.get(selectedRowIndex);
+                                    UtilReflection.clickButton(rowListener.button);
+                                    // selectPreset(tableRowListeners.get(selectedRowIndex).rowName, selectedRowIndex);
+                                    // tablePlugin.rebuild();
                                 }
-                                enableButtonsRequiringSelection();
+                                // enableButtonsRequiringSelection();
                             
                             } else if (Keyboard.isKeyDown(Keyboard.KEY_UP)) {
                                 selectedRowIndex += tableUp ? -1 : 1;
@@ -794,17 +797,26 @@ public class FleetPresetManagementListener extends ActionListener {
                                 } else if (selectedRowIndex >= rowNum) {
                                     selectedRowIndex = rowNum - 1;
                                 } else {
-                                    selectPreset(tableRowListeners.get(selectedRowIndex).rowName, selectedRowIndex);
-                                    tablePlugin.rebuild();
+                                    TableRowListener rowListener = tableRowListeners.get(selectedRowIndex);
+                                    UtilReflection.clickButton(rowListener.button);
+                                    // selectPreset(tableRowListeners.get(selectedRowIndex).rowName, selectedRowIndex);
+                                    // tablePlugin.rebuild();
                                 }
-                                enableButtonsRequiringSelection();
+                                // enableButtonsRequiringSelection();
 
                             } else if (Keyboard.isKeyDown(Keyboard.KEY_ESCAPE) && rowNum > 0 && selectedPresetName != EMPTY_STRING) {
+                                if (selectedRowIndex != -1) {
+                                    TableRowListener selectedRowListener = tableRowListeners.get(selectedRowIndex);
+                                    tablePanel.select(null, null);
+                                    tablePlugin.setRowRenderParams(selectedRowListener.row, new Object[] {c1, selectedRowListener.rowName});
+                                    tablePlugin.addShipList(null, null);
+                                }
+
                                 selectedRowIndex = -1;
                                 selectPreset(EMPTY_STRING, selectedRowIndex);
                                 disableButtonsRequiringSelection();
-
-                                tablePlugin.rebuild();
+                                isSelectedPresetAvailablePara.setText("");
+                                // tablePlugin.rebuild();
                                 event.consume();
                             
                             }
@@ -914,17 +926,62 @@ public class FleetPresetManagementListener extends ActionListener {
         @Override
         public void render(float alphaMult) {}
 
+        public void setRowRenderParams(Object row, Object[] params) {
+            ReflectionUtilis.setPrivateVariable(ClassRefs.tableRowParamsField, row, params);
+            ReflectionUtilis.setPrivateVariable(ClassRefs.tableRowCreatedField, row, false);
+            ReflectionUtilis.invokeMethodDirectly(ClassRefs.tableRowRenderMethod, row, 0.01f);
+        }
+
+        private void setRowButtonHook(TableRowListener rowListener) {
+            Object oldListener = ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, rowListener.button);
+
+            ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, rowListener.button, new ActionListener() {
+                @Override
+                public void trigger(Object... args) {
+                    setRowRenderParams(rowListener.row, new Object[] {TEXT_HIGHLIGHT_COLOR, rowListener.rowName});
+
+                    ReflectionUtilis.invokeMethodDirectly(ClassRefs.tablePanelSelectMethod, tablePanel, rowListener.row, null);
+                    selectPreset(rowListener.rowName, rowListener.id);
+
+                    for (TableRowListener rowL : tableRowListeners) {
+                        if (rowListener == rowL) continue;
+                        setRowRenderParams(rowL.row, new Object[] {c1, rowL.rowName});
+                    }
+
+                    if (selectedPresetName != EMPTY_STRING) {
+                        selectedPreset = currentTableMap.get(selectedPresetName);
+        
+                        // in case there is a matching member in storage with the same variant but not the exact same member the preset was saved with
+                        Map<FleetMemberWrapper, FleetMemberAPI> neededMembers = PresetUtils.getIdAgnosticRequiredMembers(dockingListener.getPlayerCurrentMarket(), selectedPresetName);
+        
+                        setParas();
+        
+                        if (neededMembers != null) {
+                            mangledFleet = PresetUtils.mangleFleet(neededMembers, selectedPreset.getCampaignFleet());
+                            addShipList(mangledFleet, whichMembersAvailable);
+                        } else {
+                            addShipList(selectedPreset.getCampaignFleet(), whichMembersAvailable);
+                        }
+        
+                    } else {
+                        isSelectedPresetAvailablePara.setText(EMPTY_STRING);
+                        addShipList(null, null);
+                    };
+
+                    ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldListener, args);
+                    enableButtonsRequiringSelection();
+                }
+            }.getProxy());
+        }
+
         private void processRow(UIPanelAPI row, String rowName, int id) {
             PositionAPI rowPos = row.getPosition();
 
-            ButtonAPI button = (ButtonAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.tableRowGetButtonMethod, row);
-            button.setMouseOverSound(null);
-
-            TableRowListener rowListener = new TableRowListener(row, rowPos, rowName, id);
+            TableRowListener rowListener = new TableRowListener(row, (ButtonAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.tableRowGetButtonMethod, row), rowPos, rowName, id);
             CustomPanelAPI rowOverlayPanel = Global.getSettings().createCustom(NAME_COLUMN_WIDTH, 29f, rowListener);
             TooltipMakerAPI rowOverlayTooltipMaker = rowOverlayPanel.createUIElement(NAME_COLUMN_WIDTH, 29f, false);
 
-            tableTipMaker.addComponent(rowOverlayPanel).inTL(rowPos.getX(), rowPos.getY());
+            // tableTipMaker.addComponent(rowOverlayPanel).inTL(rowPos.getX(), rowPos.getY());
             rowListener.init(rowOverlayPanel, rowOverlayTooltipMaker, rowPos);
             
             tableRowListeners.add(rowListener);
@@ -942,7 +999,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
             tableTipMaker = panel.createUIElement(NAME_COLUMN_WIDTH, PANEL_HEIGHT, true);
             
-            tablePanel = tableTipMaker.beginTable(c1, c2, Misc.getHighlightedOptionColor(), 30f, false, false, 
+            tablePanel = (UITable) tableTipMaker.beginTable(c1, c2, Misc.getHighlightedOptionColor(), 30f, false, false, 
             new Object[]{tablePresetNamesColumnHeader, NAME_COLUMN_WIDTH - 10f });
             // tablePanel = tableTipMaker.beginTable2(Global.getSector().getPlayerFaction(), 30f, true, true, 
             // new Object[]{tablePresetNamesColumnHeader, NAME_COLUMN_WIDTH - 1f});
@@ -982,12 +1039,10 @@ public class FleetPresetManagementListener extends ActionListener {
             }
             tableTipMaker.addTable(BLANK_TABLE_TEXT, 0, 5f);
 
+            tablePanel.setItemsSelectable(true);
             if (selectedRow != null) {
-                ReflectionUtilis.invokeMethodDirectly(ClassRefs.tablePanelsetItemsSelectableMethod, tablePanel, true);
                 ReflectionUtilis.invokeMethodDirectly(ClassRefs.tablePanelSelectMethod, tablePanel, selectedRow, null);
             }
-
-            panel.addUIElement(tableTipMaker);
 
             if (selectedPresetName != EMPTY_STRING) {
                 selectedPreset = currentTableMap.get(selectedPresetName);
@@ -1007,7 +1062,11 @@ public class FleetPresetManagementListener extends ActionListener {
             } else {
                 isSelectedPresetAvailablePara.setText(EMPTY_STRING);
                 addShipList(null, null);
-            };
+            }
+
+            panel.addUIElement(tableTipMaker);
+
+            for (TableRowListener rowListener : tableRowListeners) setRowButtonHook(rowListener);
 
             tableTipMaker.getExternalScroller().setYOffset(yScrollOffset);
         }
@@ -1035,7 +1094,6 @@ public class FleetPresetManagementListener extends ActionListener {
             }
 
             fleetInfoPanelHolder.addComponent(fleetInfoPanel).inTL(0f, 0f);
-            
             shipsPanel.addUIElement(fleetInfoPanelHolder).inTL(0f, 0f);
             
             // have to do this because if directly added to the refreshing panel then the game crashes when the confirm dialog window is closed
@@ -1064,12 +1122,14 @@ public class FleetPresetManagementListener extends ActionListener {
         public CustomPanelAPI panel;
         public PositionAPI rowPos;
         public TooltipMakerAPI tooltipMaker;
+        public ButtonAPI button;
 
-        public TableRowListener(Object row, PositionAPI rowPos, String rowPresetName, int id) {
+        public TableRowListener(Object row, ButtonAPI rowButton, PositionAPI rowPos, String rowPresetName, int id) {
             this.row = row;
             this.id = id;
             this.rowName = rowPresetName;
-            this.rowPos = rowPos;;
+            this.rowPos = rowPos;
+            this.button = rowButton;
         }
     
         public void init(CustomPanelAPI panel, TooltipMakerAPI tooltipMaker, PositionAPI rowPos) {
@@ -1088,7 +1148,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
         @Override
         public void processInput(List<InputEventAPI> arg0) {
-            for (InputEventAPI event : arg0) {
+            // for (InputEventAPI event : arg0) {
                 // if (!isActive) continue;
                 // if (event.isMouseMoveEvent()) {
                 //     int eventX = event.getX();
@@ -1106,13 +1166,13 @@ public class FleetPresetManagementListener extends ActionListener {
                 //     }
                 // }
 
-                 if (event.isLMBDownEvent()) {
-                    int eventX = event.getX();
-                    int eventY = event.getY();
-                    float rX = rowPos.getX();
-                    float rY = rowPos.getY();
-                    float rW = rowPos.getWidth();
-                    float rH = rowPos.getHeight();
+                //  if (event.isLMBDownEvent()) {
+                //     int eventX = event.getX();
+                //     int eventY = event.getY();
+                //     float rX = rowPos.getX();
+                //     float rY = rowPos.getY();
+                //     float rW = rowPos.getWidth();
+                //     float rH = rowPos.getHeight();
                     
                     // For table headers to sort the table by ascending or descending.
                     // I couldnt get mouse events to register on the header itself, idk what is blocking them. Above and below worked fine lol. So used offsets instead
@@ -1155,28 +1215,26 @@ public class FleetPresetManagementListener extends ActionListener {
                         // }
                     // }
 
-                    if (eventX >= rX &&
-                    eventX <= rX + rW &&
-                    eventY >= rY &&
-                    eventY <= rY + rH) {
-                        selectPreset(rowName, id);
-                        enableButtonsRequiringSelection();
-                        tablePlugin.rebuild();
-                        // event.consume();
-                        break;
-                    }
+            //         if (eventX >= rX &&
+            //         eventX <= rX + rW &&
+            //         eventY >= rY &&
+            //         eventY <= rY + rH) {
+            //             selectPreset(rowName, id);
+            //             enableButtonsRequiringSelection();
+            //             tablePlugin.rebuild();
+            //             // event.consume();
+            //             break;
+            //         }
                     
-                }
-            }
+            //     }
+            // }
         }
     
         @Override
-        public void render(float arg0) {
-        }
+        public void render(float arg0) {}
     
         @Override
-        public void renderBelow(float arg0) {
-        }
+        public void renderBelow(float arg0) {}
     }
 
     public void setParas() {

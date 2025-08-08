@@ -116,6 +116,9 @@ public class ClassRefs {
     public static Object tablePanelsetItemsSelectableMethod;
     public static Object tablePanelSelectMethod;
     public static Object tableRowGetButtonMethod;
+    public static Object tableRowParamsField;
+    public static Object tableRowCreatedField;
+    public static Object tableRowRenderMethod;
 
     public static Object campaignUIScreenPanelField;
     public static Object campaignUIGetCoreMethod;
@@ -378,6 +381,15 @@ public class ClassRefs {
 
         Object row = tt.addRowWithGlow(new Color(0, 0, 0), "");
         tableRowGetButtonMethod = ReflectionUtilis.getMethod("getButton", row, 0);
+        tableRowRenderMethod = ReflectionUtilis.getMethod("render", row, 1);
+        for (Object field : row.getClass().getDeclaredFields()) {
+            if (ReflectionUtilis.getFieldType(field).equals(Object[].class)) {
+                tableRowParamsField = field; 
+            } else if (ReflectionUtilis.getFieldName(field).equals("created")) {
+                tableRowCreatedField = field;
+            }
+        };
+        tableRowCreatedField = ReflectionUtilis.getFieldByName("created", row.getClass().getSuperclass());
     }
 
     /**Dummy function to call to load the class and run the static block in onApplicationLoad */
