@@ -488,6 +488,8 @@ public class PresetUtils {
             this.campaignFleet = createDummyPresetFleet();
 
             for (FleetMemberWrapper member : this.fleetMembers) {
+                if (member.getCaptainCopy() != null) member.getMember().setCaptain(member.getCaptainCopy());
+                
                 this.campaignFleet.getFleetData().addFleetMember(member.getMember());
 
                 if (member.getCaptainId() != null && member.getCaptainId().equals(Global.getSector().getPlayerPerson().getId())) {

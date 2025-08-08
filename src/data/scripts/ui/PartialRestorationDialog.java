@@ -308,15 +308,10 @@ public class PartialRestorationDialog {
     private void removeAllPresetMembersFromPlayerFleet() {
         for (FleetMemberAPI member : Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder()) {
             Global.getSector().getPlayerFleet().getFleetData().removeFleetMember(member);
-            presetFleet.getFleetData().addFleetMember(member);
-
-            // TODO: This comparer function needs more rigorous testing
-            if (PresetUtils.areSameOfficerMinusId(member.getCaptain(), Global.getSector().getPlayerPerson())) {// (member.getCaptain().getId().equals(Global.getSector().getPlayerPerson().getId())) {
-                presetFleet.setCommander(member.getCaptain());
-                presetFleet.getFleetData().setFlagship(member);
-            }
         }
-        presetFleet.getFleetData().sortToMatchOrder(originalOrder);
+        presetFleet.despawn();
+        presetFleet = null;
+        preset.remakeCampaignFleet();
     }
 
     // so warning message doesnt show for over max ships THIS IS IRRELEVANT NOW AS WE ARE NO LONGER USING THE ACTUAL FLEET MEMEBR RECOVERY DIALOG. IDK WHY I KEPT THIS
