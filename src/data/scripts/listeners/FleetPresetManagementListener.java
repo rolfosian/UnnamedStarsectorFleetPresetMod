@@ -245,7 +245,6 @@ public class FleetPresetManagementListener extends ActionListener {
                 }
         });
 
-        com.fs.starfarer.api.impl.campaign.missions.HandMeDownFreighter s;
         if (master == null) return;
         master.panel.removeComponent(master.confirmButton.getInstance());
         master.addGridLines(false, true, Misc.getDarkPlayerColor());
