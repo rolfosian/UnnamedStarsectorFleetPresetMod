@@ -167,7 +167,7 @@ public class ClassRefs {
         Class<?>[] obfClasses = ObfuscatedClasses.getClasses();
         for (int i = 0; i < obfClasses.length; i++) {
             Class<?> cls = obfClasses[i];
-            
+
             if (optionPanelGetButtonToItemMapMethod == null && OptionPanelAPI.class.isAssignableFrom(cls)) {
                 optionPanelGetButtonToItemMapMethod = ReflectionUtilis.getMethod("getButtonToItemMap", cls, 0);
                 continue;

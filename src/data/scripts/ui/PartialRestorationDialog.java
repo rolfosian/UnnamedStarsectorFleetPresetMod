@@ -36,6 +36,7 @@ import com.fs.starfarer.api.ui.CutStyle;
 import com.fs.starfarer.api.ui.Fonts;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
+import com.fs.starfarer.api.ui.ScrollPanelAPI;
 
 import java.awt.Color;
 import java.util.*;
@@ -51,12 +52,12 @@ public class PartialRestorationDialog {
     private CampaignFleetAPI presetFleet;
     private CampaignFleetAPI tempFleet;
 
-    private Map<FleetMemberAPI, FleetMemberAPI> tempToPresetMembersMap = new HashMap<>();
+    private final Map<FleetMemberAPI, FleetMemberAPI> tempToPresetMembersMap = new HashMap<>();
     private Map<Integer, FleetMemberAPI> whichFleetMembersAvailable;
     
-    private List<FleetMemberAPI> playerFleetMembers = new ArrayList<>();
-    private List<FleetMemberAPI> pickedFleetMembers = new ArrayList<>();
-    private List<FleetMemberAPI> originalOrder = new ArrayList<>();
+    private final List<FleetMemberAPI> playerFleetMembers = new ArrayList<>();
+    private final  List<FleetMemberAPI> pickedFleetMembers = new ArrayList<>();
+    private final List<FleetMemberAPI> originalOrder;
     
     private HoloVar holoVar;
     private UtilReflection.ConfirmDialogData FMRDialog;
@@ -87,7 +88,7 @@ public class PartialRestorationDialog {
 
         for (FleetMemberAPI member : fleet.getFleetData().getMembersListCopy()) {
             for (FleetMemberAPI tempMember : tempFleet.getFleetData().getMembersListCopy()) {
-                if (member.getId().equals(tempMember.getId())) {
+                if (member.getId().equals(PresetUtils.reverseMemberId(tempMember))) {
                     tempToPresetMembersMap.put(tempMember, member);
                     break;
                 }
@@ -228,7 +229,7 @@ public class PartialRestorationDialog {
                     public void advance(float arg0) {
                         if (!holoVar.isRendering()) {
                             holoVar.resetColor();
-                            Global.getSector().removeScript(this);
+                            Global.getSector().removeTransientScript(this);
                             isDone = true;
                         }
                     }
@@ -276,7 +277,8 @@ public class PartialRestorationDialog {
                     if (pickedFleetMembers.isEmpty()) FMRDialog.confirmButton.setEnabled(false);
                 }
 
-                Global.getSector().getPlayerFleet().getFleetData().sortToMatchOrder(presetFleet.getFleetData().getMembersListCopy());
+                // Regular FleetData sortToMatchOrder method uses member Ids to sort so we have to use our own here to maintain member agnosticism (and preset fleet dummy members do not share the same Ids)
+                PresetUtils.sortToMatchOrder(Global.getSector().getPlayerFleet().getFleetData(), presetFleet.getFleetData().getMembersListCopy());
                 if (!String.valueOf(args[0]).equals("All")) {
                     PresetUtils.refreshFleetUI();
                 }
@@ -303,11 +305,13 @@ public class PartialRestorationDialog {
         }
     }
 
-    private void removeAllMembersFromPlayerFleet() {
+    private void removeAllPresetMembersFromPlayerFleet() {
         for (FleetMemberAPI member : Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder()) {
             Global.getSector().getPlayerFleet().getFleetData().removeFleetMember(member);
             presetFleet.getFleetData().addFleetMember(member);
-            if (member.getCaptain().getId().equals(Global.getSector().getPlayerPerson().getId())) {
+
+            // TODO: This comparer function needs more rigorous testing
+            if (PresetUtils.areSameOfficerMinusId(member.getCaptain(), Global.getSector().getPlayerPerson())) {// (member.getCaptain().getId().equals(Global.getSector().getPlayerPerson().getId())) {
                 presetFleet.setCommander(member.getCaptain());
                 presetFleet.getFleetData().setFlagship(member);
             }
@@ -351,13 +355,14 @@ public class PartialRestorationDialog {
     private void clearFleetPanel(TreeTraverser traverser) {
         while (traverser.goDownOneLevel()) {}
         for (int i = 0; i < traverser.getNodes().size(); i++) {
-            UIPanel par = new UIPanel(traverser.getCurrentNode().getParent());
+            UIPanelAPI parent = traverser.getCurrentNode().getParent();
 
-            for (Object child : traverser.getCurrentNode().getChildren()) {
+            if (parent instanceof ScrollPanelAPI) continue;
+            for (UIComponentAPI child : traverser.getCurrentNode().getChildren()) {
                 if (ButtonAPI.class.isAssignableFrom(child.getClass())) {
                     continue;
                 }
-                par.remove(new UIComponent(child));
+                parent.removeComponent(child);
             }
             traverser.goUpOneLevel();
         }
@@ -365,7 +370,7 @@ public class PartialRestorationDialog {
 
     private void cancelledFleetMemberPicking() {
         pickedFleetMembers.clear();
-        removeAllMembersFromPlayerFleet();
+        removeAllPresetMembersFromPlayerFleet();
         readdFleetMembersToPlayerFleet();
         PresetUtils.refreshFleetUI();
 
@@ -374,7 +379,7 @@ public class PartialRestorationDialog {
     }
 
     private void pickedFleetMembers(List<FleetMemberAPI> membersToRestore) {
-        removeAllMembersFromPlayerFleet();
+        removeAllPresetMembersFromPlayerFleet();
         readdFleetMembersToPlayerFleet();
         if (pickedFleetMembers.size() == 0) {
             master.setPartialSelecting(false);
@@ -384,6 +389,13 @@ public class PartialRestorationDialog {
         
         PresetUtils.partRestorePreset(membersToRestore, whichFleetMembersAvailable, preset);
 
+        if (master.getMangledFleet() != null) {
+            master.getTablePlugin().addShipList(master.getMangledFleet(), whichFleetMembersAvailable);
+        } else {
+            master.getTablePlugin().addShipList(preset.getCampaignFleet(), whichFleetMembersAvailable);
+        }
+        master.setParas();
+        
         master.setPartialSelecting(false);
         master.enableButtonsRequiringSelection();
         pickedFleetMembers.clear();

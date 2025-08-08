@@ -127,35 +127,12 @@ public class FleetPresetsFleetPanelInjector {
 
             if (market != null && CargoPresetUtils.getStorageSubmarket(market) != null) {
                 if (dockingListener.canPlayerAccessStorage(market)) {
-                    if (pullAllShipsButton == null || storeFleetButton == null) addAuxStorageButtons(playerFleetMembers, officerAutoAssignButtonPosition, mothballedShips, market);
-                        if (mothballedShips != null && mothballedShips.size() > 0) {
-                            if (!pullAllShipsButton.isEnabled()) pullAllShipsButton.setEnabled(true);
-                        } else {
-                            if (pullAllShipsButton.isEnabled()) pullAllShipsButton.setEnabled(false);
-                        }
-
-                        if (!storeFleetButton.isEnabled() && playerFleetMembers.size() > 1) storeFleetButton.setEnabled(true);
+                    updateAuxStorageButtons(playerFleetMembers, mothballedShips, market);
                 }
                 // checking if members are sold so there's no memory leak for wrappedMembers
                 if (runningMembers.size() > playerFleetMembers.size()) {
-                    if ((boolean)Global.getSector().getPersistentData().get(PresetUtils.IS_AUTO_UPDATE_KEY)) {
-                        for (FleetMemberAPI runningMember : runningMembers.keySet()) {
-                            if (!playerFleetMembers.contains(runningMember)) {
-                                
-                                if (mothballedShips != null && mothballedShips.contains(runningMember) && PresetUtils.getFleetPresetsMembers().get(runningMember.getId()) != null) {
-                                    // member was stored
-                                    if (storedMemberIds.get(market.getName()) == null) {
-                                        storedMemberIds.put(market.getName(), new HashSet<>());
-                                    }
-                                    storedMemberIds.get(market.getName()).add(runningMember.getId());
-
-                                } else if (PresetUtils.getFleetPresetsMembers().get(runningMember.getId()) != null && !masterPresetsDialog.isPartialSelecting() && getPickedUpMember() == null) {
-                                    // member was sold or scuttled
-                                    PresetUtils.cleanUpPerishedPresetMembers();
-                                }
-                            }
-                        }
-                    }
+                    handleMissingMember(playerFleetMembers, mothballedShips, market);
+                    
                 } else if (playerFleetMembers.size() > runningMembers.size()) {
                     for (FleetMemberAPI member : playerFleetMembers) {
                         if (storedMemberIds.get(market.getName()) != null && storedMemberIds.get(market.getName()).contains(member.getId())) {
@@ -164,12 +141,10 @@ public class FleetPresetsFleetPanelInjector {
                             if (storedMemberIds.get(market.getName()).isEmpty()) storedMemberIds.remove(market.getName());
                         }
                     }
-                // } else if (!runningMembers.keySet().equals(new HashSet<>(playerFleetMembers))) {
 
+                } else if (!runningMembers.keySet().equals(new HashSet<>(playerFleetMembers))) {
+                    handleMissingMember(playerFleetMembers, mothballedShips, market);
                 }
-            }
-            if (storeFleetButton != null && playerFleetMembers.size() < 2) {
-                if (storeFleetButton.isEnabled()) storeFleetButton.setEnabled(false);
             }
         }
 
@@ -306,7 +281,7 @@ public class FleetPresetsFleetPanelInjector {
                 if (ButtonAPI.class.isAssignableFrom(ReflectionUtilis.getFieldType(field))) {
                     ButtonAPI button = (ButtonAPI) ReflectionUtilis.getPrivateVariable(ReflectionUtilis.getFieldName(field), fleetInfoPanel);
                     
-                    if (button != null && new Button(button, null, null).getText().trim().startsWith("Auto-assign")) {
+                    if (button != null && button.getText().trim().startsWith("Auto-assign")) {
                         autoAssignButtonField = field;
                         break;
                     }
@@ -390,6 +365,37 @@ public class FleetPresetsFleetPanelInjector {
             storeFleetButton = null;
             pullAllShipsButton = null;
         }
+    }
+
+    private void handleMissingMember(List<FleetMemberAPI> playerFleetMembers, List<FleetMemberAPI> mothballedShips, MarketAPI market) {
+        for (FleetMemberAPI runningMember : runningMembers.keySet()) {
+            if (!playerFleetMembers.contains(runningMember)) {
+                
+                if (mothballedShips != null && mothballedShips.contains(runningMember) && PresetUtils.getFleetPresetsMembers().get(runningMember.getId()) != null) {
+                    // member was stored
+                    if (storedMemberIds.get(market.getName()) == null) {
+                        storedMemberIds.put(market.getName(), new HashSet<>());
+                    }
+                    storedMemberIds.get(market.getName()).add(runningMember.getId());
+
+                } else if (PresetUtils.getFleetPresetsMembers().get(runningMember.getId()) != null && !masterPresetsDialog.isPartialSelecting() && getPickedUpMember() == null) {
+                    // member was sold or scuttled
+                    PresetUtils.cleanUpPerishedPresetMembers();
+                }
+            }
+        }
+    }
+
+    private void updateAuxStorageButtons(List<FleetMemberAPI> playerFleetMembers, List<FleetMemberAPI> mothballedShips, MarketAPI market) {
+        if (pullAllShipsButton == null || storeFleetButton == null) addAuxStorageButtons(playerFleetMembers, officerAutoAssignButtonPosition, mothballedShips, market);
+        if (mothballedShips != null && mothballedShips.size() > 0) {
+            if (!pullAllShipsButton.isEnabled()) pullAllShipsButton.setEnabled(true);
+        } else {
+            if (pullAllShipsButton.isEnabled()) pullAllShipsButton.setEnabled(false);
+        }
+
+        if (!storeFleetButton.isEnabled() && playerFleetMembers.size() > 1) storeFleetButton.setEnabled(true);
+        else if (storeFleetButton.isEnabled() && playerFleetMembers.size() < 2) storeFleetButton.setEnabled(false);
     }
 
     private Object getPickedUpMember() {

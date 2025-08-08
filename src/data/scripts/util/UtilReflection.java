@@ -24,7 +24,9 @@ import com.fs.starfarer.api.input.InputEventClass;
 import com.fs.starfarer.api.input.InputEventType;
 
 import com.fs.starfarer.api.ui.*;
+import com.fs.starfarer.api.util.IntervalUtil;
 import com.fs.starfarer.api.util.Misc;
+
 import com.fs.starfarer.campaign.CharacterStats;
 import com.fs.starfarer.campaign.fleet.FleetMember;
 import com.fs.starfarer.ui.impl.StandardTooltipV2;
@@ -44,6 +46,7 @@ import java.awt.Color;
 
 import org.apache.log4j.Logger;
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.opengl.GL11;
 
 @SuppressWarnings("unchecked")
 public class UtilReflection {
@@ -243,11 +246,139 @@ public class UtilReflection {
         public UIPanelAPI dialog;
 
         public ConfirmDialogData(LabelAPI label, Button yes, Button no, UIPanelAPI panel, UIPanelAPI dialog) {
-            textLabel = label;
-            confirmButton = yes;
-            cancelButton = no;
+            this.textLabel = label;
+            this.confirmButton = yes;
+            this.cancelButton = no;
             this.panel = panel;
             this.dialog = dialog;
+        }
+
+        public void addGridLines(boolean keepConfirmButton, boolean keepCancelButton, Color color) {
+            PositionAPI panelPos = dialog.getPosition();
+            float width = panelPos.getWidth();
+            float height = panelPos.getHeight();
+            int gridWidth = (int) width;
+            int gridHeight = (int) height;
+
+            float red = color.getRed() / 255.0f;
+            float green = color.getGreen() / 255.0f;
+            float blue = color.getBlue() / 255.0f;
+        
+            CustomPanelAPI gridPanel = Global.getSettings().createCustom(width, height, new BackGroundImagePanelPlugin(panelPos) {
+                private float x = panelPos.getX();
+                private float y = panelPos.getY();
+                private int cellSize = 24;
+                private float verticalAlpha = 0.5f;
+                private float horizontalAlpha = 0.75f;
+        
+                @Override
+                public void render(float alphaMult) {
+                    renderGridWithStencil(gridWidth, gridHeight, x, y);
+                }
+
+                private void drawStencilArea(int width, int height, float offsetX, float offsetY) {
+                    GL11.glEnable(GL11.GL_STENCIL_TEST);
+                    GL11.glClear(GL11.GL_STENCIL_BUFFER_BIT);
+                
+                    GL11.glStencilFunc(GL11.GL_ALWAYS, 1, 0xFF);
+                    GL11.glStencilOp(GL11.GL_KEEP, GL11.GL_KEEP, GL11.GL_REPLACE);
+                
+                    GL11.glColorMask(false, false, false, false);
+                    GL11.glDepthMask(false);
+                
+                    GL11.glBegin(GL11.GL_QUADS);
+                    GL11.glVertex2f(offsetX, offsetY);
+                    GL11.glVertex2f(offsetX + width, offsetY);
+                    GL11.glVertex2f(offsetX + width, offsetY + height);
+                    GL11.glVertex2f(offsetX, offsetY + height);
+                    GL11.glEnd();
+                
+                    GL11.glColorMask(true, true, true, true);
+                    GL11.glDepthMask(true);
+                
+                    GL11.glStencilFunc(GL11.GL_EQUAL, 1, 0xFF);
+                    GL11.glStencilOp(GL11.GL_KEEP, GL11.GL_KEEP, GL11.GL_KEEP);
+                }
+                
+                private void renderGridWithStencil(int width, int height, float offsetX, float offsetY) {
+                    drawStencilArea(width, height, offsetX, offsetY);
+                    renderGrid(width, height, offsetX, offsetY);
+                    GL11.glDisable(GL11.GL_STENCIL_TEST);
+                }
+        
+                private void renderGrid(int width, int height, float offsetX, float offsetY) {
+                    GL11.glLineWidth(1f);
+                    GL11.glDisable(GL11.GL_TEXTURE_2D);
+                    GL11.glBegin(GL11.GL_LINES);
+
+                    float startX = -cellSize / 2f;
+                    float endX = width + cellSize / 2f;
+                    float startY = -cellSize / 2f;
+                    float endY = height + cellSize / 2f;
+
+                    GL11.glColor4f(red, green, blue, verticalAlpha);
+                    for (float x = startX; x <= endX; x += cellSize) {
+                        GL11.glVertex2f(x + offsetX, startY + offsetY);
+                        GL11.glVertex2f(x + offsetX, endY + offsetY);
+                    }
+
+                    GL11.glColor4f(red, green, blue, horizontalAlpha);
+                    for (float y = startY; y <= endY; y += cellSize) {
+                        GL11.glVertex2f(startX + offsetX, y + offsetY);
+                        GL11.glVertex2f(endX + offsetX, y + offsetY);
+                    }
+
+                    GL11.glEnd();
+                }
+
+            }.init(null, cancelButton.getInstance()));
+
+            Global.getSector().addTransientScript(new EveryFrameScript() {
+                private boolean isDone = false;
+                private IntervalUtil interval = new IntervalUtil(0.15f, 0.15f);
+
+                @Override
+                public void advance(float arg0) {
+                    interval.advance(arg0);
+                    if (!interval.intervalElapsed()) return;
+                    dialog.addComponent(gridPanel).inTL(0f, 0f);
+                    dialog.sendToBottom(gridPanel);
+        
+                    setButtonInterceptorForGrid(cancelButton, gridPanel);
+                    setButtonInterceptorForGrid(confirmButton, gridPanel);
+        
+                    if (keepConfirmButton) panel.bringComponentToTop(confirmButton.getInstance());
+                    if (keepCancelButton) panel.bringComponentToTop(cancelButton.getInstance());
+                    panel.bringComponentToTop((UIComponentAPI)textLabel);
+
+                    isDone = true;
+                    Global.getSector().removeTransientScript(this);
+                }
+
+                @Override
+                public boolean isDone() {
+                    return isDone;
+                }
+
+                @Override
+                public boolean runWhilePaused() {
+                    return true;
+                }
+                
+            });
+        }
+
+        private void setButtonInterceptorForGrid(Button btn, CustomPanelAPI gridPanel) {
+            Object oldListener = ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, btn.getInstance());
+    
+            ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, btn.getInstance(), new ActionListener() {
+                public void trigger(Object... args) {
+                    gridPanel.setOpacity(0f);
+                    dialog.removeComponent(gridPanel);
+    
+                    ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldListener, args);
+                }
+            }.getProxy());
         }
     }
 
@@ -343,28 +474,10 @@ public class UtilReflection {
         }
     }
 
-    public static Object getCRBarFromTooltip(TreeTraverser traverser) {
-        return traverser.getTargetChild();
-        // for (TreeNode node : traverser.getNodesAtDepth(2)) {
-        //     for (Object child : node.getChildren()) {
-        //         if (LabelAPI.class.isAssignableFrom(child.getClass())) {
-        //             if(((LabelAPI)child).getText().equals("Combat readiness")) {
-        //                 for (Object target : node.getChildren()) {
-        //                     if (ClassRefs.CRBarClass.isInstance(target)) {
-        //                         return target;
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
-        // return null;
-    }
-
     // tooltip parameter needs to be set on button before this is called. natively the expanded tooltip doesnt show the actual CR, but the maximum, so we do this to 'fix' it
     public static StandardTooltipV2 fixCRBar(ButtonAPI btn, FleetMemberAPI member, StandardTooltipV2 tt) {
         ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelShowTooltipMethod, btn, tt);
-        Object CRBar = getCRBarFromTooltip(new TreeTraverser(tt, 0, 5, 1));
+        Object CRBar = new TreeTraverser(tt, 0, 5, 1).getTargetChild();
 
         ReflectionUtilis.invokeMethodDirectly(ClassRefs.CRBarClassSetProgressMethod, CRBar, member.getRepairTracker().getCR() * 100f);
         ReflectionUtilis.invokeMethodDirectly(ClassRefs.CRBarClassForceSyncMethod, CRBar);
@@ -495,9 +608,10 @@ public class UtilReflection {
             this.dialogBottomBound = dialogPos.getCenterY() - dialogPos.getHeight() / 2;
         }
 
-        public void init(TooltipMakerAPI tt, ButtonAPI cancelButton) {
+        public BackGroundImagePanelPlugin init(TooltipMakerAPI tt, ButtonAPI cancelButton) {
             this.tt = tt;
             this.cancelButton = cancelButton;
+            return this;
         }
 
         private boolean isOutsideDialogBounds(float mouseX, float mouseY) {

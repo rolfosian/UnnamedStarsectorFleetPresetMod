@@ -54,7 +54,7 @@ import data.scripts.util.ReflectionUtilis;
 import data.scripts.util.ListenerFactory.DialogDismissedListener;
 import data.scripts.util.ListenerFactory.ActionListener;
 import data.scripts.util.UtilReflection;
-import data.scripts.util.UtilReflection.ConfirmDialogData;
+import data.scripts.util.UtilReflection.*;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.PresetUtils.FleetMemberWrapper;
 import data.scripts.util.PresetUtils.FleetPreset;
@@ -62,6 +62,8 @@ import data.scripts.util.PresetMiscUtils;
 
 import java.awt.Color;
 import java.util.*;
+
+import javax.swing.text.TableView.TableRow;
 
 import org.apache.log4j.Logger;
 import org.lwjgl.input.Keyboard;
@@ -231,7 +233,6 @@ public class FleetPresetManagementListener extends ActionListener {
 
         CustomPanelAPI tableMasterPanel = Global.getSettings().createCustom(PANEL_WIDTH - CANCEL_CONFIRM_BUTTON_WIDTH - 5f, PANEL_HEIGHT, new BaseCustomUIPanelPlugin() );
         ConfirmDialogData master = UtilReflection.showConfirmationDialog(
-            "graphics/illustrations/abyssal_light2.jpg",
             EMPTY_STRING,
             EMPTY_STRING,
             CLOSE_TEXT,
@@ -243,13 +244,15 @@ public class FleetPresetManagementListener extends ActionListener {
                     resetTopLevelVars();
                 }
         });
+
+        com.fs.starfarer.api.impl.campaign.missions.HandMeDownFreighter s;
         if (master == null) return;
+        master.panel.removeComponent(master.confirmButton.getInstance());
+        master.addGridLines(false, true, Misc.getDarkPlayerColor());
 
         overlordPanel = master.panel;
         overlordPanelPos = master.panel.getPosition();
 
-        ButtonAPI confirmButton = master.confirmButton.getInstance();
-        PositionAPI confirmButtonPosition = confirmButton.getPosition();
         ButtonAPI cancelButton = master.cancelButton.getInstance();
         PositionAPI cancelButtonPosition = cancelButton.getPosition();
         CANCEL_CONFIRM_BUTTON_WIDTH = cancelButtonPosition.getWidth();
@@ -260,7 +263,7 @@ public class FleetPresetManagementListener extends ActionListener {
         TooltipMakerAPI tooltipMaker = buttonsPanel.createUIElement(CANCEL_CONFIRM_BUTTON_WIDTH+2f, PANEL_HEIGHT, false);
         buttonPlugin.init(buttonsPanel, tooltipMaker);
 
-        addTheButtons(tooltipMaker, confirmButtonPosition, cancelButtonPosition);
+        addTheButtons(tooltipMaker, cancelButtonPosition);
 
         String storageAvailableText;
         Color storageAvailableColor;
@@ -276,7 +279,6 @@ public class FleetPresetManagementListener extends ActionListener {
         isSelectedPresetAvailablePara = tooltipMaker.addParaWithMarkup("", c1, 5f);
         isSelectedPresetFleetPara = tooltipMaker.addParaWithMarkup("", c1, 5f);
 
-        master.panel.removeComponent(confirmButton);
         // data.panel.removeComponent(cancelButton);
         this.masterCancelButton = cancelButton;
         tablePlugin = new TablePlugin();
@@ -292,8 +294,8 @@ public class FleetPresetManagementListener extends ActionListener {
         tablePlugin.setRoot(tableMasterPanel);
     }
     
-    private void addTheButtons(TooltipMakerAPI tooltipMaker, PositionAPI confirmPosition, PositionAPI cancelPosition) {
-        float buttonWidth = confirmPosition.getWidth();
+    private void addTheButtons(TooltipMakerAPI tooltipMaker, PositionAPI cancelPosition) {
+        float buttonWidth = cancelPosition.getWidth();
         float buttonHeight = cancelPosition.getHeight();
         int i = 2;
 
@@ -578,7 +580,7 @@ public class FleetPresetManagementListener extends ActionListener {
                     ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelHideTooltipMethod, ptsLabbelTt, tt);
                     isShowingTt = false;
                     isDone = true;
-                    Global.getSector().removeScript(this);
+                    Global.getSector().removeTransientScript(this);
                 }
             }
 
@@ -627,7 +629,7 @@ public class FleetPresetManagementListener extends ActionListener {
                         isShowingTt = false;
                         hideEnsurer.setIsDone(true);
                         hideEnsurer.setIsActive(false);
-                        Global.getSector().removeScript(hideEnsurer);
+                        Global.getSector().removeTransientScript(hideEnsurer);
                         hideEnsurer.resetInterval();
                     }
                 }
@@ -702,6 +704,14 @@ public class FleetPresetManagementListener extends ActionListener {
 
                 case RESTORE_BUTTON_ID:
                     PresetUtils.restoreFleetFromPreset(selectedPresetName);
+
+                    if (mangledFleet != null) {
+                        tablePlugin.addShipList(mangledFleet, whichMembersAvailable);
+                    } else {
+                        tablePlugin.addShipList(selectedPreset.getCampaignFleet(), whichMembersAvailable);
+                    }
+                    setParas();
+
                     enableButtonsRequiringSelection();
                     return;
 
@@ -711,6 +721,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
                 case STORE_BUTTON_ID:
                     PresetUtils.storeFleetInStorage();
+                    setParas();
                     enableButtonsRequiringSelection();
                     return;
                     
@@ -790,9 +801,9 @@ public class FleetPresetManagementListener extends ActionListener {
                                 enableButtonsRequiringSelection();
 
                             } else if (Keyboard.isKeyDown(Keyboard.KEY_ESCAPE) && rowNum > 0 && selectedPresetName != EMPTY_STRING) {
-                                disableButtonsRequiringSelection();
                                 selectedRowIndex = -1;
                                 selectPreset(EMPTY_STRING, selectedRowIndex);
+                                disableButtonsRequiringSelection();
 
                                 tablePlugin.rebuild();
                                 event.consume();
@@ -909,7 +920,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
             ButtonAPI button = (ButtonAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.tableRowGetButtonMethod, row);
             button.setMouseOverSound(null);
-            
+
             TableRowListener rowListener = new TableRowListener(row, rowPos, rowName, id);
             CustomPanelAPI rowOverlayPanel = Global.getSettings().createCustom(NAME_COLUMN_WIDTH, 29f, rowListener);
             TooltipMakerAPI rowOverlayTooltipMaker = rowOverlayPanel.createUIElement(NAME_COLUMN_WIDTH, 29f, false);
@@ -923,6 +934,7 @@ public class FleetPresetManagementListener extends ActionListener {
         @Override
         public void buildTooltip(CustomPanelAPI panel) {
             refreshTableMap();
+
             whichMembersAvailable = null;
             if (mangledFleet != null) {
                 mangledFleet.despawn();
@@ -984,41 +996,7 @@ public class FleetPresetManagementListener extends ActionListener {
                 // in case there is a matching member in storage with the same variant but not the exact same member the preset was saved with
                 Map<FleetMemberWrapper, FleetMemberAPI> neededMembers = PresetUtils.getIdAgnosticRequiredMembers(dockingListener.getPlayerCurrentMarket(), selectedPresetName);
 
-                if (PresetUtils.isPresetAvailableAtCurrentMarket(dockingListener.getPlayerCurrentMarket(), selectedPresetName, 
-                    Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy())) {
-
-                    isSelectedPresetAvailablePara.setText(String.format(isSelectedPresetAvailableParaFormat, "available"));
-                    isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
-
-                    if (PresetUtils.isPresetPlayerFleet(selectedPreset)) {
-                        theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
-                        isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet"));
-                        isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
-                        Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, selectedPreset);
-                    } else {
-                        Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
-                    }
-
-                } else {
-
-                    if (PresetUtils.isPresetPlayerFleet(selectedPreset)) {
-                        isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet"));
-                        isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
-
-                    } else if (PresetUtils.isPresetPlayerFleetOfficerAgnostic(selectedPreset)) {
-                        isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet but the ship order or officer assignments are different."));
-                        isSelectedPresetAvailablePara.setColor(TEXT_HIGHLIGHT_COLOR);
-
-                    } else if (PresetUtils.isPresetContainedInPlayerFleet(selectedPreset)) {
-                        isSelectedPresetAvailablePara.setText(String.format("Selected Preset is a part of the current fleet"));
-                        isSelectedPresetAvailablePara.setColor(TEXT_HIGHLIGHT_COLOR);
-
-                    } else {
-                        isSelectedPresetAvailablePara.setText(String.format(isSelectedPresetAvailableParaFormat, "only partially available, or unavailable"));
-                        isSelectedPresetAvailablePara.setColor(Misc.getNegativeHighlightColor());
-                        whichMembersAvailable = PresetUtils.whichMembersAvailable(dockingListener.getPlayerCurrentMarket(), selectedPreset.getCampaignFleet().getFleetData().getMembersListCopy());
-                    }
-                }
+                setParas();
 
                 if (neededMembers != null) {
                     mangledFleet = PresetUtils.mangleFleet(neededMembers, selectedPreset.getCampaignFleet());
@@ -1199,6 +1177,44 @@ public class FleetPresetManagementListener extends ActionListener {
     
         @Override
         public void renderBelow(float arg0) {
+        }
+    }
+
+    public void setParas() {
+        if (PresetUtils.isPresetAvailableAtCurrentMarket(dockingListener.getPlayerCurrentMarket(), selectedPresetName, 
+        Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy())) {
+
+            isSelectedPresetAvailablePara.setText(String.format(isSelectedPresetAvailableParaFormat, "available"));
+            isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
+
+            if (PresetUtils.isPresetPlayerFleet(selectedPreset)) {
+                theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
+                isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet"));
+                isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
+                Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, selectedPreset);
+            } else {
+                Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
+            }
+
+        } else {
+
+            if (PresetUtils.isPresetPlayerFleet(selectedPreset)) {
+                isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet"));
+                isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
+
+            } else if (PresetUtils.isPresetPlayerFleetOfficerAgnostic(selectedPreset)) {
+                isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet but the ship order or officer assignments are different."));
+                isSelectedPresetAvailablePara.setColor(TEXT_HIGHLIGHT_COLOR);
+
+            } else if (PresetUtils.isPresetContainedInPlayerFleet(selectedPreset)) {
+                isSelectedPresetAvailablePara.setText(String.format("Selected Preset is a part of the current fleet"));
+                isSelectedPresetAvailablePara.setColor(TEXT_HIGHLIGHT_COLOR);
+
+            } else {
+                isSelectedPresetAvailablePara.setText(String.format(isSelectedPresetAvailableParaFormat, "only partially available, or unavailable"));
+                isSelectedPresetAvailablePara.setColor(Misc.getNegativeHighlightColor());
+                if (selectedPreset != null) whichMembersAvailable = PresetUtils.whichMembersAvailable(dockingListener.getPlayerCurrentMarket(), selectedPreset.getCampaignFleet().getFleetData().getMembersListCopy());
+            }
         }
     }
 
@@ -1401,6 +1417,10 @@ public class FleetPresetManagementListener extends ActionListener {
 
     public DockingListener getDockingListener() {
         return this.dockingListener;
+    }
+
+    public CampaignFleetAPI getMangledFleet() {
+        return this.mangledFleet;
     }
 
     public TablePlugin getTablePlugin() {
