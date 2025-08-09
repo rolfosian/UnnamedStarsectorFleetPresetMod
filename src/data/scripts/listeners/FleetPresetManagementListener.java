@@ -355,7 +355,6 @@ public class FleetPresetManagementListener extends ActionListener {
         // theButtons.put(KEEP_CARGO_RATIOS_BUTTON_ID, cargoRatiosButton);
         disableButtonsRequiringSelection();
         enableButtonsRequiringSelection();
-
         return;
     }
 
@@ -705,11 +704,11 @@ public class FleetPresetManagementListener extends ActionListener {
                 case RESTORE_BUTTON_ID:
                     PresetUtils.restoreFleetFromPreset(selectedPresetName);
 
-                    if (mangledFleet != null) {
-                        tablePlugin.addShipList(mangledFleet, whichMembersAvailable);
-                    } else {
-                        tablePlugin.addShipList(selectedPreset.getCampaignFleet(), whichMembersAvailable);
-                    }
+                    // if (mangledFleet != null) {
+                    //     tablePlugin.addShipList(mangledFleet, whichMembersAvailable);
+                    // } else {
+                    //     tablePlugin.addShipList(selectedPreset.getCampaignFleet(), whichMembersAvailable);
+                    // }
                     setParas();
 
                     enableButtonsRequiringSelection();
@@ -808,7 +807,7 @@ public class FleetPresetManagementListener extends ActionListener {
                                 if (selectedRowIndex != -1) {
                                     TableRowListener selectedRowListener = tableRowListeners.get(selectedRowIndex);
                                     tablePanel.select(null, null);
-                                    tablePlugin.setRowRenderParams(selectedRowListener.row, new Object[] {c1, selectedRowListener.rowName});
+                                    tablePlugin.setRowColorAndText(selectedRowListener.row, new Object[] {c1, selectedRowListener.rowName});
                                     tablePlugin.addShipList(null, null);
                                 }
 
@@ -926,9 +925,9 @@ public class FleetPresetManagementListener extends ActionListener {
         @Override
         public void render(float alphaMult) {}
 
-        public void setRowRenderParams(Object row, Object[] params) {
-            ReflectionUtilis.setPrivateVariable(ClassRefs.tableRowParamsField, row, params);
-            ReflectionUtilis.setPrivateVariable(ClassRefs.tableRowCreatedField, row, false);
+        public void setRowColorAndText(Object row, Object[] colorAndText) {
+            ReflectionUtilis.setPrivateVariable(ClassRefs.tableRowParamsField, row, colorAndText);
+            ReflectionUtilis.setPrivateVariable(ClassRefs.tableRowCreatedField, row, false); // setting created to false makes the renderer reinitialize when it is called and use the new color/text
             ReflectionUtilis.invokeMethodDirectly(ClassRefs.tableRowRenderMethod, row, 0.01f);
         }
 
@@ -938,15 +937,16 @@ public class FleetPresetManagementListener extends ActionListener {
             ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, rowListener.button, new ActionListener() {
                 @Override
                 public void trigger(Object... args) {
-                    setRowRenderParams(rowListener.row, new Object[] {TEXT_HIGHLIGHT_COLOR, rowListener.rowName});
-
-                    ReflectionUtilis.invokeMethodDirectly(ClassRefs.tablePanelSelectMethod, tablePanel, rowListener.row, null);
-                    selectPreset(rowListener.rowName, rowListener.id);
-
-                    for (TableRowListener rowL : tableRowListeners) {
-                        if (rowListener == rowL) continue;
-                        setRowRenderParams(rowL.row, new Object[] {c1, rowL.rowName});
+                    if (selectedRowIndex == rowListener.id) {
+                        return;
+                    } else if (selectedRowIndex != -1) {
+                        TableRowListener previousSelected = tableRowListeners.get(selectedRowIndex);
+                        setRowColorAndText(previousSelected.row, new Object[] {c1, previousSelected.rowName});
                     }
+
+                    selectPreset(rowListener.rowName, rowListener.id);
+                    setRowColorAndText(rowListener.row, new Object[] {TEXT_HIGHLIGHT_COLOR, rowListener.rowName});
+                    ReflectionUtilis.invokeMethodDirectly(ClassRefs.tablePanelSelectMethod, tablePanel, rowListener.row, null);
 
                     if (selectedPresetName != EMPTY_STRING) {
                         selectedPreset = currentTableMap.get(selectedPresetName);
@@ -978,11 +978,11 @@ public class FleetPresetManagementListener extends ActionListener {
             PositionAPI rowPos = row.getPosition();
 
             TableRowListener rowListener = new TableRowListener(row, (ButtonAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.tableRowGetButtonMethod, row), rowPos, rowName, id);
-            CustomPanelAPI rowOverlayPanel = Global.getSettings().createCustom(NAME_COLUMN_WIDTH, 29f, rowListener);
-            TooltipMakerAPI rowOverlayTooltipMaker = rowOverlayPanel.createUIElement(NAME_COLUMN_WIDTH, 29f, false);
+            // CustomPanelAPI rowOverlayPanel = Global.getSettings().createCustom(NAME_COLUMN_WIDTH, 29f, rowListener);
+            // TooltipMakerAPI rowOverlayTooltipMaker = rowOverlayPanel.createUIElement(NAME_COLUMN_WIDTH, 29f, false);
 
             // tableTipMaker.addComponent(rowOverlayPanel).inTL(rowPos.getX(), rowPos.getY());
-            rowListener.init(rowOverlayPanel, rowOverlayTooltipMaker, rowPos);
+            // rowListener.init(rowOverlayPanel, rowOverlayTooltipMaker, rowPos);
             
             tableRowListeners.add(rowListener);
         }
@@ -1115,7 +1115,7 @@ public class FleetPresetManagementListener extends ActionListener {
         }
     }
 
-    public class TableRowListener implements CustomUIPanelPlugin  {
+    public class TableRowListener { // implements CustomUIPanelPlugin  {
         public Object row;
         public String rowName;
         public int id;
@@ -1132,22 +1132,22 @@ public class FleetPresetManagementListener extends ActionListener {
             this.button = rowButton;
         }
     
-        public void init(CustomPanelAPI panel, TooltipMakerAPI tooltipMaker, PositionAPI rowPos) {
-            this.panel = panel;
-            this.rowPos = rowPos;
-        }
+        // public void init(CustomPanelAPI panel, TooltipMakerAPI tooltipMaker, PositionAPI rowPos) {
+        //     this.panel = panel;
+        //     this.rowPos = rowPos;
+        // }
     
-        @Override
-        public void buttonPressed(Object arg0) {}
+        // @Override
+        // public void buttonPressed(Object arg0) {}
     
-        @Override
-        public void positionChanged(PositionAPI arg0) {}
+        // @Override
+        // public void positionChanged(PositionAPI arg0) {}
 
-        @Override
-        public void advance(float arg0) {}
+        // @Override
+        // public void advance(float arg0) {}
 
-        @Override
-        public void processInput(List<InputEventAPI> arg0) {
+        // @Override
+        // public void processInput(List<InputEventAPI> arg0) {
             // for (InputEventAPI event : arg0) {
                 // if (!isActive) continue;
                 // if (event.isMouseMoveEvent()) {
@@ -1228,13 +1228,13 @@ public class FleetPresetManagementListener extends ActionListener {
                     
             //     }
             // }
-        }
+        // }
     
-        @Override
-        public void render(float arg0) {}
+        // @Override
+        // public void render(float arg0) {}
     
-        @Override
-        public void renderBelow(float arg0) {}
+        // @Override
+        // public void renderBelow(float arg0) {}
     }
 
     public void setParas() {
