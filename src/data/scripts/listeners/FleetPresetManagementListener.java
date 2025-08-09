@@ -704,11 +704,11 @@ public class FleetPresetManagementListener extends ActionListener {
                 case RESTORE_BUTTON_ID:
                     PresetUtils.restoreFleetFromPreset(selectedPresetName);
 
-                    // if (mangledFleet != null) {
-                    //     tablePlugin.addShipList(mangledFleet, whichMembersAvailable);
-                    // } else {
-                    //     tablePlugin.addShipList(selectedPreset.getCampaignFleet(), whichMembersAvailable);
-                    // }
+                    if (mangledFleet != null) {
+                        tablePlugin.addShipList(mangledFleet, whichMembersAvailable);
+                    } else {
+                        tablePlugin.addShipList(selectedPreset.getCampaignFleet(), whichMembersAvailable);
+                    }
                     setParas();
 
                     enableButtonsRequiringSelection();
