@@ -9,6 +9,7 @@ import com.fs.starfarer.api.campaign.OptionPanelAPI;
 import com.fs.starfarer.api.campaign.VisualPanelAPI;
 import com.fs.starfarer.api.combat.EngagementResultAPI;
 import com.fs.starfarer.api.ui.ButtonAPI;
+import com.fs.starfarer.api.ui.UIComponentAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 import com.fs.starfarer.campaign.CommDirectoryEntry;
 
@@ -36,7 +37,9 @@ public abstract class OptionPanelListener {
     private OptionPanelListener self;
     private InteractionDialogPlugin plugin;
     private Map<ButtonAPI, Object> buttonsToItemsMap;
-    private Object currentOption;
+
+    private Object currentCommDirectoryEntryData = null; // this is usually a Person object
+    private Object currentOption = null;
 
     private Set<Object> currentOptions = new HashSet<>();
     private Set<Object> currentButtons = new HashSet<>();
@@ -212,7 +215,6 @@ public abstract class OptionPanelListener {
         currentOptions = newOptions;
         currentButtons = newButtons;
         currentConfirmButtons.clear();
-        // if (!currentOptions.equals(newOptions)) currentOptions = newOptions;
     }
     
     private void onPlayerEnterBattle() {
@@ -249,18 +251,19 @@ public abstract class OptionPanelListener {
 
     private void handleCommDirectory(Set<Object> innerPanelNonButtons, Set<Object> newButtons, Set<Object> newOptions) {
         for (Object nonButton : innerPanelNonButtons) {
-            List<Object> children = (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getChildrenNonCopy", nonButton, 0);
+            List<UIComponentAPI> children = ClassRefs.uiPanelClass.isInstance(nonButton) ? (List<UIComponentAPI>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelgetChildrenNonCopyMethod, nonButton) : null;
             if (children != null) {
-                for (Object child : children) {
-                    List<Object> lst = (List<Object>) ReflectionUtilis.getMethodAndInvokeDirectly("getItems", child, 0);
+                for (UIComponentAPI child : children) {
+                    List<Object> lst = ClassRefs.commDirectoryListPanelClass.isInstance(child) ? (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.commDirectoryGetItemsMethod, child) : null;
                     
                     if (lst != null) {
                         // these are the buttons for the comm directory entries, there is a field for this particular child that maps to CommDirectoryEntry with its keys being these buttons
+                        Map<ButtonAPI, CommDirectoryEntry> buttonToCommDirectoryEntryMap = (Map<ButtonAPI, CommDirectoryEntry>) ReflectionUtilis.getPrivateVariable(ClassRefs.commDirectoryEntriesMapField, child);
                         for (Object o : lst) {
                             if (currentConfirmButtons.contains(o)) continue;
     
                             currentConfirmButtons.add(o);
-                            setCommmDirectoryButtonListener(o, newButtons, newOptions);
+                            setCommmDirectoryButtonListener(o, newButtons, newOptions, buttonToCommDirectoryEntryMap.get(o).getEntryData());
                         }
                     }
                 }
@@ -268,12 +271,18 @@ public abstract class OptionPanelListener {
         }
     }
 
-    private void setCommmDirectoryButtonListener(Object button, Set<Object> newButtons, Set<Object> newOptions) {
+    public Object getCurrentCommDirectoryEntryData() {
+        return this.currentCommDirectoryEntryData; // this is usually a Person Object
+    }
+
+    private void setCommmDirectoryButtonListener(Object button, Set<Object> newButtons, Set<Object> newOptions, Object commDirEntryData) {
         Object oldListener = ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, button);
         ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, button, new ActionListener() {
             @Override
             public void trigger(Object... args) {
                 if (args[1] == button) {
+                    currentCommDirectoryEntryData = commDirEntryData;
+                    
                     ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldListener, args);
                     updateOptions(newButtons, newOptions);
                     populateOptions();
@@ -283,24 +292,24 @@ public abstract class OptionPanelListener {
     }
 
     private class ButtonToItemsMapRefFixer implements EveryFrameScript {
-            boolean isDone = false;
-            @Override
-            public boolean isDone() {
-                return isDone;
-            }
+        boolean isDone = false;
+        @Override
+        public boolean isDone() {
+            return isDone;
+        }
 
-            @Override
-            public boolean runWhilePaused() {
-                return true;
-            }
+        @Override
+        public boolean runWhilePaused() {
+            return true;
+        }
 
-            @Override
-            public void advance(float amount) {
-                self.buttonsToItemsMap = (Map<ButtonAPI, Object>)ReflectionUtilis.invokeMethodDirectly(ClassRefs.optionPanelGetButtonToItemMapMethod, optionPanel);
-                populateOptions();
-                Global.getSector().removeTransientScript(this);
-                isDone = true;
-            }
+        @Override
+        public void advance(float amount) {
+            self.buttonsToItemsMap = (Map<ButtonAPI, Object>)ReflectionUtilis.invokeMethodDirectly(ClassRefs.optionPanelGetButtonToItemMapMethod, optionPanel);
+            populateOptions();
+            Global.getSector().removeTransientScript(this);
+            isDone = true;
+        }
     }
 
     private class ButtonChecker implements EveryFrameScript {

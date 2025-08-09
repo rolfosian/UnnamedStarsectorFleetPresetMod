@@ -89,6 +89,10 @@ public class ClassRefs {
     public static Object optionPanelGetButtonToItemMapMethod;
     public static Object interactionDialogGetCoreUIMethod;
 
+    public static Class<?> commDirectoryListPanelClass;
+    public static Object commDirectoryGetItemsMethod;
+    public static Object commDirectoryEntriesMapField;
+
     public static float FMRDialogWidth = FleetPresetManagementListener.CONFIRM_DIALOG_WIDTH * 0.87f;
     public static float FMRDialogHeight = FleetPresetManagementListener.CONFIRM_DIALOG_HEIGHT * 0.87f;
     public static float FMRDialogPanelWidth = FMRDialogWidth * 0.97f;
@@ -344,6 +348,31 @@ public class ClassRefs {
                         }
                     }
                     continue;
+
+                case 32:
+                    if (commDirectoryGetItemsMethod == null) {
+                        outer:
+                        for (int j = 0; j < methods.length; j++) {
+                            Object method = methods[j];
+
+                            if (ReflectionUtilis.getMethodName(method).equals("getItems")) {
+                                commDirectoryListPanelClass = cls;
+                                commDirectoryGetItemsMethod = method;
+
+                                Object[] fields = cls.getDeclaredFields();
+                                for (int k = 0; k < fields.length; k++) {
+                                    Object field = fields[k];
+                                    
+                                    if (ReflectionUtilis.getFieldType(field).equals(Map.class)) {
+                                        commDirectoryEntriesMapField = field;
+                                        break outer;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    continue;
+
 
                 case 56:
                     if (CRBarClass == null) {
