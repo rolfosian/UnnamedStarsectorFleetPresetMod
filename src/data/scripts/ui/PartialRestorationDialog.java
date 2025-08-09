@@ -189,6 +189,7 @@ public class PartialRestorationDialog {
             FleetMemberButton buttonWrapper = shipButtons.get(btn);
             if (member == null) {
                 btn.setOpacity(0.66f);
+                btn.setButtonPressedSound("ui_button_disabled_pressed");
                 UtilReflection.setButtonTooltipWithPostProcessing(btn, originalOrder.get(i));
                 UtilReflection.setShipButtonHighlightColor(buttonToRenderControllerMap.get(btn), UtilReflection.DARK_RED);
                 setListenerForDisabled(buttonWrapper);

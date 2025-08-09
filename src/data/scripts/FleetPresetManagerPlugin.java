@@ -27,7 +27,6 @@ import data.scripts.FleetPresetManagerCoreScript;
 import java.util.*;
 
 import org.apache.log4j.Logger;
-import org.apache.log4j.PatternLayout;
 
 public class FleetPresetManagerPlugin extends BaseModPlugin {
     public static void print(Object... args) {
