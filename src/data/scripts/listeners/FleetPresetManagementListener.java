@@ -64,8 +64,6 @@ import data.scripts.util.PresetMiscUtils;
 import java.awt.Color;
 import java.util.*;
 
-import javax.swing.text.TableView.TableRow;
-
 import org.apache.log4j.Logger;
 import org.lwjgl.input.Keyboard;
 
@@ -378,6 +376,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
                         PresetUtils.deleteFleetPreset(oldName);
                         PresetUtils.saveFleetPreset(newName);
+
                         refreshTableMap();
                         selectPreset(newName, getTableMapIndex(newName));
                         tablePlugin.rebuild();
@@ -530,12 +529,20 @@ public class FleetPresetManagementListener extends ActionListener {
             public void trigger(Object... args) {
                 String text = saveNameField.getText();
                 if (!isEmptyOrWhitespace(text)) {
+                    FleetPreset possibleDuplicate = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
+
                     if (currentTableMap.containsKey(text)) {
+                        if (possibleDuplicate != null && !possibleDuplicate.getName().equals(text)) {
+                            new MessageBox("Duplicates are not allowed!", null).dialogData.addGridLines(false, true, UtilReflection.DARK_RED);
+                            return;
+                        }
+
                         selectPreset(text, getTableMapIndex(text));
                         openOverwriteDialog(oldSaveButtonListener, saveButton);
                         return;
                     }
-                    FleetPreset possibleDuplicate = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
+                    
+                    
                     if (possibleDuplicate != null) {
                         openRenameDialog(possibleDuplicate.getName(), text, oldSaveButtonListener, saveButton, cancelButtonListener, cancelButton);
                         return;
@@ -946,7 +953,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
                     selectPreset(rowListener.rowName, rowListener.id);
                     setRowColorAndText(rowListener.row, new Object[] {TEXT_HIGHLIGHT_COLOR, rowListener.rowName});
-                    ReflectionUtilis.invokeMethodDirectly(ClassRefs.tablePanelSelectMethod, tablePanel, rowListener.row, null);
+                    // ReflectionUtilis.invokeMethodDirectly(ClassRefs.tablePanelSelectMethod, tablePanel, rowListener.row, null);
 
                     if (selectedPresetName != EMPTY_STRING) {
                         selectedPreset = currentTableMap.get(selectedPresetName);
@@ -1485,9 +1492,11 @@ public class FleetPresetManagementListener extends ActionListener {
     }
 
     private class MessageBox {
-        private ConfirmDialogData messageMaster;
+        private ConfirmDialogData dialogData;
     
         public MessageBox(String message, DialogDismissedListener listener) {
+            if (listener == null) listener = new DialogDismissedListener() {public void trigger(Object... args){}};
+
             LabelAPI labbel = Global.getSettings().createLabel(message, Fonts.ORBITRON_16);
             labbel.setAlignment(Alignment.MID);
             labbel.setColor(Misc.getBasePlayerColor());
@@ -1495,7 +1504,7 @@ public class FleetPresetManagementListener extends ActionListener {
             float width = labbel.computeTextWidth(message);
             float height = labbel.computeTextHeight(message);
     
-            messageMaster = UtilReflection.showConfirmationDialog("graphics/icons/industry/battlestation.png",
+            dialogData = UtilReflection.showConfirmationDialog("graphics/icons/industry/battlestation.png",
             "",
             "",
             "Ok",
@@ -1504,9 +1513,9 @@ public class FleetPresetManagementListener extends ActionListener {
             listener
             );
     
-            messageMaster.panel.removeComponent((UIComponentAPI)messageMaster.confirmButton.getInstance());
-            messageMaster.panel.removeComponent((UIComponentAPI)messageMaster.textLabel);
-            PositionAPI buttonPos = messageMaster.cancelButton.getInstance().getPosition();
+            dialogData.panel.removeComponent((UIComponentAPI)dialogData.confirmButton.getInstance());
+            dialogData.panel.removeComponent((UIComponentAPI)dialogData.textLabel);
+            PositionAPI buttonPos = dialogData.cancelButton.getInstance().getPosition();
     
             CustomPanelAPI labbelPanel = Global.getSettings().createCustom(width, height, null);
             TooltipMakerAPI tt = labbelPanel.createUIElement(width, height, false);
@@ -1519,7 +1528,7 @@ public class FleetPresetManagementListener extends ActionListener {
             messageText.setAlignment(Alignment.MID);
             labbelPanel.addUIElement(tt);
     
-            messageMaster.panel.addComponent(labbelPanel).inMid().setYAlignOffset(0f);
+            dialogData.panel.addComponent(labbelPanel).inMid().setYAlignOffset(0f);
     
             width = buttonPos.getWidth() / 2;
             height = buttonPos.getHeight();

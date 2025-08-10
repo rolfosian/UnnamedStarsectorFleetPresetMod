@@ -1073,57 +1073,6 @@ public class PresetUtils {
         return null;
     }
 
-    public static Set<FleetPreset> getPresetsOfMembers(List<FleetMemberAPI> targetMembers) {
-        Map<String, FleetPreset> presets = getFleetPresets();
-        Set<FleetPreset> found = new HashSet<>();
-
-        for (FleetPreset preset : presets.values()) {
-            if (targetMembers.size() != preset.getShipIds().size()) {
-                continue;
-            }
-
-            boolean allShipsMatched = true;
-
-            for (int i = 0; i < targetMembers.size(); i++) {
-                FleetMemberAPI playerMember = targetMembers.get(i);
-                ShipVariantAPI variant = playerMember.getVariant();
-                PersonAPI captain = playerMember.getCaptain();
-
-                ShipVariantAPI presetVariant = preset.getVariantsMap().get(i);
-                if (presetVariant == null) {
-                    allShipsMatched = false;
-                    break;
-                }
-
-                boolean variantMatched = false;
-                if (areSameVariant(presetVariant, variant)) {
-                    OfficerVariantPair pair = preset.getOfficersMap().get(i);
-                    if (pair != null) {
-                        boolean officerMatched = false;
-
-                        if (areSameVariant(pair.getVariant(), variant) && (captain != null && pair.getOfficer().getId().equals(captain.getId()))) officerMatched = true;
-
-                        if (!officerMatched) {
-                            allShipsMatched = false;
-                            break;
-                        }
-                    }
-                    variantMatched = true;
-                }
-                
-                if (!variantMatched) {
-                    allShipsMatched = false;
-                    break;
-                }
-            }
-
-            if (allShipsMatched) {
-                found.add(preset);
-            }
-        }
-        return found;
-    }
-
     public static boolean isPresetPlayerFleet(FleetPreset preset) {
         if (preset == null) return false;
 
