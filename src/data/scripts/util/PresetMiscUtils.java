@@ -1,9 +1,6 @@
 package data.scripts.util;
 
 import java.util.*;
-import java.awt.Robot;
-import java.awt.AWTException;
-import java.awt.event.InputEvent;
 import org.apache.log4j.Logger;
 import com.fs.starfarer.api.Global;
 

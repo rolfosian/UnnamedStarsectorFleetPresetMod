@@ -204,32 +204,33 @@ public class UtilReflection {
         String cancelText,
         float width,
         float height,
-        DialogDismissedListener dialogListener) {
+        DialogDismissedListener dialogListener
+        ) {
+            
+        UIPanelAPI confirmDialog = (UIPanelAPI) createConfirmDialog(text, confirmText, cancelText, width, height, dialogListener);
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogShowMethod, confirmDialog, 0.25f, 0.25f);
 
-    UIPanelAPI confirmDialog = (UIPanelAPI) createConfirmDialog(text, confirmText, cancelText, width, height, dialogListener);
-    ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogShowMethod, confirmDialog, 0.25f, 0.25f);
+        LabelAPI label = (LabelAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetLabelMethod, confirmDialog);
+        Button yes = new Button((ButtonAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetButtonMethod, confirmDialog, 0), null, null);
+        Button no = new Button((ButtonAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetButtonMethod, confirmDialog, 1), null, null);
 
-    LabelAPI label = (LabelAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetLabelMethod, confirmDialog);
-    Button yes = new Button((ButtonAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetButtonMethod, confirmDialog, 0), null, null);
-    Button no = new Button((ButtonAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetButtonMethod, confirmDialog, 1), null, null);
+        UIPanelAPI innerPanel = (UIPanelAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetInnerPanelMethod, confirmDialog);
+        
+        CustomPanelAPI bgImagePanel = addBackGroundImage((UIPanelAPI)confirmDialog, no.getInstance(), backgroundImagePath);
+        innerPanel.bringComponentToTop((UIComponentAPI)label);
+        innerPanel.bringComponentToTop((UIComponentAPI)yes.getInstance());
+        innerPanel.bringComponentToTop((UIComponentAPI)no.getInstance());
 
-    UIPanelAPI innerPanel = (UIPanelAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogGetInnerPanelMethod, confirmDialog);
+        setConfirmDialogButtonInterceptor(no, confirmDialog, bgImagePanel);
+        setConfirmDialogButtonInterceptor(yes, confirmDialog, bgImagePanel);
     
-    CustomPanelAPI bgImagePanel = addBackGroundImage((UIPanelAPI)confirmDialog, no.getInstance(), backgroundImagePath);
-    innerPanel.bringComponentToTop((UIComponentAPI)label);
-    innerPanel.bringComponentToTop((UIComponentAPI)yes.getInstance());
-    innerPanel.bringComponentToTop((UIComponentAPI)no.getInstance());
-
-    setConfirmDialogButtonInterceptor(no, confirmDialog, bgImagePanel);
-    setConfirmDialogButtonInterceptor(yes, confirmDialog, bgImagePanel);
- 
-    return new ConfirmDialogData(
-            label,
-            yes,
-            no,
-            innerPanel,
-            confirmDialog);
-}
+        return new ConfirmDialogData(
+                label,
+                yes,
+                no,
+                innerPanel,
+                confirmDialog);
+    }
 
     public static UIPanelAPI getCoreUI() {
         CampaignUIAPI campaignUI = Global.getSector().getCampaignUI();
