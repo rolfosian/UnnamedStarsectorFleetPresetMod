@@ -41,12 +41,31 @@ public class UIConfig {
 
     // THERE HAS TO BE A BETTER WAY TO DO THIS
     static {
+        float storeBtnOffsetMult = 1f;
+        float takeBtnOffsetMult = 1f;
+
+        float scaleMult = Global.getSettings().getScreenScaleMult();
+        if (scaleMult > 1) {
+            if (scaleMult >= 1.3f && DISPLAY_WIDTH < 2560) {
+                storeBtnOffsetMult = 0.817f;
+                takeBtnOffsetMult = 0.78f;
+                
+            } else if (scaleMult >= 1.7f && DISPLAY_WIDTH >= 2560 && DISPLAY_WIDTH < 3840) {
+                storeBtnOffsetMult = 0.817f;
+                takeBtnOffsetMult = 0.78f;
+
+            } else if (scaleMult >= 2.55f && DISPLAY_HEIGHT >= 2160) {
+                storeBtnOffsetMult = 0.817f;
+                takeBtnOffsetMult = 0.78f;
+            }
+        }
+
         if (DISPLAY_WIDTH >= 1600) {
-            STORE_SHIPS_BTN_X_OFFSET = 1352f;
-            TAKE_SHIPS_BTN_X_OFFSET = 1127f;
+            STORE_SHIPS_BTN_X_OFFSET = 1352f * storeBtnOffsetMult;
+            TAKE_SHIPS_BTN_X_OFFSET = 1127f * takeBtnOffsetMult;
         } else {
-            STORE_SHIPS_BTN_X_OFFSET = 1105f;
-            TAKE_SHIPS_BTN_X_OFFSET = 880f;
+            STORE_SHIPS_BTN_X_OFFSET = 1105f * storeBtnOffsetMult;
+            TAKE_SHIPS_BTN_X_OFFSET = 880f * takeBtnOffsetMult;
         }
 
         if (DISPLAY_WIDTH < 1360) {
