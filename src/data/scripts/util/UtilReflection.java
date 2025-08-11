@@ -96,6 +96,19 @@ public class UtilReflection {
         );
     }
 
+    public static void setButtonHook(ButtonAPI button, Runnable runBefore, Runnable runAfter) {
+        Object oldListener = ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, button);
+
+        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, button, new ActionListener() {
+            @Override
+            public void trigger(Object... args) {
+                runBefore.run();
+                ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldListener, args);
+                runAfter.run();
+            }
+        }.getProxy());
+    }
+
     public static void clickButton(Object button) {
         if (button == null) return;
 

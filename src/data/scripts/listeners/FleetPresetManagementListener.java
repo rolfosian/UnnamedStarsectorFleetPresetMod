@@ -240,7 +240,7 @@ public class FleetPresetManagementListener extends ActionListener {
             new DialogDismissedListener() {
                 @Override
                 public void trigger(Object... args) {
-                    resetTopLevelVars();
+                    // resetTopLevelVars();
                 }
         });
 
@@ -255,6 +255,7 @@ public class FleetPresetManagementListener extends ActionListener {
         PositionAPI cancelButtonPosition = cancelButton.getPosition();
         CANCEL_CONFIRM_BUTTON_WIDTH = cancelButtonPosition.getWidth();
         cancelButton.setShortcut(Keyboard.KEY_G, false);
+        UtilReflection.setButtonHook(cancelButton, () -> resetTopLevelVars(), () -> {});
 
         ButtonPlugin buttonPlugin = new ButtonPlugin();
         buttonsPanel = Global.getSettings().createCustom(CANCEL_CONFIRM_BUTTON_WIDTH, PANEL_HEIGHT, buttonPlugin);
