@@ -168,7 +168,7 @@ public class FleetPresetManagementListener extends ActionListener {
         this.fenaglePanele = null;
         this.tablePanel = null;
         this.tableRowListeners = new ArrayList<>();
-        this.tablePlugin = new TablePlugin();
+        this.tablePlugin = null;
         this.tableCanvasPos = null;
         this.currentTableMap = null;
         this.tableUp = true;
