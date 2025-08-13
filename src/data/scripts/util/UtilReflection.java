@@ -424,24 +424,23 @@ public class UtilReflection {
 
     public static void setButtonTooltips(String name, UIPanelAPI obfFleetInfoPanel, List<FleetMemberAPI> members) {
         TreeTraverser traverser = new TreeTraverser(obfFleetInfoPanel);
-        int i = 0;
 
+        outer:
         for (TreeNode node : traverser.getNodes()) {
             List<LabelAPI> labels = node.getLabels();
 
             if (labels != null) {
                 for (LabelAPI label : labels) {
                     if (label.getText().equals(name)) {
-                        i++;
                         label.setHighlightColor(Color.YELLOW);
                         label.setHighlightOnMouseover(true);
-                        break;
+                        break outer;
                     }
                 }
             }
         }
 
-        i = 0;
+        int i = 0;
         for (TreeNode node : traverser.getNodesAtDepth(7)) {
             for (Object child : node.getChildren()) {
                 setButtonTooltip((ButtonAPI)child, members.get(i));

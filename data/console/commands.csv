@@ -1,2 +1,3 @@
 command,class,tags,syntax,help
-ufp_deleteall,data.scripts.console.DeleteFleetPresets,"cheat,campaign",ufp_deleteall,Deletes All Fleet Presets.
+ufp_deleteall,data.scripts.console.DeleteFleetPresets,"cheat,campaign",ufp_deleteall,Deletes All Fleet Presets, does not remove data keys.
+ufp_uninst,data.scripts.console.UninstFleetPresets,"cheat,campaign",ufp_uninst,Uninstalls Fleet Preset data keys.

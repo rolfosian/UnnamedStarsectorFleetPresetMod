@@ -719,6 +719,22 @@ public class PresetUtils {
             wrappedMember.removeFrompreset();
         }
 
+        for (FleetMemberWrapper wrappedMember : toRemoveMembers) {
+            List<FleetPreset> presets = getPresetsOfMembers(wrappedMember.getPreset().getCampaignFleet().getFleetData().getMembersListCopy());
+
+            if (presets.size() > 1) {
+                String toRemoveName = null;
+                for (int i = 0; i < presets.size(); i++) {
+                    toRemoveName = presets.get(i).getName();
+                    if (getUndockedFleetPreset() != null && getUndockedFleetPreset().getName().equals(toRemoveName)) continue;
+                    break;
+                }
+
+                deleteFleetPreset(toRemoveName);
+                Global.getSector().getCampaignUI().addMessage("Perished member resulted in duplicate fleet preset: " + toRemoveName + ". It has been removed.", Misc.getNegativeHighlightColor());
+            }
+        }
+
         for (String key : toRemoveKeys) {
             presetMembers.remove(key);
         }
@@ -1071,6 +1087,57 @@ public class PresetUtils {
             }
         }
         return null;
+    }
+
+    public static List<FleetPreset> getPresetsOfMembers(List<FleetMemberAPI> targetMembers) {
+        Map<String, FleetPreset> presets = getFleetPresets();
+        List<FleetPreset> result = new ArrayList<>();
+
+        for (FleetPreset preset : presets.values()) {
+            if (targetMembers.size() != preset.getShipIds().size()) {
+                continue;
+            }
+
+            boolean allShipsMatched = true;
+
+            for (int i = 0; i < targetMembers.size(); i++) {
+                FleetMemberAPI playerMember = targetMembers.get(i);
+                ShipVariantAPI variant = playerMember.getVariant();
+                PersonAPI captain = playerMember.getCaptain();
+
+                ShipVariantAPI presetVariant = preset.getVariantsMap().get(i);
+                if (presetVariant == null) {
+                    allShipsMatched = false;
+                    break;
+                }
+
+                boolean variantMatched = false;
+                if (areSameVariant(presetVariant, variant)) {
+                    OfficerVariantPair pair = preset.getOfficersMap().get(i);
+                    if (pair != null) {
+                        boolean officerMatched = false;
+
+                        if (areSameVariant(pair.getVariant(), variant) && areSameOfficerMinusId(captain, pair.getOfficer())) officerMatched = true;
+
+                        if (!officerMatched) {
+                            allShipsMatched = false;
+                            break;
+                        }
+                    }
+                    variantMatched = true;
+                }
+                
+                if (!variantMatched) {
+                    allShipsMatched = false;
+                    break;
+                }
+            }
+
+            if (allShipsMatched) {
+                result.add(preset);
+            }
+        }
+        return result;
     }
 
     public static boolean isPresetPlayerFleet(FleetPreset preset) {
