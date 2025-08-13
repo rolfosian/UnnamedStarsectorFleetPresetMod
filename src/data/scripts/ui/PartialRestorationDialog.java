@@ -417,7 +417,7 @@ public class PartialRestorationDialog {
         }
 
         public void addLabel() {
-            this.panel.addComponent((UIComponentAPI)this.label).inMid();
+            this.panel.addComponent((UIComponentAPI)this.label).inMid().setYAlignOffset(-5f);
         }
 
         public void removeLabel() {
