@@ -397,7 +397,7 @@ public class PresetUtils {
             wrapper.getMember().setId(reverseMemberId(member));
 
             tempFleet.getFleetData().addFleetMember(wrapper.getMember());
-            if (wrapper.getCaptainId() != null && wrapper.getCaptainId().equals(Global.getSector().getPlayerPerson().getId())) {
+            if (wrapper.getCaptainId() != null && areSameOfficerMinusId(wrapper.getMember().getCaptain(), Global.getSector().getPlayerPerson())) {
                 tempFleet.setCommander(wrapper.getCaptainCopy());
                 tempFleet.getFleetData().setFlagship(wrapper.getMember());
             }
