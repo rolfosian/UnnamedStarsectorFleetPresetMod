@@ -771,13 +771,26 @@ public class FleetPresetManagementListener extends ActionListener {
             }
         }
 
+        private void handleArrowKeys(int key, int rowNum) {
+            int newIndex = key == Keyboard.KEY_UP ? (tableUp ? selectedRowIndex - 1 : selectedRowIndex + 1) : (tableUp ? selectedRowIndex + 1 : selectedRowIndex - 1);
+            newIndex = newIndex < 0 ? rowNum - 1 : newIndex == rowNum ? 0 : newIndex;
+            if (newIndex == selectedRowIndex && rowNum == 1) return;
+
+            TableRowListener rowListener = tableRowListeners.get(newIndex);
+            UtilReflection.clickButton(rowListener.button);
+        }
+
         @Override
         public void processInput(List<InputEventAPI> arg0) {
             for (InputEventAPI event : arg0) {
-                if (event.isKeyDownEvent()) {
-                    if (Keyboard.isKeyDown(Keyboard.KEY_RETURN) || Keyboard.isKeyDown(Keyboard.KEY_NUMPADENTER) || Keyboard.isKeyDown(Keyboard.KEY_SPACE)) {
-                        event.consume();
-                        continue;
+                if (event.isKeyboardEvent()) {
+                    boolean isKeyDownEvent = event.isKeyDownEvent();
+
+                    if (isKeyDownEvent) {
+                        if (Keyboard.isKeyDown(Keyboard.KEY_RETURN) || Keyboard.isKeyDown(Keyboard.KEY_NUMPADENTER) || Keyboard.isKeyDown(Keyboard.KEY_SPACE)) {
+                            event.consume();
+                            continue;
+                        }
                     }
 
                     if (!tableRowListeners.isEmpty()) {
@@ -786,29 +799,24 @@ public class FleetPresetManagementListener extends ActionListener {
                         boolean keyUp = Keyboard.isKeyDown(Keyboard.KEY_UP);
 
                         if (keyDown || keyUp) {
-                            int newIndex = 0;
-                            if (keyUp) newIndex = tableUp ? selectedRowIndex - 1 : selectedRowIndex + 1;
-                            else if (keyDown) newIndex = tableUp ? selectedRowIndex + 1 : selectedRowIndex - 1;
+                            handleArrowKeys(event.getEventValue(), rowNum);
 
-                            if (newIndex < 0 || newIndex > rowNum - 1) newIndex = 0;
-
-                            TableRowListener rowListener = tableRowListeners.get(newIndex);
-                            UtilReflection.clickButton(rowListener.button);
-
-                        } else if (Keyboard.isKeyDown(Keyboard.KEY_ESCAPE) && rowNum > 0 && selectedPresetName != EMPTY_STRING) {
-                            if (selectedRowIndex != -1) {
-                                TableRowListener selectedRowListener = tableRowListeners.get(selectedRowIndex);
-                                tablePanel.select(null, null);
-                                tablePlugin.setRowColorAndText(selectedRowListener.row, new Object[] {c1, selectedRowListener.rowName});
-                                tablePlugin.addShipList(null, null);
+                        } else if (isKeyDownEvent) {
+                            if (Keyboard.isKeyDown(Keyboard.KEY_ESCAPE) && rowNum > 0 && selectedPresetName != EMPTY_STRING) {
+                                if (selectedRowIndex != -1) {
+                                    TableRowListener selectedRowListener = tableRowListeners.get(selectedRowIndex);
+                                    tablePanel.select(null, null);
+                                    tablePlugin.setRowColorAndText(selectedRowListener.row, new Object[] {c1, selectedRowListener.rowName});
+                                    tablePlugin.addShipList(null, null);
+                                }
+    
+                                selectedRowIndex = -1;
+                                selectPreset(EMPTY_STRING, selectedRowIndex);
+                                disableButtonsRequiringSelection();
+                                isSelectedPresetAvailablePara.setText("");
+                                event.consume();
                             }
-
-                            selectedRowIndex = -1;
-                            selectPreset(EMPTY_STRING, selectedRowIndex);
-                            disableButtonsRequiringSelection();
-                            isSelectedPresetAvailablePara.setText("");
-                            event.consume();
-                        }
+                        } 
                     }
                 } // else if (event.isLMBEvent()) {
                 //     if (event.getX() < overlordPanelPos.getX() || 
