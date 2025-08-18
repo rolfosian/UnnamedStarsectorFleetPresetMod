@@ -56,7 +56,7 @@ public class FleetPresetsFleetPanelInjector {
     private UIPanel fleetTabWrapped;
     private Object fleetTab;
     private Object fleetPanelClickHandler;
-    private UIComponentAPI fleetDisengageableNotice;
+    private UIComponentAPI targetDialogButtonAnchor;
 
     private ButtonAPI autoAssignButton;
     private PositionAPI officerAutoAssignButtonPosition;
@@ -134,16 +134,20 @@ public class FleetPresetsFleetPanelInjector {
                     handleMissingMember(playerFleetMembers, mothballedShips, market);
                     
                 } else if (playerFleetMembers.size() > runningMembers.size()) {
-                    for (FleetMemberAPI member : playerFleetMembers) {
-                        if (storedMemberIds.get(market.getName()) != null && storedMemberIds.get(market.getName()).contains(member.getId())) {
-                            // member was taken from storage
-                            storedMemberIds.get(market.getName()).remove(member.getId());
-                            if (storedMemberIds.get(market.getName()).isEmpty()) storedMemberIds.remove(market.getName());
+                    Set<String> marketStoredMemberIds = storedMemberIds.get(market.getName());
+
+                    if (marketStoredMemberIds != null) {
+                        for (FleetMemberAPI member : playerFleetMembers) {
+                            if (marketStoredMemberIds.contains(member.getId())) {
+                                // member was taken from storage
+                                marketStoredMemberIds.remove(member.getId());
+                                if (marketStoredMemberIds.isEmpty()) storedMemberIds.remove(market.getName());
+                            }
                         }
                     }
 
                 } else if (!runningMembers.keySet().equals(new HashSet<>(playerFleetMembers))) {
-                    handleMissingMember(playerFleetMembers, mothballedShips, market);
+                    handleMembersMismatch(playerFleetMembers, mothballedShips, market);
                 }
             }
         }
@@ -151,12 +155,12 @@ public class FleetPresetsFleetPanelInjector {
         if (!injected) {
             injected = true;
             fleetTabLeftPane = new UIPanel(fleetInfoPanel);
-            fleetDisengageableNotice = getDisengageableNotice(fleetInfoPanel);
+            targetDialogButtonAnchor = getLowestCenterChild(fleetInfoPanel);
 
             Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.FLEET_TAB_KEY, fleetTab);
 
             autoAssignButton = (ButtonAPI) getAutoAssignButton(fleetInfoPanel);
-            Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.OFFICER_AUTOASSIGN_BUTTON_KEY, getAutoAssignButton(fleetInfoPanel));
+            Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.OFFICER_AUTOASSIGN_BUTTON_KEY, autoAssignButton);
 
             officerAutoAssignButtonPosition = autoAssignButton.getPosition();
 
@@ -183,7 +187,7 @@ public class FleetPresetsFleetPanelInjector {
 
             if (UIConfig.DISPLAY_HEIGHT > 800) {
                 Position pos = fleetTabLeftPane.add(presetFleetsButton);
-                pos.getInstance().belowMid(fleetDisengageableNotice, 10f);
+                pos.getInstance().belowMid(targetDialogButtonAnchor, 10f);
 
             } else {
                 Position pos = fleetTabLeftPane.add(presetFleetsButton);
@@ -214,7 +218,7 @@ public class FleetPresetsFleetPanelInjector {
                 Position labelPos2;
                 if (UIConfig.DISPLAY_HEIGHT > 800) {
                     labelPos1 = fleetTabLeftPane.add(currentPresetLabelHeader);
-                    labelPos1.getInstance().belowMid(fleetDisengageableNotice, presetFleetsButton.getInstance().getPosition().getHeight() + 20f);
+                    labelPos1.getInstance().belowMid(targetDialogButtonAnchor, presetFleetsButton.getInstance().getPosition().getHeight() + 20f);
                     labelPos2 = fleetTabLeftPane.add(currentPresetLabel);
                     labelPos2.getInstance().belowMid((UIComponentAPI)labbel1, 5f);
                 } else {
@@ -264,12 +268,28 @@ public class FleetPresetsFleetPanelInjector {
         return (UIPanelAPI) ReflectionUtilis.getPrivateVariable(ClassRefs.fleetTabFleetInfoPanelField, fleetTab);
     }
 
-    private UIComponentAPI getDisengageableNotice(UIPanelAPI fleetInfoPanel) {
-        for (Object child : (List<Object>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelgetChildrenNonCopyMethod, fleetInfoPanel)) {
-            if (LabelAPI.class.isAssignableFrom(child.getClass())) {
-                LabelAPI labbel = (LabelAPI) child;
-                if (labbel.getText().startsWith("Your fleet is")) return (UIComponentAPI) labbel;
-            }
+    private UIComponentAPI getLowestCenterChild(UIPanelAPI fleetInfoPanel) {
+        List<UIComponentAPI> children = (List<UIComponentAPI>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelgetChildrenNonCopyMethod, fleetInfoPanel);
+        int size = children.size();
+        float[] centerXArr = new float[size];
+        float[] yArr = new float[size];
+
+        for (int i = 0; i < size; i++) {
+            UIComponentAPI child = children.get(i);
+            PositionAPI childPos = child.getPosition();
+
+            centerXArr[i] = childPos.getCenterX();
+            yArr[i] = childPos.getY();
+        }
+
+        float targetCenterX = PresetMiscUtils.getMostCommon(centerXArr);
+        float targetY = PresetMiscUtils.getSmallest(yArr);
+
+        for (int i = 0; i < size; i++) {
+            UIComponentAPI child = children.get(i);
+            PositionAPI childPos = child.getPosition();
+
+            if (childPos.getCenterX() == targetCenterX && childPos.getY() == targetY) return child;
         }
         return null;
     }
@@ -381,6 +401,41 @@ public class FleetPresetsFleetPanelInjector {
                 } else if (PresetUtils.getFleetPresetsMembers().get(runningMember.getId()) != null && !masterPresetsDialog.isPartialSelecting() && getPickedUpMember() == null) {
                     // member was sold or scuttled
                     PresetUtils.cleanUpPerishedPresetMembers();
+                }
+            }
+        }
+    }
+
+    private void handleMembersMismatch(List<FleetMemberAPI> playerFleetMembers, List<FleetMemberAPI> mothballedShips, MarketAPI market) {
+        Set<FleetMemberAPI> runningMembersKeySet = runningMembers.keySet();
+
+        for (FleetMemberAPI runningMember : runningMembersKeySet) {
+            if (!playerFleetMembers.contains(runningMember)) {
+                
+                if (mothballedShips != null && mothballedShips.contains(runningMember) && PresetUtils.getFleetPresetsMembers().get(runningMember.getId()) != null) {
+                    // member was stored
+                    if (storedMemberIds.get(market.getName()) == null) {
+                        storedMemberIds.put(market.getName(), new HashSet<>());
+                    }
+                    storedMemberIds.get(market.getName()).add(runningMember.getId());
+
+                } else if (PresetUtils.getFleetPresetsMembers().get(runningMember.getId()) != null && !masterPresetsDialog.isPartialSelecting() && getPickedUpMember() == null) {
+                    // member was sold or scuttled
+                    PresetUtils.cleanUpPerishedPresetMembers();
+                }
+            }
+        }
+
+        Set<String> marketStoredMemberIds = storedMemberIds.get(market.getName());
+
+        if (marketStoredMemberIds != null) {
+            for (FleetMemberAPI playerMember : playerFleetMembers) {
+                if (!runningMembersKeySet.contains(playerMember)) {
+                    if (marketStoredMemberIds.contains(playerMember.getId())) {
+                        // member was taken from storage
+                        marketStoredMemberIds.remove(playerMember.getId());
+                        if (marketStoredMemberIds.isEmpty()) storedMemberIds.remove(market.getName());
+                    }
                 }
             }
         }
