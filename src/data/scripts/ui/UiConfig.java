@@ -126,7 +126,7 @@ public class UIConfig {
                     NAME_COLUMN_WIDTH_DIVISOR_ = 5.32f;
                     SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
 
-                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
                     break;
 
                 case 3840:
@@ -139,7 +139,7 @@ public class UIConfig {
                     NAME_COLUMN_WIDTH_DIVISOR_ = 5.32f;
                     SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
 
-                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 20f;
+                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 7f;
                     break;
 
                 // 1600x900
@@ -152,7 +152,7 @@ public class UIConfig {
                     NAME_COLUMN_WIDTH_DIVISOR_ = 5.32f;
                     SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
 
-                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
                     break;
             }
         } else {
@@ -169,7 +169,7 @@ public class UIConfig {
                             NAME_COLUMN_WIDTH_DIVISOR_ = 5.32f;
                             SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
 
-                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
                             break;
                             
                         case 1440:
@@ -182,7 +182,7 @@ public class UIConfig {
                             NAME_COLUMN_WIDTH_DIVISOR_ = 5.32f;
                             SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
 
-                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
                             break;
                             
                         case 1680:
@@ -195,7 +195,7 @@ public class UIConfig {
                             NAME_COLUMN_WIDTH_DIVISOR_ = 5.32f;
                             SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
 
-                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
                             break;
 
                         case 1920:
@@ -208,7 +208,7 @@ public class UIConfig {
                             NAME_COLUMN_WIDTH_DIVISOR_ = 5.32f;
                             SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
 
-                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
                             break;
 
                         // 2560
@@ -222,7 +222,7 @@ public class UIConfig {
                             NAME_COLUMN_WIDTH_DIVISOR_ = 5.32f;
                             SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
 
-                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
                             break;
                     }
 
@@ -237,7 +237,7 @@ public class UIConfig {
                     NAME_COLUMN_WIDTH_DIVISOR_ = 5.32f;
                     SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
 
-                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
 
                 // 1600x1024
                 } else if (Math.abs(ratio - 0.64) < epsilon) {
@@ -250,7 +250,7 @@ public class UIConfig {
                     NAME_COLUMN_WIDTH_DIVISOR_ = 5.32f;
                     SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
 
-                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
 
                 // 1280x960 1600x1200 1920x1440 2048x1536
                 } else if (Math.abs(ratio - 0.75) < epsilon) {
@@ -265,7 +265,7 @@ public class UIConfig {
                             NAME_COLUMN_WIDTH_DIVISOR_ = 5.32f;
                             SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
 
-                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
                             break;
 
                         case 1400:
@@ -278,7 +278,7 @@ public class UIConfig {
                             NAME_COLUMN_WIDTH_DIVISOR_ = 5.32f;
                             SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
 
-                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
                             break;
 
                         case 1600:
@@ -291,7 +291,7 @@ public class UIConfig {
                             NAME_COLUMN_WIDTH_DIVISOR_ = 5.32f;
                             SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
 
-                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
                             break;
 
                         case 1920:
@@ -304,7 +304,7 @@ public class UIConfig {
                             NAME_COLUMN_WIDTH_DIVISOR_ = 5.32f;
                             SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
 
-                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
                             break;
                             
                         // 2048
@@ -318,7 +318,7 @@ public class UIConfig {
                             NAME_COLUMN_WIDTH_DIVISOR_ = 5.32f;
                             SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
 
-                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
                             break;
                     }
 
@@ -333,7 +333,7 @@ public class UIConfig {
                     NAME_COLUMN_WIDTH_DIVISOR_ = 5.32f;
                     SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
 
-                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
                     
                 // 2048x1080 4096x2160
                 } else if (Math.abs(ratio - 0.52734375) < epsilon) {
@@ -362,7 +362,7 @@ public class UIConfig {
                             NAME_COLUMN_WIDTH_DIVISOR_ = 5.32f;
                             SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
         
-                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 20f;
+                            SHIPLIST_Y_OFFSET_MULTIPLIER_ = 7f;
                             break;
                     }
 
@@ -377,7 +377,7 @@ public class UIConfig {
                     NAME_COLUMN_WIDTH_DIVISOR_ = 5.32f;
                     SHIP_COLUMN_WIDTH_DIVISOR_ = 1.8f;
 
-                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                    SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
                 
                 // ultrawide
                 } else if (ratio <= 0.4286) {
@@ -395,12 +395,12 @@ public class UIConfig {
                     if (DISPLAY_HEIGHT > 1080 && DISPLAY_HEIGHT <= 1440) {
                         CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 3.0f;
                         PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.1f);
-                        SHIPLIST_Y_OFFSET_MULTIPLIER_ = 10f;
+                        SHIPLIST_Y_OFFSET_MULTIPLIER_ = 5f;
                         
                     } else if (DISPLAY_HEIGHT > 1440) {
                         CONFIRM_DIALOG_HEIGHT_DIVISOR_ = 4.5f;
                         PANEL_HEIGHT_SUBTRACTOR_ = (DISPLAY_HEIGHT / 100 * 1.5f);
-                        SHIPLIST_Y_OFFSET_MULTIPLIER_ = 20f;
+                        SHIPLIST_Y_OFFSET_MULTIPLIER_ = 7f;
                     }
 
                 } else {
@@ -426,7 +426,8 @@ public class UIConfig {
 
         NAME_COLUMN_WIDTH_DIVISOR = NAME_COLUMN_WIDTH_DIVISOR_;
         SHIP_COLUMN_WIDTH_DIVISOR = SHIP_COLUMN_WIDTH_DIVISOR_ ;
-
+        
+        SHIPLIST_Y_OFFSET_MULTIPLIER_ *= 2.5f;
         SHIPLIST_Y_OFFSET_MULTIPLIER = SHIPLIST_Y_OFFSET_MULTIPLIER_;
     }
 }

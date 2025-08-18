@@ -44,6 +44,7 @@ import data.scripts.ClassRefs;
 import data.scripts.listeners.DockingListener;
 
 import data.scripts.ui.BaseSelfRefreshingPanel;
+import data.scripts.ui.FleetIconPanel;
 import data.scripts.ui.PartialRestorationDialog;
 import data.scripts.ui.TreeTraverser;
 import data.scripts.ui.UIComponent;
@@ -247,7 +248,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
         if (master == null) return;
         master.panel.removeComponent(master.confirmButton.getInstance());
-        master.addGridLines(false, true, Misc.getDarkPlayerColor());
+        master.addGridLines(0.13f, true, false, true, Misc.getDarkPlayerColor());
 
         overlord = master;
         overlordPanel = master.panel;
@@ -536,7 +537,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
                     if (currentTableMap.containsKey(text)) {
                         if (possibleDuplicate != null && !possibleDuplicate.getName().equals(text)) {
-                            new MessageBox("Duplicates are not allowed!", null).dialogData.addGridLines(false, true, UtilReflection.DARK_RED);
+                            new MessageBox("Duplicates are not allowed!", null).dialogData.addGridLines(0.1f, false, false, true, UtilReflection.DARK_RED);
                             return;
                         }
 
@@ -772,9 +773,11 @@ public class FleetPresetManagementListener extends ActionListener {
         }
 
         private void navigateTableRows(int key, int rowNum) {
-            int newIndex = key == Keyboard.KEY_UP ? (tableUp ? selectedRowIndex - 1 : selectedRowIndex + 1) : (tableUp ? selectedRowIndex + 1 : selectedRowIndex - 1);
-            newIndex = newIndex < 0 ? rowNum - 1 : newIndex == rowNum ? 0 : newIndex;
-            if (newIndex == selectedRowIndex && rowNum == 1) return;
+            boolean unselected = selectedRowIndex == -1;
+            if (rowNum == 1 && !unselected) return;
+
+            int direction = (tableUp ^ key == Keyboard.KEY_UP) ? 1 : -1;
+            int newIndex = (unselected && key == Keyboard.KEY_UP) ? rowNum - 1 : (selectedRowIndex + direction + rowNum) % rowNum;
 
             TableRowListener rowListener = tableRowListeners.get(newIndex);
             UtilReflection.clickButton(rowListener.button);
@@ -1103,20 +1106,22 @@ public class FleetPresetManagementListener extends ActionListener {
             shipsPanel = Global.getSettings().createCustom(1, 1, null);
 
             TooltipMakerAPI fleetInfoPanelHolder = shipsPanel.createUIElement(SHIP_COLUMN_WIDTH, PANEL_HEIGHT, false);
-            fleetInfoPanel = UtilReflection.getObfFleetInfoPanel(selectedPresetName, fleet); // Object casted to UIPanelAPI, fixed size 400x400 afaik
+            fleetInfoPanel = new FleetIconPanel(selectedPresetName, fleet, whichMembersAvailable).getPanel();
+
+            // fleetInfoPanel = UtilReflection.createObfFleetIconPanel(selectedPresetName, fleet); // Object casted to UIPanelAPI, fixed size 400x400 afaik
             
-            if (whichMembersAvailable != null) {
-                UtilReflection.setButtonTooltips(selectedPresetName, fleetInfoPanel, whichMembersAvailable, fleet.getFleetData().getMembersListCopy());
-            } else {
-                UtilReflection.setButtonTooltips(selectedPresetName, fleetInfoPanel, fleet.getFleetData().getMembersListCopy());
-            }
+            // if (whichMembersAvailable != null) {
+            //     UtilReflection.setButtonTooltips(selectedPresetName, fleetInfoPanel, whichMembersAvailable, fleet.getFleetData().getMembersListCopy());
+            // } else {
+            //     UtilReflection.setButtonTooltips(selectedPresetName, fleetInfoPanel, fleet.getFleetData().getMembersListCopy());
+            // }
 
             fleetInfoPanelHolder.addComponent(fleetInfoPanel).inTL(0f, 0f);
             shipsPanel.addUIElement(fleetInfoPanelHolder).inTL(0f, 0f);
             
             // have to do this because if directly added to the refreshing panel then the game crashes when the confirm dialog window is closed
             fenaglePanele.parent.addComponent(shipsPanel).rightOfTop(fenaglePanele.panel, 0f)
-            .setXAlignOffset(-8f)
+            .setXAlignOffset(-10f)
             .setYAlignOffset(-1f * UIConfig.SHIPLIST_Y_OFFSET_MULTIPLIER);
         }
 
@@ -1286,7 +1291,7 @@ public class FleetPresetManagementListener extends ActionListener {
                 isSelectedPresetAvailablePara.setColor(TEXT_HIGHLIGHT_COLOR);
 
             } else {
-                isSelectedPresetAvailablePara.setText(String.format(isSelectedPresetAvailableParaFormat, "only partially available, or unavailable"));
+                isSelectedPresetAvailablePara.setText(String.format(isSelectedPresetAvailableParaFormat, "only partially available, or is unavailable"));
                 isSelectedPresetAvailablePara.setColor(Misc.getNegativeHighlightColor());
                 if (selectedPreset != null) whichMembersAvailable = PresetUtils.whichMembersAvailable(dockingListener.getPlayerCurrentMarket(), selectedPreset.getCampaignFleet().getFleetData().getMembersListCopy());
             }

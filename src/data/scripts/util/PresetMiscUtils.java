@@ -27,11 +27,8 @@ public class PresetMiscUtils {
         Global.getLogger(cls).info(sb.toString());
     }
 
-    public static void drawTaperedLine(Color color, float x, float y, float rotation, float length, float width) {
-        float r = color.getRed() / 255f;
-        float g = color.getGreen() / 255f;
-        float b = color.getBlue() / 255f;
-        float coreRatio = 0.6f; // Controls how long the middle section is
+    public static void drawTaperedLine(float red, float green, float blue, float x, float y, float rotation, float length, float width, float coreRatio) {
+        // float coreRatio = 0.6f; // Controls how long the middle section is
         float taperRatio = (1f - coreRatio) / 2f; // Controls taper length on each end
         float halfLength = length / 2f;
         float halfWidth = width / 2f;
@@ -41,28 +38,55 @@ public class PresetMiscUtils {
         GL11.glRotatef(rotation, 0f, 0f, 1f);
         GL11.glBegin(GL11.GL_QUADS);
     
-        GL11.glColor4f(r, g, b, 0f);
+        GL11.glColor4f(red, green, blue, 0f);
         GL11.glVertex2f(-halfLength, -halfWidth);
         GL11.glVertex2f(-halfLength, halfWidth);
-        GL11.glColor4f(r, g, b, 1f);
+        GL11.glColor4f(red, green, blue, 1f);
         GL11.glVertex2f(-halfLength + length * taperRatio, halfWidth);
         GL11.glVertex2f(-halfLength + length * taperRatio, -halfWidth);
     
-        GL11.glColor4f(r, g, b, 1f);
+        GL11.glColor4f(red, green, blue, 1f);
         GL11.glVertex2f(-halfLength + length * taperRatio, -halfWidth);
         GL11.glVertex2f(-halfLength + length * taperRatio, halfWidth);
         GL11.glVertex2f(halfLength - length * taperRatio, halfWidth);
         GL11.glVertex2f(halfLength - length * taperRatio, -halfWidth);
     
-        GL11.glColor4f(r, g, b, 1f);
+        GL11.glColor4f(red, green, blue, 1f);
         GL11.glVertex2f(halfLength - length * taperRatio, -halfWidth);
         GL11.glVertex2f(halfLength - length * taperRatio, halfWidth);
-        GL11.glColor4f(r, g, b, 0f);
+        GL11.glColor4f(red, green, blue, 0f);
         GL11.glVertex2f(halfLength, halfWidth);
         GL11.glVertex2f(halfLength, -halfWidth);
     
         GL11.glEnd();
         GL11.glPopMatrix();
+    }
+
+    public static float getMostCommon(float[] arr) {
+        Map<Float, Integer> countMap = new HashMap<>();
+        float mostCommon = arr[0];
+        int maxCount = 0;
+
+        for (float num : arr) {
+            int count = countMap.getOrDefault(num, 0) + 1;
+            countMap.put(num, count);
+            if (count > maxCount) {
+                maxCount = count;
+                mostCommon = num;
+            }
+        }
+
+        return mostCommon;
+    }
+
+    public static float getSmallest(float[] arr) {
+        float min = arr[0];
+        for (int i = 1; i < arr.length; i++) {
+            if (arr[i] < min) {
+                min = arr[i];
+            }
+        }
+        return min;
     }
 
     public static boolean isVersionAfter(String v1, String v2) {

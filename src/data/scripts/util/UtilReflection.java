@@ -267,7 +267,7 @@ public class UtilReflection {
             this.dialog = dialog;
         }
 
-        public void addGridLines(boolean keepConfirmButton, boolean keepCancelButton, Color color) {
+        public void addGridLines(float delay, boolean withOverlay, boolean keepConfirmButton, boolean keepCancelButton, Color color) {
             PositionAPI panelPos = dialog.getPosition();
             float width = panelPos.getWidth();
             float height = panelPos.getHeight();
@@ -282,8 +282,8 @@ public class UtilReflection {
                 private float x = panelPos.getX();
                 private float y = panelPos.getY();
                 private int cellSize = 24;
-                private float verticalAlpha = 0.5f;
-                private float horizontalAlpha = 0.75f;
+                private float verticalAlpha = 0.35f;
+                private float horizontalAlpha = 0.525f;
         
                 @Override
                 public void render(float alphaMult) {
@@ -321,27 +321,38 @@ public class UtilReflection {
                 }
         
                 private void renderGrid(int width, int height, float offsetX, float offsetY) {
-                    GL11.glLineWidth(1f);
                     GL11.glDisable(GL11.GL_TEXTURE_2D);
-                    GL11.glBegin(GL11.GL_LINES);
-
+                
                     float startX = -cellSize / 2f;
                     float endX = width + cellSize / 2f;
                     float startY = -cellSize / 2f;
                     float endY = height + cellSize / 2f;
-
+                    
+                    if (withOverlay) {
+                        GL11.glColor4f(0f, 0f, 0f, 0.5f); 
+                        GL11.glBegin(GL11.GL_QUADS);
+                        GL11.glVertex2f(startX + offsetX, startY + offsetY);
+                        GL11.glVertex2f(endX + offsetX, startY + offsetY);
+                        GL11.glVertex2f(endX + offsetX, endY + offsetY);
+                        GL11.glVertex2f(startX + offsetX, endY + offsetY);
+                        GL11.glEnd();
+                    }
+                
+                    GL11.glLineWidth(1f);
+                    GL11.glBegin(GL11.GL_LINES);
+                
                     GL11.glColor4f(red, green, blue, verticalAlpha);
                     for (float x = startX; x <= endX; x += cellSize) {
                         GL11.glVertex2f(x + offsetX, startY + offsetY);
                         GL11.glVertex2f(x + offsetX, endY + offsetY);
                     }
-
+                
                     GL11.glColor4f(red, green, blue, horizontalAlpha);
                     for (float y = startY; y <= endY; y += cellSize) {
                         GL11.glVertex2f(startX + offsetX, y + offsetY);
                         GL11.glVertex2f(endX + offsetX, y + offsetY);
                     }
-
+                
                     GL11.glEnd();
                 }
 
@@ -349,7 +360,7 @@ public class UtilReflection {
 
             Global.getSector().addTransientScript(new EveryFrameScript() {
                 private boolean isDone = false;
-                private IntervalUtil interval = new IntervalUtil(0.15f, 0.15f);
+                private IntervalUtil interval = new IntervalUtil(delay, delay);
 
                 @Override
                 public void advance(float arg0) {
@@ -401,16 +412,14 @@ public class UtilReflection {
     // Tooltips aren't hard to add but I couldn't easily find out how to do postprocessing for officer portraits in a vacuum
     // What these buttons DO do that the ones processed by the obf fleet info panel class don't are account for their members being mothballed in real time
     // I didnt bother trying to find out why, I decided it wasn't worth the trouble. May revisit this at some stage
-    // public static ButtonAPI createFleetMemberButton(FleetMemberAPI member, Object enumType, ActionListener listener, float size) {
-    //     ButtonAPI button = (ButtonAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.memberButtonFactoryMethod, null,
+    // public static ButtonAPI createFleetMemberButton(FleetMemberAPI member, ActionListener listener) {
+    //     return (ButtonAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.memberButtonFactoryMethod,
+    //     null,
     //     member,
-    //     enumType,
     //     listener.getProxy());
-
-    //     return button;
     // }
 
-    public static UIPanelAPI getObfFleetInfoPanel(String name, CampaignFleetAPI fleet) {
+    public static UIPanelAPI createObfFleetIconPanel(String name, CampaignFleetAPI fleet) {
         return (UIPanelAPI) ReflectionUtilis.instantiateClass(ClassRefs.visualPanelFleetInfoClass,
         ClassRefs.visualPanelFleetInfoClassParamTypes,
         name,

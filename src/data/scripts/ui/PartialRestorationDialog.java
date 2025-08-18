@@ -84,7 +84,7 @@ public class PartialRestorationDialog {
         this.originalOrder = new ArrayList<>(fleet.getFleetData().getMembersListCopy());
 
         this.tempFleet = PresetUtils.createTempFleetCopy(fleet.getFleetData().getMembersListCopy());
-        this.fleetPanel = UtilReflection.getObfFleetInfoPanel("", tempFleet);
+        this.fleetPanel = UtilReflection.createObfFleetIconPanel("", tempFleet);
 
         for (FleetMemberAPI member : fleet.getFleetData().getMembersListCopy()) {
             for (FleetMemberAPI tempMember : tempFleet.getFleetData().getMembersListCopy()) {
