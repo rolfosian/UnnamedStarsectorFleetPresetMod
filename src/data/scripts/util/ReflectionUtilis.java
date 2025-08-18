@@ -104,7 +104,7 @@ public class ReflectionUtilis {
     private static final MethodHandle getMethodNameHandle;
     private static final MethodHandle getMethodDeclaringClassHandle;
     private static final MethodHandle invokeMethodHandle;
-    private static final MethodHandle setMethodAccessable;
+    private static final MethodHandle setMethodAccessible;
     private static final MethodHandle getModifiersHandle;
     private static final MethodHandle getParameterTypesHandle;
     private static final MethodHandle getReturnTypeHandle;
@@ -139,7 +139,7 @@ public class ReflectionUtilis {
             getMethodNameHandle = lookup.findVirtual(methodClass, "getName", MethodType.methodType(String.class));
             getMethodDeclaringClassHandle = lookup.findVirtual(methodClass, "getDeclaringClass", MethodType.methodType(Class.class));
             invokeMethodHandle = lookup.findVirtual(methodClass, "invoke", MethodType.methodType(Object.class, Object.class, Object[].class));
-            setMethodAccessable = lookup.findVirtual(methodClass, "setAccessible", MethodType.methodType(void.class, boolean.class));
+            setMethodAccessible = lookup.findVirtual(methodClass, "setAccessible", MethodType.methodType(void.class, boolean.class));
             getModifiersHandle = lookup.findVirtual(methodClass, "getModifiers", MethodType.methodType(int.class));
             getParameterTypesHandle = lookup.findVirtual(methodClass, "getParameterTypes", MethodType.methodType(Class[].class));
             getReturnTypeHandle = lookup.findVirtual(methodClass, "getReturnType", MethodType.methodType(Class.class));
@@ -767,7 +767,7 @@ public class ReflectionUtilis {
 
     public static Object invokePrivateMethodDirectly(Object method, Object instance, Object... arguments) {
         try {
-            setMethodAccessable.invoke(method, true);
+            setMethodAccessible.invoke(method, true);
             return invokeMethodHandle.invoke(method, instance, arguments);
         } catch (Throwable e) {
             throw new RuntimeException(e);
