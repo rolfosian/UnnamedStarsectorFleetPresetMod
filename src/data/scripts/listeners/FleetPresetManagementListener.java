@@ -269,7 +269,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
         String storageAvailableText;
         Color storageAvailableColor;
-        if (dockingListener.getPlayerCurrentMarket() != null && dockingListener.canPlayerAccessStorage(dockingListener.getPlayerCurrentMarket())) {
+        if (dockingListener.canPlayerAccessStorage(dockingListener.getPlayerCurrentMarket())) {
             storageAvailableText = "Storage Available";
             storageAvailableColor = Misc.getPositiveHighlightColor();
         } else {

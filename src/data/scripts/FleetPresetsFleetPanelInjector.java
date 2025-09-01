@@ -257,12 +257,17 @@ public class FleetPresetsFleetPanelInjector {
         if (core == null) {
             return null;
         }
-
         Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.COREUI_KEY, core);
+        
         fleetTab = (UIPanelAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.coreUIgetCurrentTabMethod, core);
+        if (fleetTab == null) return null;
 
         Object fleetPanel = ReflectionUtilis.invokeMethodDirectly(ClassRefs.fleetTabGetFleetPanelMethod, fleetTab);
+        if (fleetPanel == null) return null;
+
         fleetPanelClickHandler = ReflectionUtilis.invokeMethodDirectly(ClassRefs.fleetPanelgetClickAndDropHandlerMethod, fleetPanel);
+        if (fleetPanelClickHandler == null) return null;
+
         fleetTabWrapped = new UIPanel(fleetTab);
 
         return (UIPanelAPI) ReflectionUtilis.getPrivateVariable(ClassRefs.fleetTabFleetInfoPanelField, fleetTab);
