@@ -779,7 +779,7 @@ public class PresetUtils {
     public static Map<Integer, FleetMemberAPI> whichMembersAvailable(MarketAPI market, List<FleetMemberAPI> membersToCheck) {
         if (market == null) return whichMembersAvailable(membersToCheck);
         SubmarketAPI storage = CargoPresetUtils.getStorageSubmarket(market);
-        if (!isPlayerPaidForStorage(storage.getPlugin())) return whichMembersAvailable(membersToCheck);
+        if (storage == null || !isPlayerPaidForStorage(storage.getPlugin())) return whichMembersAvailable(membersToCheck);
         
         CargoAPI storageCargo = storage.getCargo();
         initMothballedShips(storageCargo);
