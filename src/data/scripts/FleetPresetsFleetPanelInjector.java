@@ -290,13 +290,26 @@ public class FleetPresetsFleetPanelInjector {
         float targetCenterX = PresetMiscUtils.getMostCommon(centerXArr);
         float targetY = PresetMiscUtils.getSmallest(yArr);
 
+        List<UIComponentAPI> centerChildren = new ArrayList<>();
         for (int i = 0; i < size; i++) {
             UIComponentAPI child = children.get(i);
             PositionAPI childPos = child.getPosition();
 
             if (childPos.getCenterX() == targetCenterX && childPos.getY() == targetY) return child;
+            else centerChildren.add(child);
         }
-        return null;
+
+        yArr = new float[centerChildren.size()];
+        for (int i = 0; i< centerChildren.size(); i++) {
+            yArr[i] = centerChildren.get(i).getPosition().getY();
+        }
+
+        targetY = PresetMiscUtils.getSmallest(yArr);
+        for (UIComponentAPI child : centerChildren) {
+            if (child.getPosition().getY() == targetY) return child;
+        }
+
+        return children.get(children.size() - 1);
     }
 
     public ButtonAPI getAutoAssignButton(UIPanelAPI fleetInfoPanel) {
