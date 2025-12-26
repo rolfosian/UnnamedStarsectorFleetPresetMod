@@ -808,7 +808,7 @@ public class FleetPresetManagementListener extends ActionListener {
                             if (Keyboard.isKeyDown(Keyboard.KEY_ESCAPE) && rowNum > 0 && selectedPresetName != EMPTY_STRING) {
                                 if (selectedRowIndex != -1) {
                                     TableRowListener selectedRowListener = tableRowListeners.get(selectedRowIndex);
-                                    tablePanel.select(null, null);
+                                    ReflectionUtilis.invokeMethodDirectly(ClassRefs.tablePanelSelectMethod, tablePanel, null, null);
                                     tablePlugin.setRowColorAndText(selectedRowListener.row, new Object[] {c1, selectedRowListener.rowName});
                                     tablePlugin.addShipList(null, null);
                                 }

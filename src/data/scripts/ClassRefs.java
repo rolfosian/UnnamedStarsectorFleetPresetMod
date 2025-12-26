@@ -2,8 +2,8 @@
 package data.scripts;
 
 import com.fs.starfarer.campaign.fleet.CampaignFleet;
-// import com.fs.graphics.Sprite;
-// import com.fs.starfarer.campaign.fleet.FleetMember;
+import com.fs.starfarer.ui.impl.StandardTooltipV2;
+import com.fs.starfarer.campaign.CampaignState;
 
 import com.fs.starfarer.api.Global;
 
@@ -155,6 +155,8 @@ public class ClassRefs {
     public static Object getOptionDataMethod;
 
     public static Class<?>[] standardTooltipV2ConstructorParamTypes = ReflectionUtilis.getConstructorParamTypesSingleConstructor(com.fs.starfarer.ui.impl.StandardTooltipV2.class);
+    public static Object standardTooltipV2GetContentsMethod;
+
     public static Class<?> CRBarClass;
     public static Object CRBarClassSetProgressMethod;
     public static Object CRBarClassForceSyncMethod;
@@ -170,6 +172,8 @@ public class ClassRefs {
                 break;
             }
         }
+
+        standardTooltipV2GetContentsMethod = ReflectionUtilis.getMethod("getContents", StandardTooltipV2.class, 0);
 
         Class<?>[] obfClasses = ObfuscatedClasses.getClasses();
         for (int i = 0; i < obfClasses.length; i++) {
@@ -372,6 +376,50 @@ public class ClassRefs {
                         }
                     }
                     continue;
+
+                // case 30:
+                //     if (buttonFactoryClass == null) {
+                //         outer:
+                //         for (int j = 0; j < methods.length; j++) {
+                //             Object method = methods[j];
+                //             Class<?> returnType = ReflectionUtilis.getReturnType(method);
+
+                //             if (ButtonAPI.class.isAssignableFrom(returnType)) {
+                //                 if (buttonClass == null) {
+                //                     buttonClass = returnType;
+                //                     buttonGetListenerMethod = ReflectionUtilis.getMethod("getListener", buttonClass, 0);
+                //                     buttonSetListenerMethod = ReflectionUtilis.getMethod("setListener", buttonClass, 1);
+                //                     buttonSetEnabledMethod = ReflectionUtilis.getMethod("setEnabled", buttonClass, 1);
+                //                     buttonSetShortcutMethod = ReflectionUtilis.getMethodExplicit("setShortcut", buttonClass, new Class<?>[]{int.class, boolean.class});
+                //                     buttonSetButtonPressedSoundMethod = ReflectionUtilis.getMethod("setButtonPressedSound", buttonClass, 1);
+                //                     buttonSetActiveMethod = ReflectionUtilis.getMethod("setActive", buttonClass, 1);
+                    
+                //                     actionListenerInterface = ReflectionUtilis.getReturnType(buttonGetListenerMethod);
+                //                     buttonListenerActionPerformedMethod = actionListenerInterface.getMethods()[0];
+                    
+                //                     Object buttonPressedMethod = ReflectionUtilis.getMethod("buttonPressed", buttonClass, 2);
+                //                     inputEventClass = ReflectionUtilis.getMethodParamTypes(buttonPressedMethod)[0];
+                //                 }
+
+                //                 Class<?>[] paramTypes = ReflectionUtilis.getMethodParamTypes(method);
+                //                 if (paramTypes.length == 2 && paramTypes[0].equals(FleetMember.class)) {
+                //                     memberButtonFactoryMethod = method;
+                                    
+                //                     for (Object constant : paramTypes[1].getEnumConstants()) {
+                //                         String constante = String.valueOf(constant);
+
+                //                         if (constante.equals("FRIEND")) memberButtonEnums.FRIEND = constant;
+                //                         else if (constante.equals("ENEMY")) memberButtonEnums.ENEMY = constant;
+                //                         else memberButtonEnums.NEUTRAL = constant;
+                //                         buttonFactoryClass = cls;
+                //                         break outer;
+                //                     }
+                //                 }
+
+                //             }
+                //         }
+                //     }
+                //     continue;
 
                 case 56:
                     if (CRBarClass == null) {

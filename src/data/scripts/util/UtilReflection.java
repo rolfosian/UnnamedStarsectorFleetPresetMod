@@ -503,7 +503,7 @@ public class UtilReflection {
 
         ReflectionUtilis.invokeMethodDirectly(ClassRefs.CRBarClassSetProgressMethod, CRBar, member.getRepairTracker().getCR() * 100f);
         ReflectionUtilis.invokeMethodDirectly(ClassRefs.CRBarClassForceSyncMethod, CRBar);
-        UIComponentAPI contents = (UIComponentAPI) tt.getContents();
+        UIComponentAPI contents = (UIComponentAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.standardTooltipV2GetContentsMethod, tt);
         PositionAPI contentsPos = contents.getPosition();
 
         Object panel = ReflectionUtilis.instantiateClass(ClassRefs.uiPanelClass,
