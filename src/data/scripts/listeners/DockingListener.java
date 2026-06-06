@@ -19,8 +19,6 @@ import data.scripts.util.CargoPresetUtils;
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.PresetUtils.FleetPreset;
-import data.scripts.util.PresetUtils.RunningMembers;
-import data.scripts.util.ReflectionUtilis;
 
 import assortment_of_things.frontiers.data.FrontiersData;
 import assortment_of_things.frontiers.SettlementData;
@@ -29,17 +27,13 @@ import assortment_of_things.frontiers.interactions.SettlementInteraction;
 import java.util.*;
 
 public class DockingListener extends BaseCampaignEventListener {
-    private void print(Object... args) {
-        PresetMiscUtils.print(args);
-    }
-
     final DockingListener self = this;
 
     private boolean isBattle = false;
     private boolean isHostileTimeout = false;
 
-    public DockingListener(boolean permaRegister) {
-        super(permaRegister);
+    public DockingListener() {
+        super(false);
     }
     public static final String PLAYERCURRENTMARKET_KEY = PresetUtils.PLAYERCURRENTMARKET_KEY;
     public static final String ISPLAYERPAIDFORSTORAGE_KEY = PresetUtils.ISPLAYERPAIDFORSTORAGE_KEY;
@@ -120,9 +114,8 @@ public class DockingListener extends BaseCampaignEventListener {
         }
 
         new OptionPanelListener(dialog) {
-            private RunningMembers runningMembers = new RunningMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
+            // private RunningMembers runningMembers = new RunningMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy()); // TODO?
             private SettlementData settlement = null;
-            private boolean checkingAbandon = false;
 
             @Override
             public void afterOptionSelected(Object optionData) {
@@ -135,7 +128,6 @@ public class DockingListener extends BaseCampaignEventListener {
                         return;
 
                     case "nex_outpostDismantleConfirm":
-                        Global.getSector().getListenerManager().getListeners(ColonyAbandonListener.class).get(0).reportPlayerAbandonedColony(dialog.getInteractionTarget().getMarket());
                         return;
 
                     case "ratVisitSettlement":
@@ -162,50 +154,6 @@ public class DockingListener extends BaseCampaignEventListener {
                         }
 
                     case "Manage Settlement":
-                        if (!this.checkingAbandon) {
-                            this.checkingAbandon = true;
-                            
-                            Global.getSector().addTransientScript(new EveryFrameScript() {
-                                private boolean isDone = false;
-                        
-                                private boolean isAbandoned() {
-                                    if (dialog.getPlugin() instanceof SettlementInteraction) {
-                                        SettlementInteraction plugin = (SettlementInteraction) dialog.getPlugin();
-                                        return !Global.getSector().getIntelManager().getIntel(plugin.getData().getIntel().getClass()).contains(plugin.getData().getIntel());
-                                    } else {
-                                        return false;
-                                    }
-                                }
-                        
-                                @Override
-                                public void advance(float arg0) {
-                                    
-                                    if (isAbandoned()) {
-                                        Global.getSector().getListenerManager().getListeners(ColonyAbandonListener.class).get(0).reportPlayerAbandonedColony(((SettlementInteraction)dialog.getPlugin()).getData().getSettlementEntity().getMarket());
-                                        isDone = true;
-                                        checkingAbandon = false;
-                                        return;
-                                    }
-                                    
-                                    if (Global.getSector().getCampaignUI().getCurrentInteractionDialog() == null || !(Global.getSector().getCampaignUI().getCurrentInteractionDialog().getPlugin() instanceof SettlementInteraction)) {
-                                        isDone = true;
-                                        checkingAbandon = false;
-                                        return;
-                                    }
-                                }
-                        
-                                @Override
-                                public boolean isDone() {
-                                    return isDone;
-                                }
-                        
-                                @Override
-                                public boolean runWhilePaused() {
-                                    return true;
-                                }
-                            });
-                        }
-
                         return;
 
                     case "mktRaidConfirm":
@@ -225,28 +173,28 @@ public class DockingListener extends BaseCampaignEventListener {
                         return;
 
                     case "mktEngage":
-                        this.runningMembers = new RunningMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
+                        // this.runningMembers = new RunningMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy()); // TODO
                         reportPlayerClosedMarket(originalMarket);
                         return;
 
                     case"RECOVERY_CONTINUE":
                         if (isBattle) {
                             isBattle = false;
-                            PresetUtils.checkFleetAgainstPreset(runningMembers);
+                            // PresetUtils.checkFleetAgainstPreset(runningMembers);
                         }
                         return;
                     
                     case "CONTINUE_LOOT":
                         if (isBattle) {
                             isBattle = false;
-                            PresetUtils.checkFleetAgainstPreset(runningMembers);
+                            // PresetUtils.checkFleetAgainstPreset(runningMembers);
                         }
                         return;
                         
                     case "LEAVE":
                         if (isBattle) {
                             isBattle = false;
-                            PresetUtils.checkFleetAgainstPreset(runningMembers);
+                            // PresetUtils.checkFleetAgainstPreset(runningMembers);
                         }
                         return;
                     default:

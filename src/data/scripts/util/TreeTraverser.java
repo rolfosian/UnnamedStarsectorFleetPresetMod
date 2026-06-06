@@ -1,4 +1,4 @@
-package data.scripts.ui;
+package data.scripts.util;
 
 import java.util.*;
 import com.fs.starfarer.api.Global;
@@ -8,11 +8,6 @@ import com.fs.starfarer.api.ui.ScrollPanelAPI;
 import com.fs.starfarer.api.ui.UIComponentAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 
-import data.scripts.ClassRefs;
-import data.scripts.util.PresetMiscUtils;
-import data.scripts.util.ReflectionUtilis;
-
-@SuppressWarnings("unchecked")
 public class TreeTraverser {
 
     public static class TreeNode {
@@ -42,7 +37,7 @@ public class TreeTraverser {
             List<ButtonAPI> buttons = new ArrayList<>();
 
             for (UIComponentAPI child : this.children) {
-                if (ButtonAPI.class.isAssignableFrom(child.getClass())) buttons.add((ButtonAPI)child);
+                if (child instanceof ButtonAPI btn) buttons.add(btn);
             }
             return buttons;
         }
@@ -51,32 +46,40 @@ public class TreeTraverser {
             List<LabelAPI> labels = new ArrayList<>();
 
             for (UIComponentAPI child : this.children) {
-                if (LabelAPI.class.isAssignableFrom(child.getClass())) labels.add((LabelAPI)child);
+                if (child instanceof LabelAPI label) labels.add(label);
             }
             return labels;
         }
     }
 
-    private final Object parentPanel;
+    private final UIPanelAPI parentPanel;
     private List<TreeNode> nodes;
+    private Map<UIPanelAPI, List<UIComponentAPI>> treeMap = null;
     private TreeNode targetNode = null;
     private UIComponentAPI targetChild = null;
     private int currentIndex;
     
-    // get entire panel tree
-    public TreeTraverser(Object parentPanel) {
+    /**  Get entire panel tree */
+    public TreeTraverser(UIPanelAPI parentPanel) {
         this.parentPanel = parentPanel;
         refresh();
     }
 
+    /** Get entire panel tree and map parents to children */
+    public TreeTraverser(UIPanelAPI parentPanel, Map<UIPanelAPI, List<UIComponentAPI>> treeMap) {
+        this.parentPanel = parentPanel;
+        this.treeMap = treeMap;
+        refresh(treeMap);
+    }
+
     // get panel tree up to depth before limit
-    public TreeTraverser(Object parentPanel, int depthLimit) {
+    public TreeTraverser(UIPanelAPI parentPanel, int depthLimit) {
         this.parentPanel = parentPanel;
         refresh(depthLimit);
     }
 
     // beeline to single target child, assuming we know the definite index of the target, final param in varargs should be the index of the target child in the children list
-    public TreeTraverser(Object parentPanel, int... treePath) {
+    public TreeTraverser(UIPanelAPI parentPanel, int... treePath) {
         this.parentPanel = parentPanel;
         refresh(treePath);
     }
@@ -85,6 +88,12 @@ public class TreeTraverser {
         this.nodes = new ArrayList<>();
         this.currentIndex = 0;
         this.getChildren((UIComponentAPI)parentPanel, 0);
+    }
+
+    public void refresh(Map<UIPanelAPI, List<UIComponentAPI>> treeMap) {
+        this.nodes = new ArrayList<>();
+        this.currentIndex = 0;
+        this.getChildren((UIComponentAPI)parentPanel, treeMap, 0);
     }
 
     public void refresh(int depthLimit) {
@@ -103,7 +112,7 @@ public class TreeTraverser {
     }
 
     private void getChildren(UIComponentAPI parent, int depth) {
-        List<UIComponentAPI> children = ClassRefs.uiPanelClass.isInstance(parent) ? (List<UIComponentAPI>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelgetChildrenCopyMethod, parent) : null;
+        List<UIComponentAPI> children = UiUtil.utils.getChildrenNonCopy(parent);
 
         if (children != null && !children.isEmpty()) {
             this.nodes.add(new TreeNode((UIPanelAPI)parent, children, depth));
@@ -116,8 +125,24 @@ public class TreeTraverser {
         return;
     }
 
+    private void getChildren(UIComponentAPI parent, Map<UIPanelAPI, List<UIComponentAPI>> treeMap, int depth) {
+        List<UIComponentAPI> children = UiUtil.utils.getChildrenNonCopy(parent);
+
+        if (children != null && !children.isEmpty()) {
+            this.nodes.add(new TreeNode((UIPanelAPI)parent, children, depth));
+            treeMap.put((UIPanelAPI)parent, children);
+            depth++;
+
+            for (UIComponentAPI child : children) {
+                this.getChildren(child, treeMap, depth);
+            }
+        }
+        return;
+    }
+
+
     private void getChildren(UIComponentAPI parent, int depth, int depthLimit) {
-        List<UIComponentAPI> children = ClassRefs.uiPanelClass.isInstance(parent) ? (List<UIComponentAPI>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelgetChildrenCopyMethod, parent) : null;
+        List<UIComponentAPI> children = UiUtil.utils.getChildrenNonCopy(parent);
 
         if (children != null && !children.isEmpty()) {
             this.nodes.add(new TreeNode((UIPanelAPI)parent, children, depth));
@@ -132,7 +157,7 @@ public class TreeTraverser {
     }
 
     private void getChildren(UIComponentAPI parent, int depth, int... treePath) {
-        List<UIComponentAPI> children = ClassRefs.uiPanelClass.isInstance(parent) ? (List<UIComponentAPI>) ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelgetChildrenCopyMethod, parent) : null;
+        List<UIComponentAPI> children = UiUtil.utils.getChildrenNonCopy(parent);
 
         if (children != null && !children.isEmpty()) {
             this.nodes.add(new TreeNode((UIPanelAPI)parent, children, depth));
@@ -152,6 +177,28 @@ public class TreeTraverser {
             outer:
             for (int i = this.nodes.size()-1; i >= 0; i--) {
                 TreeNode node = nodes.get(i);
+
+                for (int j = 0; j < node.getChildren().size(); j++) {
+                    if (node.getChildren().get(j) == current) {
+                        current = node.getParent();
+                        result.add(0, j);
+                        break outer;
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
+    public static List<Integer> getPathToTarget(TreeTraverser trav, UIComponentAPI target) {
+        List<Integer> result = new ArrayList<>();
+        UIComponentAPI current = target;
+
+        while (!(current == trav.parentPanel)) {
+            outer:
+            for (int i = trav.nodes.size()-1; i >= 0; i--) {
+                TreeNode node = trav.nodes.get(i);
 
                 for (int j = 0; j < node.getChildren().size(); j++) {
                     if (node.getChildren().get(j) == current) {
@@ -193,6 +240,16 @@ public class TreeTraverser {
         return this.nodes;
     }
 
+    /** Only returns non-null if map constructor was used */
+    public Map<UIPanelAPI, List<UIComponentAPI>> getTreeMap() {
+        return this.treeMap;
+    }
+
+    /** Only usable if map constructor was used otherwise will throw {@link NullPointerException}. */
+    public List<UIComponentAPI> getChildren(UIPanelAPI parent) {
+        return this.treeMap.get(parent);
+    }
+
     public TreeNode getCurrentNode() {
         return nodes.get(currentIndex);
     }
@@ -207,22 +264,26 @@ public class TreeTraverser {
         return result;
     }
     
+    /**Temporal level (Order in which components were added)*/
     public boolean goUpOneLevel() {
         if (currentIndex == 0) return false;
         currentIndex -= 1;
         return true;
     }
     
+    /**Temporal level (Order in which components were added)*/
     public boolean goDownOneLevel() {
         if (currentIndex >= nodes.size() - 1) return false;
         currentIndex += 1;
         return true;
     }
 
+    /**Temporal top (Order in which components were added) */
     public void toTop() {
         currentIndex = nodes.size() - 1;
     }
     
+    /** Temporal bottom (Order in which components were added) */
     public void toBottom() {
         currentIndex = 0;
     }

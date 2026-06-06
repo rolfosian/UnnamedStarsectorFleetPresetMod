@@ -2,21 +2,22 @@ package data.scripts.util;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CargoAPI;
+import com.fs.starfarer.api.campaign.CargoStackAPI;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.campaign.econ.SubmarketAPI;
 import com.fs.starfarer.api.combat.ShipVariantAPI;
+import com.fs.starfarer.api.combat.WeaponAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Submarkets;
 import com.fs.starfarer.api.loading.WeaponGroupSpec;
+import com.fs.starfarer.api.loading.WeaponSpecAPI;
 
 import java.util.*;
 import org.apache.log4j.Logger;
 
-public class CargoPresetUtils {
-    public static void print(Object... args) {
-        PresetMiscUtils.print(args);
-    }
+import static data.scripts.util.PresetUtils.*;
 
+public class CargoPresetUtils {
     public static SubmarketAPI getStorageSubmarket(MarketAPI market) {
         SubmarketAPI storage = market.getSubmarket(Submarkets.SUBMARKET_STORAGE);
         if (storage != null) return storage;
@@ -48,13 +49,88 @@ public class CargoPresetUtils {
         for (String wing : nonBuiltInWings) {
             storageCargo.addFighters(wing, 1);
         }
+
+        Set<String> sMods = new HashSet<>(variant.getSMods());
+        sMods.addAll(variant.getSModdedBuiltIns());
+
         variant.clear();
+
+        for(String mod : variant.getHullSpec().getBuiltInMods()) {
+            variant.addMod(mod);
+        }
+
+        for(String mod : variant.getPermaMods()) {
+            variant.addMod(mod);
+        }
+
+        for (String mod : sMods) {
+            variant.addMod(mod);
+        }
     }
 
     public static void stripAllToStorage(List<FleetMemberAPI> fleetMembers, CargoAPI storageCargo) {
         for (FleetMemberAPI member : fleetMembers) {
             stripToStorage(member.getVariant(), storageCargo);
         }
+    }
+
+    public static Map<String, Integer> getNeededWeapons(ShipVariantAPI variant) {
+        Map<String, Integer> neededWeapons = new HashMap<>();
+
+        for (String slotId : variant.getFittedWeaponSlots()) {
+            String wepId = variant.getWeaponSpec(slotId).getWeaponId();
+            neededWeapons.put(wepId, neededWeapons.getOrDefault(wepId, 0) + 1);
+        }
+        return neededWeapons;
+    }
+
+    public static Map<String, Integer> getNeededFighters(ShipVariantAPI variant) {
+        Map<String, Integer> neededFighters = new HashMap<>();
+
+        for (String wingId : variant.getFittedWings()) {
+            neededFighters.put(wingId, neededFighters.getOrDefault(wingId, 0) + 1);
+        }
+        return neededFighters;
+    }
+
+    public static boolean isVariantAvailableInStorage(
+        ShipVariantAPI targetVariant,
+        List<FleetMemberAPI> mothballedShipsInStorage,
+        CargoAPI storageCargo
+    ) {
+        boolean weaponsMatch = false;
+        boolean fightersMatch = false;
+        boolean hullMatch = false;
+
+        String hullId = targetVariant.getHullSpec().getBaseHullId();
+        for (FleetMemberAPI member : mothballedShipsInStorage) {
+            if (member.getHullSpec().getBaseHullId().equals(hullId)) {
+                hullMatch = true;
+                break;
+            }
+        }
+        if (!hullMatch) return false;
+
+        Map<String, Integer> neededWeapons = getNeededFighters(targetVariant);
+        Map<String, Integer> neededFighters = getNeededFighters(targetVariant);
+
+        if (neededWeapons.size() == 0 && neededFighters.size() == 0) return true;
+
+        for (String weaponId : neededWeapons.keySet()) {
+            if (storageCargo.getNumWeapons(weaponId) < neededWeapons.get(weaponId)) {
+                weaponsMatch = false;
+                break;
+            }
+        }
+
+        for (String wing : neededFighters.keySet()) {
+            if (storageCargo.getNumFighters(wing) < neededFighters.get(wing)) {
+                fightersMatch = false;
+                break;
+            }
+        }
+        
+        return weaponsMatch && fightersMatch;
     }
 
     // manual implementation for refit because FleetMemberAPI.setvariant materializes weapons and fighters out of thin air and simply overwrites and i couldnt find any other avenue, someone please let me know if there's a better way
@@ -151,15 +227,10 @@ public class CargoPresetUtils {
             float fuel = playerCargo.getFuel();
             float maxFuel = playerCargo.getMaxFuel();
 
-            float rawMarinesRatio = totalMarines / maxPersonnel;
-            float rawCrewRatio = totalCrew / maxPersonnel;
-            float fuelRatio = fuel / maxFuel;
-            float supplyRatio = supplies / cargoCapacity;
-
-            this.rawCrewRatio = rawCrewRatio;
-            this.marinesRatio = rawMarinesRatio;
-            this.fuelRatio = fuelRatio;
-            this.supplyRatio = supplyRatio;
+            this.rawCrewRatio = totalCrew / maxPersonnel;
+            this.marinesRatio = totalMarines / maxPersonnel;
+            this.fuelRatio = fuel / maxFuel;
+            this.supplyRatio = supplies / cargoCapacity;
         }
     }
 

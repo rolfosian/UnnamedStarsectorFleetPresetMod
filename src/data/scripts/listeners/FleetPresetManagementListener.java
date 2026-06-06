@@ -40,27 +40,23 @@ import com.fs.starfarer.api.util.IntervalUtil;
 import com.fs.starfarer.api.util.Misc;
 import com.fs.starfarer.campaign.ui.UITable;
 
-import data.scripts.ClassRefs;
+import data.scripts.util.UiUtil;
 import data.scripts.listeners.DockingListener;
-
+import data.scripts.listeners.FleetPresetManagementListener.FenaglePanele;
 import data.scripts.ui.BaseSelfRefreshingPanel;
 import data.scripts.ui.FleetIconPanel;
 import data.scripts.ui.PartialRestorationDialog;
-import data.scripts.ui.TreeTraverser;
-import data.scripts.ui.UIComponent;
-import data.scripts.ui.UIPanel;
-import data.scripts.ui.TreeTraverser.TreeNode;
 import data.scripts.ui.UIConfig;
 
-import data.scripts.util.ReflectionUtilis;
-import data.scripts.util.ListenerFactory.DialogDismissedListener;
-import data.scripts.util.ListenerFactory.ActionListener;
-import data.scripts.util.UtilReflection;
-import data.scripts.util.UtilReflection.*;
+import data.scripts.util.UtilUi;
+import data.scripts.util.UtilUi.ConfirmDialogData;
 import data.scripts.util.PresetUtils;
-import data.scripts.util.PresetUtils.FleetMemberWrapper;
 import data.scripts.util.PresetUtils.FleetPreset;
+import data.scripts.util.UiUtil.ActionListener;
+import data.scripts.util.UiUtil.DialogDismissedListener;
 import data.scripts.util.PresetMiscUtils;
+
+import static data.scripts.util.UiUtil.utils;
 
 import java.awt.Color;
 import java.util.*;
@@ -69,10 +65,6 @@ import org.apache.log4j.Logger;
 import org.lwjgl.input.Keyboard;
 
 public class FleetPresetManagementListener extends ActionListener {
-    private static void print(Object... args) {
-        PresetMiscUtils.print(args);
-    }
-
     public static final float CONFIRM_DIALOG_WIDTH = UIConfig.DISPLAY_WIDTH / UIConfig.CONFIRM_DIALOG_WIDTH_DIVISOR;
     public static final float CONFIRM_DIALOG_HEIGHT = UIConfig.DISPLAY_HEIGHT / UIConfig.CONFIRM_DIALOG_HEIGHT_DIVISOR;
 
@@ -99,31 +91,21 @@ public class FleetPresetManagementListener extends ActionListener {
     private static final String OVERWRITE_DIALOG_HEADE_SUFFIX = " with the current fleet?";
     private static final String RENAME_DIALOG_HEADE_PREFIX = "Are you sure you want to rename ";
     
-    private static final String SAVE_DIALOG_BUTTON_ID = "saveDialogButton";
     private static final String SAVE_DIALOG_BUTTON_TOOLTIP_PARA_TEXT = "Saves the current fleet as preset.";
     private static final String SAVE_DIALOG_BUTTON_TEXT = "SAVE FLEET";
 
-    private static final String RESTORE_BUTTON_ID = "restoreButton"; 
     private static final String RESTORE_BUTTON_TOOLTIP_PARA_TEXT = "Restores the selected preset.";
     private static final String RESTORE_BUTTON_TEXT  = "RESTORE";
 
-    private static final String PARTIAL_RESTORE_BUTTON_ID = "partialRestoreButton";
     private static final String PARTIAL_RESTORE_BUTTON_TOOLTIP_PARA_TEXT = "Opens a dialog for ship selection and partial preset restoration.";
     private static final String PARTIAL_RESTORE_BUTTON_TEXT = "PART. RESTORE";
 
-    private static final String STORE_BUTTON_ID = "storeButton";
     private static final String STORE_BUTTON_TOOLTIP_PARA_TEXT = "Stores the current fleet in storage.";
     private static final String STORE_BUTTON_TEXT  = "STORE FLEET";
 
-    private static final String DELETE_BUTTON_ID = "deleteButton";
     private static final String DELETE_BUTTON_TOOLTIP_PARA_TEXT = "Deletes the selected preset.";
     private static final String DELETE_BUTTON_TEXT = "DELETE";
 
-    // private static final String OVERWRITE_PRESET_BUTTON_ID = "overwriteToPresetButton";
-    // private static final String OVERWRITE_PRESET_BUTTON_TOOLTIP_PARA_TEXT = "Overwrites the selected preset with the current fleet.";
-    // private static final String OVERWRITE_PRESET_BUTTON_TEXT = "UPDATE";
-
-    private static final String AUTO_UPDATE_BUTTON_ID = "autoUpdateButton";
     private static final String AUTO_UPDATE_BUTTON_TOOLTIP_PARA_TEXT = "Toggle to automatically update the preset when the fleet changes, if undocked with a COMPLETE preset fleet.";
     private static final String AUTO_UPDATE_BUTTON_TEXT = "AUTO UPDATE";
 
@@ -162,8 +144,7 @@ public class FleetPresetManagementListener extends ActionListener {
         this.overlordPanel = null;
         this.overlordPanelPos = null;
         this.buttonsPanel = null;
-
-        this.theButtons = new HashMap<>();
+        
         this.masterCancelButton = null;
         
         this.fenaglePanele = null;
@@ -202,7 +183,21 @@ public class FleetPresetManagementListener extends ActionListener {
     private PositionAPI overlordPanelPos = null;
     private UIPanelAPI overlordPanel = null;
     private CustomPanelAPI buttonsPanel = null;
-    private Map<String, ButtonAPI> theButtons = new HashMap<>();
+
+    private ButtonAPI saveButton;
+    private ButtonAPI restoreButton;
+    private ButtonAPI partialRestoreButton;
+    private ButtonAPI storeButton;
+    private ButtonAPI deleteButton;
+    private ButtonAPI autoUpdateButton;
+
+    private final Runnable SAVE_DIALOG_BUTTON_ID;
+    private final Runnable RESTORE_BUTTON_ID;
+    private final Runnable PARTIAL_RESTORE_BUTTON_ID;
+    private final Runnable STORE_BUTTON_ID;
+    private final Runnable DELETE_BUTTON_ID;
+    // private final Runnable AUTO_UPDATE_BUTTON_ID;
+
     private ButtonAPI masterCancelButton = null;
     private FenaglePanele fenaglePanele = null;
 
@@ -225,15 +220,47 @@ public class FleetPresetManagementListener extends ActionListener {
     public FleetPresetManagementListener() {
         super();
         dockingListener = PresetUtils.getDockingListener();
+
+        SAVE_DIALOG_BUTTON_ID = () -> {this.openSaveDialog();};
+
+        RESTORE_BUTTON_ID = () -> {
+            PresetUtils.restoreFleetFromPreset(this.selectedPresetName);
+            this.tablePlugin.addShipList(selectedPreset.getMembers(), whichMembersAvailable);
+            this.setParas();
+            this.enableButtonsRequiringSelection();
+        };
+
+        PARTIAL_RESTORE_BUTTON_ID = () -> {this.showFleetMemberRecoveryDialog();};
+
+        STORE_BUTTON_ID = () -> {
+            PresetUtils.storeFleetInStorage();
+            setParas();
+            enableButtonsRequiringSelection();
+        };
+
+        DELETE_BUTTON_ID = () -> {this.openDeleteDialog();};
+
+        // AUTO_UPDATE_BUTTON_ID = () -> {
+        //     if (autoUpdateButton.isChecked()) {
+        //         Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, true);
+        //         if (dockingListener.getPlayerCurrentMarket() == null) {
+        //             FleetPreset preset = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
+
+        //             if (preset != null) {
+        //                 Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, preset);
+        //             }
+        //         }
+        //     } else {
+        //         Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, false);
+        //         Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
+        //     }
+        // };
     }
 
     @Override
-    public void trigger(Object... args) {
-        PresetUtils.cleanUpPerishedPresetMembers();
-        if (PresetUtils.isAutoUpdatePresets()) PresetUtils.updateFleetPresetStats(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
-
+    public void actionPerformed(Object arg0, Object arg1) {
         CustomPanelAPI tableMasterPanel = Global.getSettings().createCustom(PANEL_WIDTH - CANCEL_CONFIRM_BUTTON_WIDTH - 5f, PANEL_HEIGHT, new BaseCustomUIPanelPlugin() );
-        ConfirmDialogData master = UtilReflection.showConfirmationDialog(
+        ConfirmDialogData master = UtilUi.showConfirmationDialog(
             EMPTY_STRING,
             EMPTY_STRING,
             CLOSE_TEXT,
@@ -241,24 +268,30 @@ public class FleetPresetManagementListener extends ActionListener {
             CONFIRM_DIALOG_HEIGHT,
             new DialogDismissedListener() {
                 @Override
-                public void trigger(Object... args) {
-                    // resetTopLevelVars();
+                public void dialogDismissed(Object arg0, int arg1) {
+                    resetTopLevelVars();
                 }
         });
 
         if (master == null) return;
-        master.panel.removeComponent(master.confirmButton.getInstance());
-        master.addGridLines(0.13f, true, false, true, Misc.getDarkPlayerColor());
+        master.panel.removeComponent(master.confirmButton);
+        master.addGridLines(0.25f, true, false, true, Misc.getDarkPlayerColor(), () -> {
+            enableButtonsRequiringSelection();
+            saveButton.setEnabled(true);
+            saveButton.setClickable(true);
+            deleteButton.setEnabled(true);
+            deleteButton.setClickable(true);
+        });
 
         overlord = master;
         overlordPanel = master.panel;
         overlordPanelPos = master.panel.getPosition();
 
-        ButtonAPI cancelButton = master.cancelButton.getInstance();
+        ButtonAPI cancelButton = master.cancelButton;
         PositionAPI cancelButtonPosition = cancelButton.getPosition();
         CANCEL_CONFIRM_BUTTON_WIDTH = cancelButtonPosition.getWidth();
         cancelButton.setShortcut(Keyboard.KEY_G, false);
-        UtilReflection.setButtonHook(cancelButton, () -> resetTopLevelVars(), () -> {});
+        UiUtil.setButtonBeforeHook(cancelButton, () -> resetTopLevelVars());
 
         ButtonPlugin buttonPlugin = new ButtonPlugin();
         buttonsPanel = Global.getSettings().createCustom(CANCEL_CONFIRM_BUTTON_WIDTH, PANEL_HEIGHT, buttonPlugin);
@@ -301,67 +334,64 @@ public class FleetPresetManagementListener extends ActionListener {
         float buttonHeight = cancelPosition.getHeight();
         int i = 2;
 
-        ButtonAPI saveDialogButton = tooltipMaker.addButton(SAVE_DIALOG_BUTTON_TEXT, SAVE_DIALOG_BUTTON_ID, c1, c2,
+        saveButton = tooltipMaker.addButton(SAVE_DIALOG_BUTTON_TEXT, SAVE_DIALOG_BUTTON_ID, c1, c2,
         Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
-        saveDialogButton.setShortcut(i, false);
-        tooltipMaker.addTooltipTo(tc(SAVE_DIALOG_BUTTON_TOOLTIP_PARA_TEXT), saveDialogButton, TooltipLocation.RIGHT, false);
-        i++;
+        saveButton.setEnabled(false);
+        saveButton.setClickable(false);
+        saveButton.setShortcut(i++, false);
+        tooltipMaker.addTooltipTo(tc(SAVE_DIALOG_BUTTON_TOOLTIP_PARA_TEXT), saveButton, TooltipLocation.RIGHT, false);
 
-        ButtonAPI restorePresetButton = tooltipMaker.addButton(RESTORE_BUTTON_TEXT, RESTORE_BUTTON_ID, c1, c2,
+        restoreButton = tooltipMaker.addButton(RESTORE_BUTTON_TEXT, RESTORE_BUTTON_ID, c1, c2,
         Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
-        restorePresetButton.setShortcut(i, false);
-        tooltipMaker.addTooltipTo(tc(RESTORE_BUTTON_TOOLTIP_PARA_TEXT), restorePresetButton, TooltipLocation.RIGHT, false);
-        i++;
+        restoreButton.setEnabled(false);
+        restoreButton.setClickable(false);
+        restoreButton.setShortcut(i++, false);
+        tooltipMaker.addTooltipTo(tc(RESTORE_BUTTON_TOOLTIP_PARA_TEXT), restoreButton, TooltipLocation.RIGHT, false);
 
-        ButtonAPI partialRestorePresetButton = tooltipMaker.addButton(PARTIAL_RESTORE_BUTTON_TEXT, PARTIAL_RESTORE_BUTTON_ID, c1, c2,
+        partialRestoreButton = tooltipMaker.addButton(PARTIAL_RESTORE_BUTTON_TEXT, PARTIAL_RESTORE_BUTTON_ID, c1, c2,
         Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
-        partialRestorePresetButton.setShortcut(i, false);
-        tooltipMaker.addTooltipTo(tc(PARTIAL_RESTORE_BUTTON_TOOLTIP_PARA_TEXT), partialRestorePresetButton, TooltipLocation.RIGHT, false);
-        i++;
+        partialRestoreButton.setEnabled(false);
+        partialRestoreButton.setClickable(false);
+        partialRestoreButton.setShortcut(i++, false);
+        tooltipMaker.addTooltipTo(tc(PARTIAL_RESTORE_BUTTON_TOOLTIP_PARA_TEXT), partialRestoreButton, TooltipLocation.RIGHT, false);
 
-        ButtonAPI storeAllButton = tooltipMaker.addButton(STORE_BUTTON_TEXT, STORE_BUTTON_ID, c1, c2,
+        storeButton = tooltipMaker.addButton(STORE_BUTTON_TEXT, STORE_BUTTON_ID, c1, c2,
         Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
-        storeAllButton.setShortcut(i, false);
-        tooltipMaker.addTooltipTo(tc(STORE_BUTTON_TOOLTIP_PARA_TEXT), storeAllButton, TooltipLocation.RIGHT, false);
-        i++;
+        storeButton.setEnabled(false);
+        storeButton.setClickable(false);
+        storeButton.setShortcut(i++, false);
+        tooltipMaker.addTooltipTo(tc(STORE_BUTTON_TOOLTIP_PARA_TEXT), storeButton, TooltipLocation.RIGHT, false);
 
-        ButtonAPI deleteButton = tooltipMaker.addButton(DELETE_BUTTON_TEXT, DELETE_BUTTON_ID, c1, c2,
+        deleteButton = tooltipMaker.addButton(DELETE_BUTTON_TEXT, DELETE_BUTTON_ID, c1, c2,
         Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
-        deleteButton.setShortcut(i, false);
+        deleteButton.setEnabled(false);
+        deleteButton.setClickable(false);
+        deleteButton.setShortcut(i++, false);
         tooltipMaker.addTooltipTo(tc(DELETE_BUTTON_TOOLTIP_PARA_TEXT), deleteButton, TooltipLocation.RIGHT, false);
-        i++;
 
         // ButtonAPI overwriteToPresetButton = tooltipMaker.addButton(OVERWRITE_PRESET_BUTTON_TEXT, OVERWRITE_PRESET_BUTTON_ID, c1, c2,
         // Alignment.BR, CutStyle.ALL, buttonWidth, buttonHeight, 5f);
-        // overwriteToPresetButton.setShortcut(i, false);
+        // overwriteToPresetButton.setShortcut(i++, false);
         // tooltipMaker.addTooltipTo(tc(OVERWRITE_PRESET_BUTTON_TOOLTIP_PARA_TEXT), overwriteToPresetButton, TooltipLocation.RIGHT, false);
         // i++;
 
-        ButtonAPI autoUpdateButton = tooltipMaker.addCheckbox(buttonWidth, buttonHeight, AUTO_UPDATE_BUTTON_TEXT, AUTO_UPDATE_BUTTON_ID, Fonts.ORBITRON_12, c1,
-        ButtonAPI.UICheckboxSize.SMALL, 5f);
-        autoUpdateButton.setChecked(PresetUtils.isAutoUpdatePresets());
-        tooltipMaker.addTooltipTo(tc(AUTO_UPDATE_BUTTON_TOOLTIP_PARA_TEXT), autoUpdateButton, TooltipLocation.RIGHT, false);
+        // autoUpdateButton = tooltipMaker.addCheckbox(buttonWidth, buttonHeight, AUTO_UPDATE_BUTTON_TEXT, AUTO_UPDATE_BUTTON_ID, Fonts.ORBITRON_12, c1,
+        // ButtonAPI.UICheckboxSize.SMALL, 5f);
+        // autoUpdateButton.setChecked(PresetUtils.isAutoUpdatePresets());
+        // tooltipMaker.addTooltipTo(tc(AUTO_UPDATE_BUTTON_TOOLTIP_PARA_TEXT), autoUpdateButton, TooltipLocation.RIGHT, false);
 
         // ButtonAPI cargoRatiosButton = tooltipMaker.addCheckbox(buttonWidth, buttonHeight, KEEP_CARGO_RATIOS_BUTTON_TEXT, KEEP_CARGO_RATIOS_BUTTON_ID, Fonts.ORBITRON_12, c1,
         // ButtonAPI.UICheckboxSize.SMALL, 5f);
         // cargoRatiosButton.setChecked((boolean)Global.getSector().getPersistentData().get(PresetUtils.KEEPCARGORATIOS_KEY));
         // tooltipMaker.addTooltipTo(tc(KEEP_CARGO_RATIOS_BUTTON_PARA_TEXT), cargoRatiosButton, TooltipLocation.RIGHT, false);
 
-        theButtons.put(SAVE_DIALOG_BUTTON_ID, saveDialogButton);
-        theButtons.put(RESTORE_BUTTON_ID, restorePresetButton);
-        theButtons.put(STORE_BUTTON_ID, storeAllButton);
-        theButtons.put(DELETE_BUTTON_ID, deleteButton);
-        // theButtons.put(OVERWRITE_PRESET_BUTTON_ID, overwriteToPresetButton);
-        theButtons.put(AUTO_UPDATE_BUTTON_ID, autoUpdateButton);
-        theButtons.put(PARTIAL_RESTORE_BUTTON_ID, partialRestorePresetButton);
-        // theButtons.put(KEEP_CARGO_RATIOS_BUTTON_ID, cargoRatiosButton);
         disableButtonsRequiringSelection();
         enableButtonsRequiringSelection();
         return;
     }
 
     private void openRenameDialog(String oldName, String newName, Object oldSaveButtonListener, ButtonAPI saveButton, Object cancelButtonListener, ButtonAPI cancelButton) {
-        ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
+        ConfirmDialogData subData = UtilUi.showConfirmationDialog(
             RENAME_DIALOG_HEADE_PREFIX + oldName + " to " + newName + QUESTON_MARK,
             CONFIRM_TEXT,
             CANCEL_TEXT,
@@ -369,8 +399,8 @@ public class FleetPresetManagementListener extends ActionListener {
             CONFIRM_DIALOG_HEIGHT / 4,
             new DialogDismissedListener() {
                 @Override
-                public void trigger(Object... args) {
-                    if ((int)args[1] == 0) {
+                public void dialogDismissed(Object arg0, int arg1) {
+                    if (arg1 == 0) {
                         // confirm
                         if (currentTableMap.containsKey(newName)) {
                             selectPreset(newName, getTableMapIndex(newName));
@@ -382,25 +412,25 @@ public class FleetPresetManagementListener extends ActionListener {
                         PresetUtils.saveFleetPreset(newName);
 
                         refreshTableMap();
+
                         selectPreset(newName, getTableMapIndex(newName));
                         tablePlugin.rebuild();
                         enableButtonsRequiringSelection();
-
-                        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod,
-                        cancelButtonListener,
-                        UtilReflection.createButtonClickEventInstance(cancelButton.getPosition()),
-                        cancelButton);
+                        utils.actionPerformed(
+                            cancelButtonListener,
+                            UtilUi.createButtonClickEventInstance(cancelButton.getPosition()),
+                            cancelButton
+                        );
                         return;
                     }
                     if (saveNameField != null) saveNameField.grabFocus(false);
                 }
             });
-            subData.confirmButton.getInstance().setShortcut(Keyboard.KEY_G, false);
+            subData.confirmButton.setShortcut(Keyboard.KEY_G, false);
     }
 
     private void openOverwriteDialog(Object oldSaveButtonListener, ButtonAPI saveButton) {
-
-        ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
+        ConfirmDialogData subData = UtilUi.showConfirmationDialog(
             OVERWRITE_DIALOG_HEADE_PREFIX + selectedPresetName + OVERWRITE_DIALOG_HEADE_SUFFIX,
             CONFIRM_TEXT,
             CANCEL_TEXT,
@@ -408,21 +438,21 @@ public class FleetPresetManagementListener extends ActionListener {
             CONFIRM_DIALOG_HEIGHT / 4,
             new DialogDismissedListener() {
                 @Override
-                public void trigger(Object... args) {
-                    if ((int)args[1] == 0) {
+                public void dialogDismissed(Object arg0, int arg1) {
+                    if (arg1 == 0) {
                         // confirm
-
-                        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod,
-                        oldSaveButtonListener,
-                        UtilReflection.createButtonClickEventInstance(saveButton.getPosition()),
-                        saveButton);
+                        utils.actionPerformed(
+                            oldSaveButtonListener,
+                            UtilUi.createButtonClickEventInstance(saveButton.getPosition()),
+                            saveButton
+                        );
                         return;
                     }
 
                     if (saveNameField != null) saveNameField.grabFocus(false);
                 }
             });
-        subData.confirmButton.getInstance().setShortcut(Keyboard.KEY_G, false);
+        subData.confirmButton.setShortcut(Keyboard.KEY_G, false);
     }
 
     @SuppressWarnings("unchecked")
@@ -432,7 +462,7 @@ public class FleetPresetManagementListener extends ActionListener {
         saveNameField = textFieldTooltipMaker.addTextField(CONFIRM_DIALOG_WIDTH/3, CONFIRM_DIALOG_HEIGHT/2/3, "graphics/fonts/orbitron24aabold.fnt", 10f);
         textFieldPanel.addUIElement(textFieldTooltipMaker).inTL(0f, 0f);
 
-        ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
+        ConfirmDialogData subData = UtilUi.showConfirmationDialog(
             "graphics/illustrations/entering_hyperspace.jpg",
             SAVE_DIALOG_HEADER,
             SAVE_DIALOG_YES_TEXT,
@@ -441,7 +471,7 @@ public class FleetPresetManagementListener extends ActionListener {
             CONFIRM_DIALOG_HEIGHT / 2,
             new SaveListener()
         );
-        setSaveButtonListenerInterceptor(subData.confirmButton.getInstance(), subData.cancelButton.getInstance());
+        setSaveButtonListenerInterceptor(subData.confirmButton, subData.cancelButton);
 
         SaveNameFieldInputInterceptor plugin = new SaveNameFieldInputInterceptor();
         ((UIPanelAPI)saveNameField).addComponent(Global.getSettings().createCustom(0f, 0f, plugin)); // we arent done with the interceptor yet. refer to plugin.init
@@ -514,7 +544,7 @@ public class FleetPresetManagementListener extends ActionListener {
 
         ptsLabbelTooltip.addTooltipTo(getPtsLabelTt((Map<String, String>)deployPtsBreakdown[1], Fonts.ORBITRON_16), ptsLabbelTooltip, TooltipLocation.RIGHT);
         ptsLabbelPanel.addUIElement(ptsLabbelTooltip);
-        Object ptsLabbelTt = ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelGetTooltipMethod, ptsLabbelTooltip);
+        Object ptsLabbelTt = utils.getTooltip(ptsLabbelTooltip);
 
         subData.panel.addComponent(ptsLabbelPanel).inTL(0f, subData.panel.getPosition().getHeight() - height - 8f);
         subData.panel.addComponent(textFieldPanel).inTL(0f, 0f).setXAlignOffset(CONFIRM_DIALOG_WIDTH / 2 / 2 / 2 / 2 - 20f).setYAlignOffset(-CONFIRM_DIALOG_HEIGHT / 2 / 2 / 2);
@@ -525,19 +555,23 @@ public class FleetPresetManagementListener extends ActionListener {
     }
 
     private void setSaveButtonListenerInterceptor(ButtonAPI saveButton, ButtonAPI cancelButton) {
-        Object oldSaveButtonListener = ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, saveButton);
-        Object cancelButtonListener = ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, cancelButton);
+        Object oldSaveButtonListener = utils.buttonGetListener(saveButton);
+        Object cancelButtonListener = utils.buttonGetListener(cancelButton);
 
-        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, saveButton, new ActionListener() {
+        utils.buttonSetListener(saveButton, new ActionListener() {
             @Override
-            public void trigger(Object... args) {
+            public void actionPerformed(Object arg0, Object arg1) {
                 String text = saveNameField.getText();
                 if (!isEmptyOrWhitespace(text)) {
                     FleetPreset possibleDuplicate = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
 
                     if (currentTableMap.containsKey(text)) {
                         if (possibleDuplicate != null && !possibleDuplicate.getName().equals(text)) {
-                            new MessageBox("Duplicates are not allowed!", null).dialogData.addGridLines(0.1f, false, false, true, UtilReflection.DARK_RED);
+                            MessageBox msgBox = new MessageBox("Duplicates are not allowed!", null);
+                            msgBox.dialogData.cancelButton.setEnabled(false);
+                            msgBox.dialogData.addGridLines(0.25f, false, false, true, UtilUi.DARK_RED, () -> {
+                            msgBox.dialogData.cancelButton.setEnabled(true);
+                            });
                             return;
                         }
 
@@ -546,13 +580,12 @@ public class FleetPresetManagementListener extends ActionListener {
                         return;
                     }
                     
-                    
                     if (possibleDuplicate != null) {
                         openRenameDialog(possibleDuplicate.getName(), text, oldSaveButtonListener, saveButton, cancelButtonListener, cancelButton);
                         return;
                     }
                 }
-                ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldSaveButtonListener, saveButton, args[1]);
+                utils.actionPerformed(oldSaveButtonListener, saveButton, arg1);
             }
         }.getProxy());
     }
@@ -583,11 +616,11 @@ public class FleetPresetManagementListener extends ActionListener {
 
                 if (interval.intervalElapsed() && !isShowingTt) {
                     isShowingTt = true;
-                    ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelShowTooltipMethod, ptsLabbelTt, tt);
+                    utils.showTooltip(ptsLabbelTt, tt);
                 }
 
                 if (!saveNameField.hasFocus()) {
-                    ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelHideTooltipMethod, ptsLabbelTt, tt);
+                    utils.showTooltip(ptsLabbelTt, tt);
                     isShowingTt = false;
                     isDone = true;
                     Global.getSector().removeTransientScript(this);
@@ -635,7 +668,7 @@ public class FleetPresetManagementListener extends ActionListener {
                         Global.getSector().addTransientScript(hideEnsurer);
 
                     } else if (isShowingTt && !isInsideBounds(mouseX, mouseY)) {
-                        ReflectionUtilis.invokeMethodDirectly(ClassRefs.uiPanelHideTooltipMethod, ptsLabbelTt, tt);
+                        utils.hideTooltip(ptsLabbelTt, tt);
                         isShowingTt = false;
                         hideEnsurer.setIsDone(true);
                         hideEnsurer.setIsActive(false);
@@ -648,11 +681,11 @@ public class FleetPresetManagementListener extends ActionListener {
                 // with this we intercept the enter/escape inputs and synthetically click the confirm or cancel buttons so the player does not have to press enter/esc twice
                 if (event.isKeyDownEvent() && saveNameField.hasFocus()) {
                     if (event.getEventValue() == Keyboard.KEY_RETURN) {
-                        UtilReflection.clickButton(subData.confirmButton.getInstance());
+                        UtilUi.clickButton(subData.confirmButton);
                         break;
                     }
                     else if (event.getEventValue() == Keyboard.KEY_ESCAPE) {
-                        UtilReflection.clickButton(subData.cancelButton.getInstance());
+                        UtilUi.clickButton(subData.cancelButton);
                         break;
                     }
                 }
@@ -680,7 +713,7 @@ public class FleetPresetManagementListener extends ActionListener {
     }
 
     private void openDeleteDialog() {
-        ConfirmDialogData subData = UtilReflection.showConfirmationDialog(
+        ConfirmDialogData subData = UtilUi.showConfirmationDialog(
             DELETE_DIALOG_HEADER_PREFIX + selectedPresetName + QUESTON_MARK,
             CONFIRM_TEXT,
             CANCEL_TEXT,
@@ -707,57 +740,15 @@ public class FleetPresetManagementListener extends ActionListener {
     
         @Override
         public void buttonPressed(Object arg0) {
-            switch ((String) arg0) {
-                case SAVE_DIALOG_BUTTON_ID:
-                    openSaveDialog();
-                    return;
-
-                case RESTORE_BUTTON_ID:
-                    PresetUtils.restoreFleetFromPreset(selectedPresetName);
-
-                    if (mangledFleet != null) {
-                        tablePlugin.addShipList(mangledFleet, whichMembersAvailable);
-                    } else {
-                        tablePlugin.addShipList(selectedPreset.getCampaignFleet(), whichMembersAvailable);
-                    }
-                    setParas();
-
-                    enableButtonsRequiringSelection();
-                    return;
-
-                case PARTIAL_RESTORE_BUTTON_ID:
-                    showFleetMemberRecoveryDialog();
-                    return;
-
-                case STORE_BUTTON_ID:
-                    PresetUtils.storeFleetInStorage();
-                    setParas();
-                    enableButtonsRequiringSelection();
-                    return;
-                    
-                case DELETE_BUTTON_ID:
-                    openDeleteDialog();
-                    return;
+            ((Runnable)arg0).run();
+            // switch ((String) arg0) {
+            //     case DELETE_BUTTON_ID:
+            //         openDeleteDialog();
+            //         return;
                     
                 // case OVERWRITE_PRESET_BUTTON_ID:
                 //     openOverwriteDialog(false);
                 //     return;
-
-                case AUTO_UPDATE_BUTTON_ID:
-                    if (theButtons.get(AUTO_UPDATE_BUTTON_ID).isChecked()) {
-                        Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, true);
-                        if (dockingListener.getPlayerCurrentMarket() == null) {
-                            FleetPreset preset = PresetUtils.getPresetOfMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
-
-                            if (preset != null) {
-                                Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, preset);
-                            }
-                        }
-                    } else {
-                        Global.getSector().getPersistentData().put(PresetUtils.IS_AUTO_UPDATE_KEY, false);
-                        Global.getSector().getMemoryWithoutUpdate().unset(PresetUtils.UNDOCKED_PRESET_KEY);
-                    }
-                    return;
 
                 // case KEEP_CARGO_RATIOS_BUTTON_ID:
                 //     if (theButtons.get(KEEP_CARGO_RATIOS_BUTTON_ID).isChecked()) {
@@ -766,10 +757,6 @@ public class FleetPresetManagementListener extends ActionListener {
                 //         Global.getSector().getPersistentData().put(PresetUtils.KEEPCARGORATIOS_KEY, false);
                 //     }
                 //     return;
-
-                default:
-                    break;
-            }
         }
 
         private void navigateTableRows(int key, int rowNum) {
@@ -780,7 +767,7 @@ public class FleetPresetManagementListener extends ActionListener {
             int newIndex = (unselected && key == Keyboard.KEY_UP) ? rowNum - 1 : (selectedRowIndex + direction + rowNum) % rowNum;
 
             TableRowListener rowListener = tableRowListeners.get(newIndex);
-            UtilReflection.clickButton(rowListener.button);
+            UtilUi.clickButton(rowListener.button);
         }
 
         @Override
@@ -808,7 +795,7 @@ public class FleetPresetManagementListener extends ActionListener {
                             if (Keyboard.isKeyDown(Keyboard.KEY_ESCAPE) && rowNum > 0 && selectedPresetName != EMPTY_STRING) {
                                 if (selectedRowIndex != -1) {
                                     TableRowListener selectedRowListener = tableRowListeners.get(selectedRowIndex);
-                                    ReflectionUtilis.invokeMethodDirectly(ClassRefs.tablePanelSelectMethod, tablePanel, null, null);
+                                    utils.uiTableSelect(tablePanel, null, null);
                                     tablePlugin.setRowColorAndText(selectedRowListener.row, new Object[] {c1, selectedRowListener.rowName});
                                     tablePlugin.addShipList(null, null);
                                 }
@@ -849,49 +836,67 @@ public class FleetPresetManagementListener extends ActionListener {
     public void enableButtonsRequiringSelection() {
         if (selectedPresetName != EMPTY_STRING) {
             if (dockingListener.canPlayerAccessStorage(dockingListener.getPlayerCurrentMarket())) {
-                theButtons.get(PARTIAL_RESTORE_BUTTON_ID).setEnabled(true);
+                partialRestoreButton.setEnabled(true);
+                partialRestoreButton.setClickable(true);
 
                 if (Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy().size() > 1) {
-                    theButtons.get(STORE_BUTTON_ID).setEnabled(true);
+                    storeButton.setEnabled(true);
+                    storeButton.setClickable(true);
                 } else {
-                    theButtons.get(STORE_BUTTON_ID).setEnabled(false);
+                    storeButton.setEnabled(false);
+                    storeButton.setClickable(false);
                 }
                 
                 if (!PresetUtils.isPresetPlayerFleet(selectedPreset)) {
-                    theButtons.get(RESTORE_BUTTON_ID).setEnabled(true);
+                    restoreButton.setEnabled(true);
+                    restoreButton.setClickable(true);
                 } else {
-                    theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
+                    restoreButton.setEnabled(false);
+                    restoreButton.setClickable(false);
                 }
             }
             // theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(true);
-            theButtons.get(DELETE_BUTTON_ID).setEnabled(true);
+            deleteButton.setEnabled(true);
+            deleteButton.setClickable(true);
 
         } else {
-            theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
-            theButtons.get(PARTIAL_RESTORE_BUTTON_ID).setEnabled(false);
+            restoreButton.setEnabled(false);
+            restoreButton.setClickable(false);
+            partialRestoreButton.setEnabled(false);
+            partialRestoreButton.setClickable(false);
             // theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(false);
-            theButtons.get(DELETE_BUTTON_ID).setEnabled(false);
+            deleteButton.setEnabled(false);
+            deleteButton.setClickable(false);
 
             if (dockingListener.canPlayerAccessStorage(dockingListener.getPlayerCurrentMarket())
                 && Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy().size() > 1) {
-                theButtons.get(STORE_BUTTON_ID).setEnabled(true);
+                storeButton.setEnabled(true);
+                storeButton.setClickable(true);
             } else {
-                theButtons.get(STORE_BUTTON_ID).setEnabled(false);
+                storeButton.setEnabled(false);
+                storeButton.setClickable(false);
             }
         }
     }
 
     private void disableButtonsRequiringSelection() {
-        theButtons.get(DELETE_BUTTON_ID).setEnabled(false);
-        theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
-        theButtons.get(PARTIAL_RESTORE_BUTTON_ID).setEnabled(false);
+        deleteButton.setEnabled(false);
+        deleteButton.setClickable(false);
+        restoreButton.setEnabled(false);
+        restoreButton.setClickable(false);
+        partialRestoreButton.setEnabled(false);
+        partialRestoreButton.setClickable(false);
+        
         // theButtons.get(OVERWRITE_PRESET_BUTTON_ID).setEnabled(false);
 
         if (dockingListener.getPlayerCurrentMarket() != null && dockingListener.canPlayerAccessStorage(dockingListener.getPlayerCurrentMarket())
             && Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy().size() > 1) {
-            theButtons.get(STORE_BUTTON_ID).setEnabled(true);
+            storeButton.setEnabled(true);
+            storeButton.setClickable(true);
         } else {
-            theButtons.get(STORE_BUTTON_ID).setEnabled(false);
+            storeButton.setEnabled(false);
+            storeButton.setClickable(false);
+
         }
     }
 
@@ -902,7 +907,7 @@ public class FleetPresetManagementListener extends ActionListener {
         
         private TooltipMakerAPI tableTipMaker;
         private CustomPanelAPI shipsPanel;
-        private UIPanelAPI fleetInfoPanel;
+        private UIPanelAPI shipListIconPanel;
         public float yScrollOffset;
 
         public TablePlugin() {}
@@ -947,17 +952,17 @@ public class FleetPresetManagementListener extends ActionListener {
         public void render(float alphaMult) {}
 
         public void setRowColorAndText(Object row, Object[] colorAndText) {
-            ReflectionUtilis.setPrivateVariable(ClassRefs.tableRowParamsField, row, colorAndText);
-            ReflectionUtilis.setPrivateVariable(ClassRefs.tableRowCreatedField, row, false); // setting created to false makes the renderer reinitialize when it is called and use the new color/text
-            ReflectionUtilis.invokeMethodDirectly(ClassRefs.tableRowRenderMethod, row, 0.01f);
+            UiUtil.uiTableRowParamsHandle.set(row, colorAndText);
+            UiUtil.uiTableRowCreatedHandle.set(row, false);
+            utils.uiTableRowRender(row, 0f);
         }
 
         private void setRowButtonHook(TableRowListener rowListener) {
-            Object oldListener = ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, rowListener.button);
+            Object oldListener = utils.buttonGetListener(rowListener.button);
 
-            ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, rowListener.button, new ActionListener() {
+            utils.buttonSetListener(rowListener.button, new ActionListener() {
                 @Override
-                public void trigger(Object... args) {
+                public void actionPerformed(Object arg0, Object arg1) {
                     if (selectedRowIndex == rowListener.id) {
                         return;
                     } else if (selectedRowIndex != -1) {
@@ -971,25 +976,17 @@ public class FleetPresetManagementListener extends ActionListener {
 
                     if (selectedPresetName != EMPTY_STRING) {
                         selectedPreset = currentTableMap.get(selectedPresetName);
-        
-                        // in case there is a matching member in storage with the same variant but not the exact same member the preset was saved with and that member is stored somewhere else
-                        Map<FleetMemberWrapper, FleetMemberAPI> neededMembers = PresetUtils.getIdAgnosticRequiredMembers(dockingListener.getPlayerCurrentMarket(), selectedPresetName);
-        
+                        whichMembersAvailable = PresetUtils.whichMembersAvailable(selectedPreset.getVariantWrappers());
+
                         setParas();
-        
-                        if (neededMembers != null) {
-                            mangledFleet = PresetUtils.mangleFleet(neededMembers, selectedPreset.getCampaignFleet());
-                            addShipList(mangledFleet, whichMembersAvailable);
-                        } else {
-                            addShipList(selectedPreset.getCampaignFleet(), whichMembersAvailable);
-                        }
+                        addShipList(selectedPreset.getMembers(), whichMembersAvailable);
         
                     } else {
                         isSelectedPresetAvailablePara.setText(EMPTY_STRING);
                         addShipList(null, null);
                     };
 
-                    ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonListenerActionPerformedMethod, oldListener, args);
+                    utils.actionPerformed(oldListener, arg0, arg1);
                     enableButtonsRequiringSelection();
                 }
             }.getProxy());
@@ -998,12 +995,7 @@ public class FleetPresetManagementListener extends ActionListener {
         private void processRow(UIPanelAPI row, String rowName, int id) {
             PositionAPI rowPos = row.getPosition();
 
-            TableRowListener rowListener = new TableRowListener(row, (ButtonAPI) ReflectionUtilis.invokeMethodDirectly(ClassRefs.tableRowGetButtonMethod, row), rowPos, rowName, id);
-            // CustomPanelAPI rowOverlayPanel = Global.getSettings().createCustom(NAME_COLUMN_WIDTH, 29f, rowListener);
-            // TooltipMakerAPI rowOverlayTooltipMaker = rowOverlayPanel.createUIElement(NAME_COLUMN_WIDTH, 29f, false);
-
-            // tableTipMaker.addComponent(rowOverlayPanel).inTL(rowPos.getX(), rowPos.getY());
-            // rowListener.init(rowOverlayPanel, rowOverlayTooltipMaker, rowPos);
+            TableRowListener rowListener = new TableRowListener(row, utils.uiTableRowGetButton(row), rowPos, rowName, id);
             
             tableRowListeners.add(rowListener);
         }
@@ -1012,7 +1004,6 @@ public class FleetPresetManagementListener extends ActionListener {
         public void buildTooltip(CustomPanelAPI panel) {
             refreshTableMap();
 
-            whichMembersAvailable = null;
             if (mangledFleet != null) {
                 mangledFleet.despawn();
                 mangledFleet = null;
@@ -1062,23 +1053,16 @@ public class FleetPresetManagementListener extends ActionListener {
 
             tablePanel.setItemsSelectable(true);
             if (selectedRow != null) {
-                ReflectionUtilis.invokeMethodDirectly(ClassRefs.tablePanelSelectMethod, tablePanel, selectedRow, null);
+                utils.uiTableSelect(tablePanel, selectedRow, null);
             }
 
             if (selectedPresetName != EMPTY_STRING) {
                 selectedPreset = currentTableMap.get(selectedPresetName);
-
-                // in case there is a matching member in storage with the same variant but not the exact same member the preset was saved with
-                Map<FleetMemberWrapper, FleetMemberAPI> neededMembers = PresetUtils.getIdAgnosticRequiredMembers(dockingListener.getPlayerCurrentMarket(), selectedPresetName);
+                whichMembersAvailable = PresetUtils.whichMembersAvailable(dockingListener.getPlayerCurrentMarket(), selectedPreset.getVariantWrappers());
 
                 setParas();
 
-                if (neededMembers != null) {
-                    mangledFleet = PresetUtils.mangleFleet(neededMembers, selectedPreset.getCampaignFleet());
-                    addShipList(mangledFleet, whichMembersAvailable);
-                } else {
-                    addShipList(selectedPreset.getCampaignFleet(), whichMembersAvailable);
-                }
+                addShipList(selectedPreset.getMembers(), whichMembersAvailable);
 
             } else {
                 isSelectedPresetAvailablePara.setText(EMPTY_STRING);
@@ -1092,32 +1076,29 @@ public class FleetPresetManagementListener extends ActionListener {
             tableTipMaker.getExternalScroller().setYOffset(yScrollOffset);
         }
 
-        public void addShipList(CampaignFleetAPI fleet, Map<Integer, FleetMemberAPI> whichMembersAvailable) {
-            if (fleetInfoPanel != null && shipsPanel != null) {
-                shipsPanel.removeComponent(fleetInfoPanel);
-                fleetInfoPanel = null;
+        public void addShipList(List<FleetMemberAPI> presetMembers, Map<Integer, FleetMemberAPI> whichMembersAvailable) {
+            if (this.shipListIconPanel != null && shipsPanel != null) {
+                shipsPanel.removeComponent(this.shipListIconPanel);
+                this.shipListIconPanel = null;
             }
             if (shipsPanel != null) {
                 fenaglePanele.parent.removeComponent(shipsPanel);
                 shipsPanel = null;
             }
-            if (fleet == null) return;
-
+            if (presetMembers == null) return;
             shipsPanel = Global.getSettings().createCustom(1, 1, null);
 
-            TooltipMakerAPI fleetInfoPanelHolder = shipsPanel.createUIElement(SHIP_COLUMN_WIDTH, PANEL_HEIGHT, false);
-            fleetInfoPanel = new FleetIconPanel(selectedPresetName, fleet, whichMembersAvailable).getPanel();
-
-            // fleetInfoPanel = UtilReflection.createObfFleetIconPanel(selectedPresetName, fleet); // Object casted to UIPanelAPI, fixed size 400x400 afaik
+            TooltipMakerAPI shipListIconPanelHolder = shipsPanel.createUIElement(SHIP_COLUMN_WIDTH, PANEL_HEIGHT, false);
+            this.shipListIconPanel = new FleetIconPanel(selectedPresetName, presetMembers, whichMembersAvailable).getPanel();
             
             // if (whichMembersAvailable != null) {
-            //     UtilReflection.setButtonTooltips(selectedPresetName, fleetInfoPanel, whichMembersAvailable, fleet.getFleetData().getMembersListCopy());
+                // UtilUi.setButtonTooltips(this.shipListIconPanel, selectedPreset.getMembers(whichMembersAvailable));
             // } else {
-            //     UtilReflection.setButtonTooltips(selectedPresetName, fleetInfoPanel, fleet.getFleetData().getMembersListCopy());
+                // UtilUi.setButtonTooltips(this.shipListIconPanel, selectedPreset.getMembers());
             // }
 
-            fleetInfoPanelHolder.addComponent(fleetInfoPanel).inTL(0f, 0f);
-            shipsPanel.addUIElement(fleetInfoPanelHolder).inTL(0f, 0f);
+            shipListIconPanelHolder.addComponent(this.shipListIconPanel).inTL(0f, 0f);
+            shipsPanel.addUIElement(shipListIconPanelHolder).inTL(0f, 0f);
             
             // have to do this because if directly added to the refreshing panel then the game crashes when the confirm dialog window is closed
             fenaglePanele.parent.addComponent(shipsPanel).rightOfTop(fenaglePanele.panel, 0f)
@@ -1268,7 +1249,7 @@ public class FleetPresetManagementListener extends ActionListener {
             isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
 
             if (PresetUtils.isPresetPlayerFleet(selectedPreset)) {
-                theButtons.get(RESTORE_BUTTON_ID).setEnabled(false);
+                restoreButton.setEnabled(false);
                 isSelectedPresetAvailablePara.setText(String.format("Selected Preset is the current fleet"));
                 isSelectedPresetAvailablePara.setColor(Misc.getPositiveHighlightColor());
                 Global.getSector().getMemoryWithoutUpdate().set(PresetUtils.UNDOCKED_PRESET_KEY, selectedPreset);
@@ -1293,7 +1274,6 @@ public class FleetPresetManagementListener extends ActionListener {
             } else {
                 isSelectedPresetAvailablePara.setText(String.format(isSelectedPresetAvailableParaFormat, "only partially available, or is unavailable"));
                 isSelectedPresetAvailablePara.setColor(Misc.getNegativeHighlightColor());
-                if (selectedPreset != null) whichMembersAvailable = PresetUtils.whichMembersAvailable(dockingListener.getPlayerCurrentMarket(), selectedPreset.getCampaignFleet().getFleetData().getMembersListCopy());
             }
         }
     }
@@ -1314,10 +1294,8 @@ public class FleetPresetManagementListener extends ActionListener {
 
     private class SaveListener extends DialogDismissedListener {
         @Override
-        public void trigger(Object... args) {
-            int option = (int) args[1];
-
-            if (option == 0) {
+        public void dialogDismissed(Object arg0, int arg1) {
+            if (arg1 == 0) {
                 // confirm
                 String text = saveNameField.getText();
                 if (!isEmptyOrWhitespace(text)) {
@@ -1345,10 +1323,8 @@ public class FleetPresetManagementListener extends ActionListener {
 
     public class DeleteListener extends DialogDismissedListener {
         @Override
-        public void trigger(Object... args) {
-            int option = (int) args[1];
-    
-            if (option == 0) {
+        public void dialogDismissed(Object arg0, int arg1) {
+            if (arg1 == 0) {
                 // confirm
                 PresetUtils.deleteFleetPreset(selectedPresetName);
                 
@@ -1383,9 +1359,6 @@ public class FleetPresetManagementListener extends ActionListener {
                     tablePlugin.rebuild();
                     return;
                 }
-            } else if (option == 1) {
-                // cancel
-                return;
             }
         }
     }
@@ -1481,10 +1454,9 @@ public class FleetPresetManagementListener extends ActionListener {
     }
 
     private void showFleetMemberRecoveryDialog() {
-        if (whichMembersAvailable == null) whichMembersAvailable = PresetUtils.whichMembersAvailable(dockingListener.getPlayerCurrentMarket(), selectedPreset.getCampaignFleet().getFleetData().getMembersListCopy());
+        if (whichMembersAvailable == null) whichMembersAvailable = PresetUtils.whichMembersAvailable(dockingListener.getPlayerCurrentMarket(), selectedPreset.getVariantWrappers());
 
-        CampaignFleetAPI fleet = mangledFleet == null ? selectedPreset.getCampaignFleet() : mangledFleet;
-        new PartialRestorationDialog(whichMembersAvailable, selectedPreset,  fleet, this);
+        new PartialRestorationDialog(whichMembersAvailable, selectedPreset,  selectedPreset.getMembers(), this);
     }
 
     public boolean isPartialSelecting() {
@@ -1499,10 +1471,6 @@ public class FleetPresetManagementListener extends ActionListener {
         return this.dockingListener;
     }
 
-    public CampaignFleetAPI getMangledFleet() {
-        return this.mangledFleet;
-    }
-
     public TablePlugin getTablePlugin() {
         return this.tablePlugin;
     }
@@ -1511,7 +1479,7 @@ public class FleetPresetManagementListener extends ActionListener {
         private ConfirmDialogData dialogData;
     
         public MessageBox(String message, DialogDismissedListener listener) {
-            if (listener == null) listener = new DialogDismissedListener() {public void trigger(Object... args){}};
+            if (listener == null) listener = new DialogDismissedListener() {public void dialogDismissed(Object arg0, int arg1) {}};
 
             LabelAPI labbel = Global.getSettings().createLabel(message, Fonts.ORBITRON_16);
             labbel.setAlignment(Alignment.MID);
@@ -1520,18 +1488,19 @@ public class FleetPresetManagementListener extends ActionListener {
             float width = labbel.computeTextWidth(message);
             float height = labbel.computeTextHeight(message);
     
-            dialogData = UtilReflection.showConfirmationDialog("graphics/icons/industry/battlestation.png",
-            "",
-            "",
-            "Ok",
-            250f,
-            100f,
-            listener
+            dialogData = UtilUi.showConfirmationDialog(
+                "graphics/icons/industry/battlestation.png",
+                "",
+                "",
+                "Ok",
+                250f,
+                100f,
+                listener
             );
     
-            dialogData.panel.removeComponent((UIComponentAPI)dialogData.confirmButton.getInstance());
+            dialogData.panel.removeComponent((UIComponentAPI)dialogData.confirmButton);
             dialogData.panel.removeComponent((UIComponentAPI)dialogData.textLabel);
-            PositionAPI buttonPos = dialogData.cancelButton.getInstance().getPosition();
+            PositionAPI buttonPos = dialogData.cancelButton.getPosition();
     
             CustomPanelAPI labbelPanel = Global.getSettings().createCustom(width, height, null);
             TooltipMakerAPI tt = labbelPanel.createUIElement(width, height, false);

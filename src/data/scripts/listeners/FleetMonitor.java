@@ -1,35 +1,30 @@
 package data.scripts.listeners;
 
-import com.fs.starfarer.api.Global;
+// import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.util.IntervalUtil;
 
 import data.scripts.util.PresetMiscUtils;
-import data.scripts.util.PresetUtils;
-import data.scripts.util.PresetUtils.RunningMembers;
+// import data.scripts.util.PresetUtils;
 
-import java.util.*;
+// import java.util.*;
 
 public class FleetMonitor implements EveryFrameScript {
-    public void print(Object... args) {
-        PresetMiscUtils.print(args);
-    }
-    
     IntervalUtil checkFleetInterval = new IntervalUtil(0.1f, 0.1f);
 
-    RunningMembers runningMembers;
+    // RunningMembers runningMembers;
     public FleetMonitor() {
-        this.runningMembers = new RunningMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
+        // this.runningMembers = new RunningMembers(Global.getSector().getPlayerFleet().getFleetData().getMembersListCopy());
     }
 
     @Override
     public void advance(float amount) {
-        if (Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY) != null) return;
-        checkFleetInterval.advance(amount);
+        // if (Global.getSector().getMemoryWithoutUpdate().get(PresetUtils.PLAYERCURRENTMARKET_KEY) != null) return;
+        // checkFleetInterval.advance(amount);
 
-        if (checkFleetInterval.intervalElapsed() && Global.getSettings().isInCampaignState()) {
-            runningMembers = PresetUtils.checkFleetAgainstPreset(runningMembers);
-        }
+        // if (checkFleetInterval.intervalElapsed() && Global.getSettings().isInCampaignState()) {
+            // runningMembers = PresetUtils.checkFleetAgainstPreset(runningMembers);
+        // }
     }
 
     @Override public boolean isDone() { return false; }

@@ -1,28 +1,23 @@
 package data.scripts.ui;
 
-import data.scripts.ClassRefs;
+import data.scripts.FleetPresetManagerPlugin;
+import data.scripts.autopilotwithgates.util.Refl;
 import data.scripts.listeners.FleetPresetManagementListener;
+import data.scripts.util.BaseEveryFrameScript;
 import data.scripts.util.PresetMiscUtils;
 import data.scripts.util.PresetUtils;
 import data.scripts.util.PresetUtils.FleetPreset;
-import data.scripts.util.ReflectionUtilis;
-import data.scripts.util.ListenerFactory.ActionListener;
-import data.scripts.util.ListenerFactory.DialogDismissedListener;
-import data.scripts.util.UtilReflection.HoloVar;
-import data.scripts.util.UtilReflection;
-import data.scripts.ui.TreeTraverser;
-import data.scripts.ui.TreeTraverser.TreeNode;
+import data.scripts.util.UtilUi.HoloNoise;
+import data.scripts.util.UtilUi;
+
+import data.scripts.util.UiUtil;
+import data.scripts.util.UiUtil.DialogDismissedListener;
+import data.scripts.util.UiUtil.ActionListener;
 
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
-import com.fs.starfarer.api.campaign.BaseCampaignEventListener;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
-import com.fs.starfarer.api.campaign.CampaignFleetAPI;
-import com.fs.starfarer.api.campaign.CampaignUIAPI;
 import com.fs.starfarer.api.campaign.FleetDataAPI;
-import com.fs.starfarer.api.campaign.FleetMemberPickerListener;
-import com.fs.starfarer.api.campaign.InteractionDialogAPI;
-import com.fs.starfarer.api.campaign.SectorEntityToken.VisibilityLevel;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.UIComponentAPI;
@@ -33,144 +28,151 @@ import com.fs.starfarer.api.ui.UIPanelAPI;
 import com.fs.starfarer.api.util.Misc;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.CutStyle;
-import com.fs.starfarer.api.ui.Fonts;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.ScrollPanelAPI;
 
+import static data.scripts.util.UiUtil.utils;
+// import static data.scripts.util.PresetUtils.FleetPreset.memberHandles;
+// import static data.scripts.util.PresetUtils.FleetPreset.repairTrackerHandle;
+// import static data.scripts.util.PresetUtils.FleetPreset.statusHandle;
+import static data.scripts.FleetPresetManagerPlugin.fleetPanelInjector;
+
 import java.awt.Color;
+// import java.lang.invoke.VarHandle;
 import java.util.*;
 
 import org.lwjgl.input.Keyboard;
 
 public class PartialRestorationDialog {
-    public static void print(Object... args) {
-        PresetMiscUtils.print(args);
-    }
+    private static final float FMRDialogWidth = FleetPresetManagementListener.CONFIRM_DIALOG_WIDTH * 0.87f;
+    private static final float FMRDialogHeight = FleetPresetManagementListener.CONFIRM_DIALOG_HEIGHT * 0.87f;
+    private static final float FMRDialogPanelWidth = FMRDialogWidth * 0.97f;
+    private static final float FMRDialogPanelHeight = FMRDialogHeight * 0.97f;
 
     private FleetPreset preset;
-    private CampaignFleetAPI presetFleet;
-    private CampaignFleetAPI tempFleet;
 
-    private final Map<FleetMemberAPI, FleetMemberAPI> tempToPresetMembersMap = new HashMap<>();
     private Map<Integer, FleetMemberAPI> whichFleetMembersAvailable;
     
     private final List<FleetMemberAPI> playerFleetMembers = new ArrayList<>();
-    private final  List<FleetMemberAPI> pickedFleetMembers = new ArrayList<>();
+    private final List<FleetMemberAPI> pickedFleetMembers = new ArrayList<>();
     private final List<FleetMemberAPI> originalOrder;
     
-    private HoloVar holoVar;
-    private UtilReflection.ConfirmDialogData FMRDialog;
+    private HoloNoise holoNoise;
+    private UtilUi.ConfirmDialogData FMRDialog;
     private UIPanelAPI innerPanel;
-    private UIPanelAPI fleetPanel;
-    private Map<ButtonAPI, FleetMemberButton> shipButtons;
-    private Map<ButtonAPI, Object> buttonToRenderControllerMap;
 
-    private FleetPresetManagementListener master;
-    private PartialRestorationDialog self = this;
+    private final Map<ButtonAPI, FleetMemberButton> shipButtons;
+    private final Map<ButtonAPI, Object> buttonToRenderControllerMap;
+
+    private final UIPanelAPI fleetPanel;
+    private final UIPanelAPI fleetPanelList;
+    private final ScrollPanelAPI fleetPanelListScroller;
+    private final List<UIPanelAPI> originalMemberItems;
+    
+    private final FleetPresetManagementListener master;
 
     private boolean all = false;
     private int selected = 0;
     private int available = 0;
 
-    public PartialRestorationDialog(Map<Integer, FleetMemberAPI> whichFleetMembersAvailable, FleetPreset preset, CampaignFleetAPI fleet, FleetPresetManagementListener master) {
-        master.setPartialSelecting(true);
+    private boolean isDone = false;
+
+    public PartialRestorationDialog(Map<Integer, FleetMemberAPI> whichFleetMembersAvailable, FleetPreset preset, List<FleetMemberAPI> members, FleetPresetManagementListener master) {
         this.master = master;
-        this.preset = preset;
-        removeFleetMembersFromPlayerFleet();
-        
-        this.whichFleetMembersAvailable = whichFleetMembersAvailable;
-        this.presetFleet = fleet;
-        this.originalOrder = new ArrayList<>(fleet.getFleetData().getMembersListCopy());
 
-        this.tempFleet = PresetUtils.createTempFleetCopy(fleet.getFleetData().getMembersListCopy());
-        this.fleetPanel = UtilReflection.createObfFleetIconPanel("", tempFleet);
+        this.fleetPanel = utils.fleetTabGetFleetPanel(fleetPanelInjector.getFleetTab());
+        this.fleetPanelList = utils.fleetPanelGetList(fleetPanel);
+        this.fleetPanelListScroller = utils.listPanelGetScroller(fleetPanelList);
 
-        for (FleetMemberAPI member : fleet.getFleetData().getMembersListCopy()) {
-            for (FleetMemberAPI tempMember : tempFleet.getFleetData().getMembersListCopy()) {
-                if (member.getId().equals(PresetUtils.reverseMemberId(tempMember))) {
-                    tempToPresetMembersMap.put(tempMember, member);
-                    break;
-                }
-            }
+        List<UIPanelAPI> items = new ArrayList<>();
+        for (UIComponentAPI item : new ArrayList<>(utils.listPanelGetItems(this.fleetPanelList))) {
+            UIPanelAPI panel = (UIPanelAPI) item;
+            items.add(panel);
+
+            float scrollX = this.fleetPanelListScroller.getXOffset();
+            float scrollY = this.fleetPanelListScroller.getYOffset();
+
+            utils.listPanelRemoveItem(this.fleetPanelList, panel);
+            utils.listPanelCollapseEmptySlots(this.fleetPanelList, true);
+
+            utils.scrollerSetOffset(this.fleetPanelListScroller, scrollX, scrollY);
+            utils.scrollerClampOffset(this.fleetPanelListScroller);
         }
+        this.originalMemberItems = Collections.unmodifiableList(items);
+
+        this.master.setPartialSelecting(true);
+        this.preset = preset;
+        this.playerFleetMembers.addAll(Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder());
+
+        this.whichFleetMembersAvailable = whichFleetMembersAvailable;
+        this.originalOrder = new ArrayList<>(members);
         
-        FMRDialog = UtilReflection.showConfirmationDialog(
+        this.FMRDialog = UtilUi.showConfirmationDialog(
             "graphics/illustrations/gate_hauler1.jpg",
             "",
             "Restore",
             "Cancel",
-            ClassRefs.FMRDialogWidth,
-            ClassRefs.FMRDialogHeight,
+            FMRDialogWidth,
+            FMRDialogHeight,
             new DialogDismissedListener() {
                 @Override
-                public void trigger(Object... args) {
-
-                    switch ((int) args[1]) {
-                        case 0:
-                            pickedFleetMembers(pickedFleetMembers);
-                            tempFleet.despawn();
-                            tempFleet = null;
-                            break;
-
-                        case 1:
-                            cancelledFleetMemberPicking();
-                            tempFleet.despawn();
-                            tempFleet = null;
-                            break;
-
-                        default:
-                            break;
+                public void dialogDismissed(Object arg0, int arg1) {
+                    if (arg1 == 0) {
+                        pickedFleetMembers(pickedFleetMembers);
+                    } else {
+                        cancelledFleetMemberPicking();
                     }
-                    holoVar.resetColor();
+
+                    holoNoise.resetColor();
                     master.getTablePlugin().rebuild();
                 }
             });
-        if (FMRDialog == null) {
-            return;
-        }
-        ReflectionUtilis.invokeMethodDirectly(ClassRefs.confirmDialogSetBackgroundDimAmountMethod, FMRDialog.dialog, 0f);
+
+        utils.confirmDialogSetBackgroundDimAmount(this.FMRDialog.dialog, 0f);
         
-        holoVar = new HoloVar(FMRDialog.dialog);
-        CustomPanelAPI holoVarOverrideOverlay = Global.getSettings().createCustom(UIConfig.DISPLAY_WIDTH, UIConfig.DISPLAY_HEIGHT, new HoloVarOverrideOverlayPlugin());
-        FMRDialog.dialog.addComponent(holoVarOverrideOverlay);
+        this.holoNoise = new HoloNoise(this.FMRDialog.dialog);
+        CustomPanelAPI holoNoiseOverrideOverlay = Global.getSettings().createCustom(UIConfig.DISPLAY_WIDTH, UIConfig.DISPLAY_HEIGHT, new HoloNoiseOverrideOverlayPlugin());
+        this.FMRDialog.dialog.addComponent(holoNoiseOverrideOverlay);
 
-        FMRDialog.confirmButton.setShortcut(Keyboard.KEY_G, false);
-        FMRDialog.confirmButton.setEnabled(false);
-        innerPanel = FMRDialog.panel;
-        addAllButton();
+        this.FMRDialog.confirmButton.setShortcut(Keyboard.KEY_G, false);
+        this.FMRDialog.confirmButton.setEnabled(false);
+        this.innerPanel = this.FMRDialog.panel;
+        this.addAllButton();
 
-        PresetUtils.refreshFleetUI();
+        UIPanelAPI fleetPanel = UtilUi.createShipIconListPanel(UtilUi.DARK_GREEN, members);
+        this.buttonToRenderControllerMap = UtilUi.getButtonToRenderControllerMap(fleetPanel);
+        this.shipButtons = new LinkedHashMap<>();
+        
+        List<UIComponentAPI> buttons = utils.listPanelGetItems((UIPanelAPI)UiUtil.shipIconListListPanelHandle.get(fleetPanel));
 
-        TreeTraverser traverser = new TreeTraverser(fleetPanel);
-        refShipButtons(traverser);
-        clearFleetPanel(traverser);
-        reAddShipButtons();
-
-        addVerticalSeedString(innerPanel, Global.getSector().getSeedString(), "left");
-    }
-
-    private void refShipButtons(TreeTraverser traverser) {
-        shipButtons = new LinkedHashMap<>();
-        for (TreeNode node : traverser.getNodesAtDepth(7)) {
-            for (Object child : node.getChildren()) {
-                ButtonAPI btn = (ButtonAPI) child;
-                shipButtons.put(btn, new FleetMemberButton(btn, getMemberFromButton(btn)));
-            }
+        // remove last to first and wrap/cache
+        for (int i = buttons.size() - 1; i >= 0; i--) {
+            UIComponentAPI btn = buttons.get(i);
+            utils.getParent(btn).removeComponent(btn);
         }
+
+        for (int i = 0; i < buttons.size(); i++) {
+            ButtonAPI btn = (ButtonAPI) buttons.get(i);
+            this.shipButtons.put(btn, new FleetMemberButton(btn, getMemberFromButton(btn)));
+        }
+
+        this.reAddShipButtons();
+
+        addVerticalSeedString(this.innerPanel, Global.getSector().getSeedString(), "left");
     }
 
     private void reAddShipButtons() {
-        float width = ClassRefs.FMRDialogPanelWidth - 5f;
-        float height = ClassRefs.FMRDialogPanelHeight - FMRDialog.confirmButton.getPosition().getHeight() - 20f;
+        float width = FMRDialogPanelWidth - 5f;
+        float height = FMRDialogPanelHeight - this.FMRDialog.confirmButton.getPosition().getHeight() - 20f;
 
-        CustomPanelAPI pane = Global.getSettings().createCustom(0f, 0f, new BaseCustomUIPanelPlugin());
+        CustomPanelAPI pane = Global.getSettings().createCustom(0f, 0f, null);
         innerPanel.addComponent(pane).inTL(0f, 5f);
 
         TooltipMakerAPI ttHolder = pane.createUIElement(0f, 0f, false);
         pane.addUIElement(ttHolder);
         
-        CustomPanelAPI shipPanel = Global.getSettings().createCustom(width, height, new BaseCustomUIPanelPlugin());
+        CustomPanelAPI shipPanel = Global.getSettings().createCustom(width, height, null);
         ttHolder.addCustom(shipPanel, 0f).getPosition().inTL(0f, 0f);
 
         TooltipMakerAPI tt = shipPanel.createUIElement(width, height, true);
@@ -181,24 +183,23 @@ public class PartialRestorationDialog {
         int i = 0;
         Set<ButtonAPI> shipBtns = shipButtons.keySet();
         for (ButtonAPI btn : shipBtns) {
-            if (i == 0) {
-                buttonToRenderControllerMap = UtilReflection.getButtonToRenderControllerMap(ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonGetListenerMethod, btn));
-            }
-
             FleetMemberAPI member = whichFleetMembersAvailable.get(i);
             FleetMemberButton buttonWrapper = shipButtons.get(btn);
+            btn.setEnabled(true);
+
             if (member == null) {
                 btn.setOpacity(0.66f);
                 btn.setButtonPressedSound("ui_button_disabled_pressed");
-                UtilReflection.setButtonTooltipWithPostProcessing(btn, originalOrder.get(i));
-                UtilReflection.setShipButtonHighlightColor(buttonToRenderControllerMap.get(btn), UtilReflection.DARK_RED);
+                UtilUi.setButtonTooltipWithPostProcessing(btn, originalOrder.get(i));
+                UtilUi.setShipButtonHighlightColor(buttonToRenderControllerMap.get(btn), UtilUi.DARK_RED);
                 setListenerForDisabled(buttonWrapper);
             } else {
                 available++;
-                UtilReflection.setButtonTooltip(btn, originalOrder.get(i));
-                buttonWrapper.setListener(setListener(buttonWrapper));
+                UtilUi.setShipButtonHighlightColor(buttonToRenderControllerMap.get(btn), UtilUi.DARK_GREEN);
+                UtilUi.setButtonTooltip(btn, originalOrder.get(i));
+                buttonWrapper.setListener(setListener(buttonWrapper, i));
             }
-           
+
             i++;
 
             if (xOffset > width - 35f) {
@@ -214,54 +215,22 @@ public class PartialRestorationDialog {
         shipPanel.addUIElement(tt);
     }
 
-    private void setListenerForDisabled(FleetMemberButton buttonWrapper) {
-        ActionListener listener = new ActionListener() {
-            public void trigger(Object... args) {
-                if (String.valueOf(args[0]).equals("All")) return;
+    Map<FleetMemberAPI, List<Object>> origFieldMap = new HashMap<>();
 
-                holoVar.setColor(UtilReflection.DARK_RED);
-                holoVar.setOverride(false);
-                UtilReflection.clickOutsideAbsorb(FMRDialog.dialog);
-
-                Global.getSector().addTransientScript(new EveryFrameScript() {
-                    private boolean isDone = false;
-
-                    @Override
-                    public void advance(float arg0) {
-                        if (!holoVar.isRendering()) {
-                            holoVar.resetColor();
-                            Global.getSector().removeTransientScript(this);
-                            isDone = true;
-                        }
-                    }
-                    @Override
-                    public boolean isDone() {
-                        return isDone;
-                    }
-                    @Override
-                    public boolean runWhilePaused() {
-                        return true;
-                    } 
-                });
-            }
-        };
-        ButtonAPI btn = buttonWrapper.getButton();
-        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, btn, listener.getProxy());
-        buttonWrapper.setListener(listener);
-        return;
-    }
-
-    private ActionListener setListener(FleetMemberButton buttonWrapper) {
+    private ActionListener setListener(FleetMemberButton buttonWrapper, int idx) {
         ButtonAPI btn = buttonWrapper.getButton();
         FleetMemberAPI member = buttonWrapper.getMember();
+        FleetMemberAPI realMember = whichFleetMembersAvailable.get(idx);
+
+        UIPanelAPI memberItemPanel = UiUtil.instantiator.instantiateFleetMemberItem(member, fleetPanel);
 
         ActionListener listener = new ActionListener() {
-            public void trigger(Object... args) {
-
+            @Override
+            public void actionPerformed(Object arg0, Object arg1) {
                 if (btn.isChecked()) {
                     buttonWrapper.addLabel();
                     pickedFleetMembers.add(member);
-                    Global.getSector().getPlayerFleet().getFleetData().addFleetMember(tempToPresetMembersMap.get(member));
+                    addMemberToFleetPanelGrid(memberItemPanel);
                     selected++;
 
                     if (!FMRDialog.confirmButton.isEnabled()) FMRDialog.confirmButton.setEnabled(true);
@@ -269,132 +238,135 @@ public class PartialRestorationDialog {
                 } else {
                     buttonWrapper.removeLabel();
                     pickedFleetMembers.remove(member);
-                    Global.getSector().getPlayerFleet().getFleetData().removeFleetMember(tempToPresetMembersMap.get(member));
-                    presetFleet.getFleetData().addFleetMember(tempToPresetMembersMap.get(member));
-                    presetFleet.getFleetData().sortToMatchOrder(originalOrder);
+                    removeMemberItemFromFleetPanelGrid(memberItemPanel);
                     selected--;
                     
                     if (all) all = false;
                     if (pickedFleetMembers.isEmpty()) FMRDialog.confirmButton.setEnabled(false);
                 }
 
-                // Regular FleetData sortToMatchOrder method uses member Ids to sort so we have to use our own here to maintain member agnosticism (and preset fleet dummy members do not share the same Ids)
-                PresetUtils.sortToMatchOrder(Global.getSector().getPlayerFleet().getFleetData(), presetFleet.getFleetData().getMembersListCopy());
-                if (!String.valueOf(args[0]).equals("All")) {
-                    PresetUtils.refreshFleetUI();
-                }
                 if (selected == available) all = true;
             }
         };
         
-        ReflectionUtilis.invokeMethodDirectly(ClassRefs.buttonSetListenerMethod, btn, listener.getProxy());
+        utils.buttonSetListener(btn, listener.getProxy());
         return listener;
     }
 
-    private static void addVerticalSeedString(UIPanelAPI panel, String sectorSeedString, String side) {
-        String[] sectorSeedStringArr = sectorSeedString.split("");
-        
-        float xOffset = side.equals("left") ? 8f : panel.getPosition().getWidth() - 12f;
-        float yOffset = 5f;
+    private void setListenerForDisabled(FleetMemberButton buttonWrapper) {
+        ActionListener listener = new ActionListener() {
+            @Override
+            public void actionPerformed(Object arg0, Object arg1) {
+                if (String.valueOf(arg0).equals("All")) return;
 
-        for (int i = 0; i < sectorSeedStringArr.length; i++) {
-            LabelAPI sectorSeedLabel = Global.getSettings().createLabel(sectorSeedStringArr[i], "graphics/fonts/victor14.fnt");
-            sectorSeedLabel.setColor(Misc.getGrayColor());
-            panel.addComponent((UIComponentAPI)sectorSeedLabel).inTL(xOffset, yOffset);
+                holoNoise.setColor(UtilUi.DARK_RED);
+                holoNoise.setOverride(false);
+                UtilUi.outsideClickAbsorbed(FMRDialog.dialog);
 
-            yOffset += sectorSeedLabel.computeTextHeight(sectorSeedStringArr[i] + 1f);
-        }
+                Global.getSector().addTransientScript(new BaseEveryFrameScript(true) {
+                    @Override
+                    public void advance(float arg0) {
+                        if (!holoNoise.isRendering()) {
+                            holoNoise.resetColor();
+                            Global.getSector().removeTransientScript(this);
+                            isDone = true;
+                        }
+                    }
+                });
+            }
+        };
+        ButtonAPI btn = buttonWrapper.getButton();
+        utils.buttonSetListener(btn, listener.getProxy());
+        buttonWrapper.setListener(listener);
+        return;
     }
 
-    private void removeAllPresetMembersFromPlayerFleet() {
-        for (FleetMemberAPI member : Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder()) {
-            Global.getSector().getPlayerFleet().getFleetData().removeFleetMember(member);
-        }
-        presetFleet.despawn();
-        presetFleet = null;
-        preset.remakeCampaignFleet();
+    private void addMemberToFleetPanelGrid(UIPanelAPI memberPanel) {
+        float scrollX = this.fleetPanelListScroller.getXOffset();
+        float scrollY = this.fleetPanelListScroller.getYOffset();
+
+        this.fleetPanelList.getPosition().setSuspendRecompute(true);
+        this.fleetPanelListScroller.getPosition().setSuspendRecompute(true);
+        utils.scrollerGetContentContainer(this.fleetPanelListScroller).getPosition().setSuspendRecompute(true);
+
+        memberPanel.getPosition().setSuspendRecompute(true);
+        utils.listPanelAddItem(this.fleetPanelList, memberPanel);
+        memberPanel.getPosition().setSuspendRecompute(false);
+
+        this.fleetPanelList.getPosition().setSuspendRecompute(false);
+        this.fleetPanelListScroller.getPosition().setSuspendRecompute(false);
+        utils.scrollerGetContentContainer(this.fleetPanelListScroller).getPosition().setSuspendRecompute(false);
+
+        utils.scrollerSetOffset(this.fleetPanelListScroller, scrollX, scrollY);
     }
 
-    // so warning message doesnt show for over max ships THIS IS IRRELEVANT NOW AS WE ARE NO LONGER USING THE ACTUAL FLEET MEMEBR RECOVERY DIALOG. IDK WHY I KEPT THIS
-    private void removeFleetMembersFromPlayerFleet() {
-        List<FleetMemberAPI> members = Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder();
-        FleetDataAPI mothballedShips = PresetUtils.getMothBalledShipsData(master.getDockingListener().getPlayerCurrentMarket());
+    private void removeMemberItemFromFleetPanelGrid(UIPanelAPI memberPanel) {
+        float scrollX = this.fleetPanelListScroller.getXOffset();
+        float scrollY = this.fleetPanelListScroller.getYOffset();
 
-        for (FleetMemberAPI member : members) {
-            Global.getSector().getPlayerFleet().getFleetData().removeFleetMember(member);
-            mothballedShips.addFleetMember(member);
-            playerFleetMembers.add(member);
-        }
+        utils.listPanelRemoveItem(this.fleetPanelList, memberPanel);
+        utils.listPanelCollapseEmptySlots(this.fleetPanelList, false);
+
+        utils.scrollerSetOffset(this.fleetPanelListScroller, scrollX, scrollY);
+        utils.scrollerClampOffset(this.fleetPanelListScroller);
     }
 
-    private void readdFleetMembersToPlayerFleet() {
-        FleetDataAPI mothballedShips = PresetUtils.getMothBalledShipsData(master.getDockingListener().getPlayerCurrentMarket());
+    // private void removeMembersFromPlayerFleet() {
+    //     for (FleetMemberAPI member : Global.getSector().getPlayerFleet().getFleetData().getMembersInPriorityOrder()) {
+    //         Global.getSector().getPlayerFleet().getFleetData().removeFleetMember(member);
+    //     }
+    // }
 
-        for (FleetMemberAPI member : playerFleetMembers) {
-            mothballedShips.removeFleetMember(member);
-            Global.getSector().getPlayerFleet().getFleetData().addFleetMember(member);
-        }
-        playerFleetMembers.clear();
-    }
+    // private void removeAllPresetMembersFromPlayerFleet() {
+    //     for (FleetMemberAPI member : presetFleet) {
+    //         Global.getSector().getPlayerFleet().getFleetData().removeFleetMember(member);
+    //     }
+    // }
+
+    // private void readdFleetMembersToPlayerFleet() {
+    //     FleetDataAPI mothballedShips = PresetUtils.getMothBalledShipsData(this.master.getDockingListener().getPlayerCurrentMarket());
+
+    //     for (FleetMemberAPI member : this.playerFleetMembers) {
+    //         mothballedShips.removeFleetMember(member);
+    //         Global.getSector().getPlayerFleet().getFleetData().addFleetMember(member);
+    //     }
+    //     this.playerFleetMembers.clear();
+    // }
 
     private FleetMemberAPI getMemberFromButton(ButtonAPI button) {
-        for (Object var : ReflectionUtilis.getAllVariables(button)) {
-            for (Object nestedVar : ReflectionUtilis.getAllVariables(var)) {
-                if (FleetMemberAPI.class.isAssignableFrom(nestedVar.getClass())) {
-                    return (FleetMemberAPI) nestedVar;
-                }
-            } 
-        }
-        return null;
-    }
-
-    private void clearFleetPanel(TreeTraverser traverser) {
-        while (traverser.goDownOneLevel()) {}
-        for (int i = 0; i < traverser.getNodes().size(); i++) {
-            UIPanelAPI parent = traverser.getCurrentNode().getParent();
-
-            if (parent instanceof ScrollPanelAPI) continue;
-            for (UIComponentAPI child : traverser.getCurrentNode().getChildren()) {
-                if (ButtonAPI.class.isAssignableFrom(child.getClass())) {
-                    continue;
-                }
-                parent.removeComponent(child);
-            }
-            traverser.goUpOneLevel();
-        }
+        return (FleetMemberAPI) UiUtil.shipIconRendererFleetMemberHandle.get(buttonToRenderControllerMap.get(button));
     }
 
     private void cancelledFleetMemberPicking() {
-        pickedFleetMembers.clear();
-        removeAllPresetMembersFromPlayerFleet();
-        readdFleetMembersToPlayerFleet();
-        PresetUtils.refreshFleetUI();
+        this.pickedFleetMembers.clear();
 
-        master.setPartialSelecting(false);
-        master.enableButtonsRequiringSelection();
+        for (UIComponentAPI c : new ArrayList<>(utils.listPanelGetItems(this.fleetPanelList))) {
+            this.removeMemberItemFromFleetPanelGrid((UIPanelAPI)c);
+        }
+
+        for (UIPanelAPI panel : this.originalMemberItems) {
+            this.addMemberToFleetPanelGrid(panel);
+        }
+
+        this.master.setPartialSelecting(false);
+        this.master.enableButtonsRequiringSelection();
+        isDone = true;
     }
 
     private void pickedFleetMembers(List<FleetMemberAPI> membersToRestore) {
-        removeAllPresetMembersFromPlayerFleet();
-        readdFleetMembersToPlayerFleet();
         if (pickedFleetMembers.size() == 0) {
-            master.setPartialSelecting(false);
-            master.enableButtonsRequiringSelection();
+            this.cancelledFleetMemberPicking();
             return;
         }
         
-        PresetUtils.partRestorePreset(membersToRestore, whichFleetMembersAvailable, preset);
+        PresetUtils.partRestorePreset(membersToRestore, this.whichFleetMembersAvailable, this.preset);
 
-        if (master.getMangledFleet() != null) {
-            master.getTablePlugin().addShipList(master.getMangledFleet(), whichFleetMembersAvailable);
-        } else {
-            master.getTablePlugin().addShipList(preset.getCampaignFleet(), whichFleetMembersAvailable);
-        }
-        master.setParas();
-        
-        master.setPartialSelecting(false);
-        master.enableButtonsRequiringSelection();
-        pickedFleetMembers.clear();
+        this.master.getTablePlugin().addShipList(this.preset.getMembers(), this.whichFleetMembersAvailable);
+        this.master.setParas();
+        this.master.setPartialSelecting(false);
+        this.master.enableButtonsRequiringSelection();
+
+        this.pickedFleetMembers.clear();
     }
 
     private class FleetMemberButton  {
@@ -408,7 +380,7 @@ public class PartialRestorationDialog {
             this.button = button;
             this.member = member;
 
-            this.panel = Global.getSettings().createCustom(button.getPosition().getWidth(), button.getPosition().getHeight(), new BaseCustomUIPanelPlugin());
+            this.panel = Global.getSettings().createCustom(button.getPosition().getWidth(), button.getPosition().getHeight(), null);
             this.panel.addComponent((UIComponentAPI)button).inTL(0f, 0f);
 
             this.label = Global.getSettings().createLabel("RESTORE", "graphics/fonts/victor14.fnt");
@@ -440,9 +412,9 @@ public class PartialRestorationDialog {
             return this.panel;
         }
 
-        public LabelAPI getLabel() {
-            return this.label;
-        }
+        // public LabelAPI getLabel() {
+        //     return this.label;
+        // }
 
         public FleetMemberAPI getMember() {
             return this.member;
@@ -450,8 +422,9 @@ public class PartialRestorationDialog {
     }
 
     private void addAllButton() {
-        float width = FMRDialog.confirmButton.getPosition().getWidth() / 2;
-        float height = FMRDialog.confirmButton.getPosition().getHeight();
+        float width = this.FMRDialog.confirmButton.getPosition().getWidth() / 2;
+        float height = this.FMRDialog.confirmButton.getPosition().getHeight();
+
         CustomPanelAPI panel = Global.getSettings().createCustom(width, height, new BaseCustomUIPanelPlugin() {
             @Override
             public void buttonPressed(Object buttonId) {
@@ -459,47 +432,46 @@ public class PartialRestorationDialog {
                     for (FleetMemberButton btn : shipButtons.values()) {
                         if (!btn.getButton().isChecked() && btn.getButton().isEnabled()) {
                             btn.getButton().setChecked(true);
-                            btn.getListener().trigger("All", null);
+                            btn.getListener().actionPerformed("All", null);
                         }
                     }
                     all = true;
                 } else {
                     for (FleetMemberButton btn : shipButtons.values()) {
                         btn.getButton().setChecked(false);
-                        btn.getListener().trigger("All", null);
+                        btn.getListener().actionPerformed("All", null);
                     }
                 }
-                PresetUtils.refreshFleetUI();
             }
         });
+
         TooltipMakerAPI tt = panel.createUIElement(width, height, false);
         tt.setButtonFontOrbitron20();
-        tt.addButton("All",
-        "",
-        Misc.getBasePlayerColor(),
-        Misc.getDarkPlayerColor(),
-        Alignment.MID,
-        CutStyle.TL_BR,
-        width,
-        height,
-        5f
+        tt.addButton(
+            "All",
+            "",
+            Misc.getBasePlayerColor(),
+            Misc.getDarkPlayerColor(),
+            Alignment.MID,
+            CutStyle.TL_BR,
+            width,
+            height,
+            5f
         );
         panel.addUIElement(tt);
 
-        
-        // pos.set(FMRDialog.confirmButton.getPosition());
-        innerPanel.addComponent(panel).leftOfMid((UIComponentAPI)FMRDialog.cancelButton.getInstance(), 10f);
+        innerPanel.addComponent(panel).leftOfMid((UIComponentAPI)FMRDialog.cancelButton, 10f);
 
-        FMRDialog.confirmButton.getPosition().leftOfMid(panel, 0f);
+        this.FMRDialog.confirmButton.getPosition().leftOfMid(panel, 0f);
     }
 
-    private class HoloVarOverrideOverlayPlugin extends BaseCustomUIPanelPlugin {
+    private class HoloNoiseOverrideOverlayPlugin extends BaseCustomUIPanelPlugin {
         private final float dialogLeftBound;
         private final float dialogRightBound;
         private final float dialogTopBound;
         private final float dialogBottomBound;
         
-        public HoloVarOverrideOverlayPlugin() {
+        public HoloNoiseOverrideOverlayPlugin() {
             super();
             PositionAPI dialogPos = FMRDialog.dialog.getPosition();
             this.dialogLeftBound = dialogPos.getCenterX() - dialogPos.getWidth() / 2;
@@ -517,10 +489,25 @@ public class PartialRestorationDialog {
         public void processInput(List<InputEventAPI> events) {
             for (InputEventAPI event : events) {
                 if (event.isLMBDownEvent() && isOutsideDialogBounds(event.getX(), event.getY())) {
-                    holoVar.setOverride(true);
+                    holoNoise.setOverride(true);
                     break;
                 }
             }
+        }
+    }
+
+    private static void addVerticalSeedString(UIPanelAPI panel, String sectorSeedString, String side) {
+        String[] sectorSeedStringArr = sectorSeedString.split("");
+        
+        float xOffset = side.equals("left") ? 8f : panel.getPosition().getWidth() - 12f;
+        float yOffset = 5f;
+
+        for (int i = 0; i < sectorSeedStringArr.length; i++) {
+            LabelAPI sectorSeedLabel = Global.getSettings().createLabel(sectorSeedStringArr[i], "graphics/fonts/victor14.fnt");
+            sectorSeedLabel.setColor(Misc.getGrayColor());
+            panel.addComponent((UIComponentAPI)sectorSeedLabel).inTL(xOffset, yOffset);
+
+            yOffset += sectorSeedLabel.computeTextHeight(sectorSeedStringArr[i] + 1f);
         }
     }
 }
